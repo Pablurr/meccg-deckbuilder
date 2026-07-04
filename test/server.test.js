@@ -74,4 +74,17 @@ describe('server', () => {
     expect(counts.playdeck).toBe(2);
     expect(Number(res.headers['content-length'])).toBeGreaterThan(1000);
   });
+
+  it('exports a US-Letter PDF for selected cards', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/export-pdf',
+      payload: { deckName: 'PDF Test', cardIds: ['AS-1', 'AS-7'], includeBacks: true },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toBe('application/pdf');
+    expect(res.rawPayload.subarray(0, 4).toString()).toBe('%PDF');
+    // 2 cards → 1 fronts page + 1 backs page (default backs applied)
+    expect(res.headers['x-export-pages']).toBe('2');
+  });
 });

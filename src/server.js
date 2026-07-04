@@ -8,6 +8,7 @@ import { existsSync } from 'node:fs';
 import { loadCards } from './cards.js';
 import { createDeckStore } from './deckStore.js';
 import { buildDeckZip } from './exporter.js';
+import { buildSheetPdf } from './sheetPdf.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
@@ -76,25 +77,51 @@ export async function buildServer() {
     return { path: `backs/${name}` };
   });
 
-  // Export selected cards as an MPC ZIP.
-  app.post('/api/export', async (req, reply) => {
-    const { cardIds = [], deckName = 'deck', backAssignments = {} } = req.body || {};
-    const selected = cardIds.map((id) => index.get(id)).filter(Boolean);
+  // Resolve back-image paths, applying shipped defaults for any group not overridden.
+  function resolveBackPaths(backAssignments = {}) {
     const backPaths = { ...DEFAULT_BACKS };
     for (const [group, rel] of Object.entries(backAssignments)) {
       // rel looks like "backs/back_123.png"; resolve under data/.
       if (rel) backPaths[group] = path.join(ROOT, 'data', path.normalize(String(rel)).replace(/^(\.\.[/\\])+/, ''));
     }
+    return backPaths;
+  }
+
+  const safeName = (s) => String(s || 'deck').replace(/[^a-zA-Z0-9_-]+/g, '_');
+
+  // Export selected cards as an MPC ZIP (individual images, bleed included).
+  app.post('/api/export', async (req, reply) => {
+    const { cardIds = [], deckName = 'deck', backAssignments = {} } = req.body || {};
+    const selected = cardIds.map((id) => index.get(id)).filter(Boolean);
     const { buffer, counts, failures } = await buildDeckZip({
       deckName,
       cards: selected,
       imagesRoot: IMAGES_ROOT,
-      backPaths,
+      backPaths: resolveBackPaths(backAssignments),
     });
     reply
       .header('Content-Type', 'application/zip')
-      .header('Content-Disposition', `attachment; filename="${deckName.replace(/[^a-zA-Z0-9_-]+/g, '_')}_MPC.zip"`)
+      .header('Content-Disposition', `attachment; filename="${safeName(deckName)}_MPC.zip"`)
       .header('X-Export-Counts', JSON.stringify(counts))
+      .header('X-Export-Failures', JSON.stringify(failures));
+    return reply.send(buffer);
+  });
+
+  // Export selected cards as a US-Letter PDF, 3x3 poker cards per page at true
+  // size with crop marks; optional mirrored backs pages for duplex printing.
+  app.post('/api/export-pdf', async (req, reply) => {
+    const { cardIds = [], deckName = 'deck', backAssignments = {}, includeBacks = true } = req.body || {};
+    const selected = cardIds.map((id) => index.get(id)).filter(Boolean);
+    const { buffer, failures, pageCount } = await buildSheetPdf({
+      cards: selected,
+      imagesRoot: IMAGES_ROOT,
+      backPaths: resolveBackPaths(backAssignments),
+      includeBacks,
+    });
+    reply
+      .header('Content-Type', 'application/pdf')
+      .header('Content-Disposition', `attachment; filename="${safeName(deckName)}_sheets.pdf"`)
+      .header('X-Export-Pages', String(pageCount))
       .header('X-Export-Failures', JSON.stringify(failures));
     return reply.send(buffer);
   });

@@ -18,7 +18,20 @@ export async function uploadBack(file) {
   return json('/api/backs', { method: 'POST', body: fd });
 }
 
-// Triggers a ZIP download; returns { counts, failures } from response headers.
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+const safeName = (s) => (s || 'deck').replace(/[^a-zA-Z0-9_-]+/g, '_');
+
+// Triggers a ZIP download (MPC individual images); returns { counts, failures }.
 export async function exportDeck({ deckName, cardIds, backAssignments }) {
   const res = await fetch('/api/export', {
     method: 'POST',
@@ -28,14 +41,20 @@ export async function exportDeck({ deckName, cardIds, backAssignments }) {
   if (!res.ok) throw new Error(`export → ${res.status}`);
   const counts = JSON.parse(res.headers.get('X-Export-Counts') || '{}');
   const failures = JSON.parse(res.headers.get('X-Export-Failures') || '[]');
-  const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${(deckName || 'deck').replace(/[^a-zA-Z0-9_-]+/g, '_')}_MPC.zip`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  downloadBlob(await res.blob(), `${safeName(deckName)}_MPC.zip`);
   return { counts, failures };
+}
+
+// Triggers a US-Letter PDF download (3x3 sheets); returns { pages, failures }.
+export async function exportPdf({ deckName, cardIds, backAssignments, includeBacks }) {
+  const res = await fetch('/api/export-pdf', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ deckName, cardIds, backAssignments, includeBacks }),
+  });
+  if (!res.ok) throw new Error(`export-pdf → ${res.status}`);
+  const pages = Number(res.headers.get('X-Export-Pages') || '0');
+  const failures = JSON.parse(res.headers.get('X-Export-Failures') || '[]');
+  downloadBlob(await res.blob(), `${safeName(deckName)}_sheets.pdf`);
+  return { pages, failures };
 }
