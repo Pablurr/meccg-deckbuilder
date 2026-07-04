@@ -1,0 +1,29 @@
+{
+  "name": "meccg-deckbuilder",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local MECCG deck builder with MPC print export",
+  "scripts": {
+    "dev": "node src/server.js",
+    "dev:web": "vite",
+    "build": "vite build",
+    "start": "vite build && node src/server.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@fastify/multipart": "^8.3.0",
+    "@fastify/static": "^7.0.4",
+    "archiver": "^7.0.1",
+    "fastify": "^4.28.1",
+    "sharp": "^0.33.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "adm-zip": "^0.5.16",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "vite": "^5.4.11",
+    "vitest": "^2.1.8"
+  }
+}

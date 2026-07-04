@@ -1,0 +1,9 @@
+node_modules/
+data/
+web/dist/
+.superpowers/
+*.log
+
+# Large local assets (kept on disk, not versioned)
+remastered-all/
+deckA/
