@@ -34,9 +34,9 @@ export function createDeckStore(dir) {
       return JSON.parse(await readFile(file(id), 'utf-8'));
     },
 
-    async create({ name, cardIds = [], backAssignments = {} }) {
+    async create({ name, cardIds = [], quantities = {}, backAssignments = {} }) {
       const now = new Date().toISOString();
-      const deck = { id: newId(), name: name || 'Untitled', cardIds, backAssignments, createdAt: now, updatedAt: now };
+      const deck = { id: newId(), name: name || 'Untitled', cardIds, quantities, backAssignments, createdAt: now, updatedAt: now };
       await writeFile(file(deck.id), JSON.stringify(deck, null, 2));
       return deck;
     },

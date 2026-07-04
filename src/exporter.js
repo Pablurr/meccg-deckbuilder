@@ -49,11 +49,18 @@ export async function buildDeckZip({ deckName = 'deck', cards = [], imagesRoot, 
     'group\tid\tname',
   ];
 
+  // A card may appear multiple times (copies); give each copy a unique filename.
+  const totalPerId = {};
+  for (const card of cards) totalPerId[card.id] = (totalPerId[card.id] || 0) + 1;
+  const seenPerId = {};
+
   for (const card of cards) {
     const group = backGroupForType(card.type);
     try {
       const buf = await toMpcBuffer(path.join(imagesRoot, card.relativePath));
-      const name = `${group}/fronts/${card.id}_${slug(card.name && card.name.en)}.png`;
+      seenPerId[card.id] = (seenPerId[card.id] || 0) + 1;
+      const suffix = totalPerId[card.id] > 1 ? `_c${seenPerId[card.id]}` : '';
+      const name = `${group}/fronts/${card.id}_${slug(card.name && card.name.en)}${suffix}.png`;
       archive.append(buf, { name });
       counts[group] += 1;
       manifest.push(`${group}\t${card.id}\t${(card.name && card.name.en) || ''}`);

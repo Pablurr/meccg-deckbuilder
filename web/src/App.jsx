@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import * as api from './api.js';
+import { maxCopies, expandQuantities, countOccurrences } from './lib/deck.js';
 import FilterBar from './components/FilterBar.jsx';
 import CardBrowser from './components/CardBrowser.jsx';
 import DeckDrawer from './components/DeckDrawer.jsx';
@@ -11,7 +12,7 @@ export default function App() {
   const [facets, setFacets] = useState(null);
   const [defaultBacks, setDefaultBacks] = useState({});
   const [filters, setFilters] = useState({});
-  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [quantities, setQuantities] = useState({}); // id -> copy count
   const [deck, setDeck] = useState({ id: null, name: 'Nouveau deck', backAssignments: {} });
   const [showManager, setShowManager] = useState(false);
   const [showExport, setShowExport] = useState(false);
@@ -25,38 +26,42 @@ export default function App() {
 
   const cardsById = useMemo(() => new Map(cards.map((c) => [c.id, c])), [cards]);
 
-  function toggleCard(id) {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
+  // delta is +1 / -1; clamps to [0, maxCopies(card)].
+  function changeQty(id, delta) {
+    setQuantities((prev) => {
+      const max = maxCopies(cardsById.get(id));
+      const next = Math.max(0, Math.min(max, (prev[id] || 0) + delta));
+      const out = { ...prev };
+      if (next <= 0) delete out[id];
+      else out[id] = next;
+      return out;
     });
   }
 
   function loadDeckIntoState(d) {
     setDeck({ id: d.id, name: d.name, backAssignments: d.backAssignments || {} });
-    setSelectedIds(new Set(d.cardIds || []));
+    setQuantities(d.quantities || countOccurrences(d.cardIds || []));
     setShowManager(false);
   }
 
   function newDeck() {
     setDeck({ id: null, name: 'Nouveau deck', backAssignments: {} });
-    setSelectedIds(new Set());
+    setQuantities({});
     setShowManager(false);
   }
 
   if (error) return <div style={{ padding: 24 }}>Erreur : {error}. Le serveur (npm start / npm run dev) tourne-t-il ?</div>;
   if (!facets) return <div style={{ padding: 24 }}>Chargement des cartes…</div>;
 
-  const selectedArray = [...selectedIds];
+  const cardIds = expandQuantities(quantities);
 
   return (
     <div className="app">
       <FilterBar facets={facets} filters={filters} onChange={setFilters} deckName={deck.name} />
-      <CardBrowser cards={cards} filters={filters} selectedIds={selectedIds} onToggle={toggleCard} />
+      <CardBrowser cards={cards} filters={filters} quantities={quantities} onChangeQty={changeQty} />
       <DeckDrawer
         cardsById={cardsById}
-        cardIds={selectedArray}
+        cardIds={cardIds}
         backAssignments={deck.backAssignments}
         defaultBacks={defaultBacks}
         onManage={() => setShowManager(true)}
@@ -66,7 +71,8 @@ export default function App() {
       {showManager && (
         <DeckManager
           deck={deck}
-          cardIds={selectedArray}
+          cardIds={cardIds}
+          quantities={quantities}
           onClose={() => setShowManager(false)}
           onLoad={loadDeckIntoState}
           onSaved={(d) => setDeck((prev) => ({ ...prev, id: d.id, name: d.name }))}
@@ -75,7 +81,7 @@ export default function App() {
       {showExport && (
         <ExportDialog
           deck={deck}
-          cardIds={selectedArray}
+          cardIds={cardIds}
           defaultBacks={defaultBacks}
           onClose={() => setShowExport(false)}
           onBacksChange={(backAssignments) => setDeck((prev) => ({ ...prev, backAssignments }))}

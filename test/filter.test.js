@@ -30,4 +30,10 @@ describe('filterCards', () => {
     expect(filterCards(cards, { search: 'tocsin' }).map((c) => c.id)).toEqual(['AS-44']);
     expect(filterCards(cards, { search: 'cul-de-sac' }).map((c) => c.id)).toEqual(['BA-1']);
   });
+
+  it('searches ignoring accents (both query and card names)', () => {
+    // query without accent matches accented name
+    expect(filterCards(cards, { search: 'burat' }).map((c) => c.id)).toEqual(['AS-1']);
+    expect(filterCards(cards, { search: 'BÛRAT' }).map((c) => c.id)).toEqual(['AS-1']);
+  });
 });

@@ -1,8 +1,16 @@
+// Lowercase and strip diacritics so search ignores accents ("burat" ~ "Bûrat").
+export function normalizeText(s) {
+  return String(s || '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase();
+}
+
 // Pure, in-memory filtering of the card list.
 // filters: { search, sets[], types[], alignments[], rarities[], races[],
 //            subtypes[], skills[], keywords[], unique(bool) }
 export function filterCards(cards, filters = {}) {
-  const q = (filters.search || '').trim().toLowerCase();
+  const q = normalizeText((filters.search || '').trim());
   const has = (arr) => Array.isArray(arr) && arr.length > 0;
 
   return cards.filter((c) => {
@@ -20,7 +28,7 @@ export function filterCards(cards, filters = {}) {
     }
     if (filters.unique === true && a.unique !== true) return false;
     if (q) {
-      const names = [c.name?.en, c.name?.fr].filter(Boolean).join(' ').toLowerCase();
+      const names = normalizeText([c.name?.en, c.name?.fr].filter(Boolean).join(' '));
       if (!names.includes(q)) return false;
     }
     return true;

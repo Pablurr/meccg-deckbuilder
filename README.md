@@ -36,9 +36,12 @@ npm run dev:web   # Vite (HMR) sur :5173  → ouvre http://localhost:5173
 ## Utilisation
 
 1. **Filtrer / rechercher** : barre du haut (Set, Type, Alignement, Rareté, Race, Sous-type,
-   Compétences, Mots-clés, Unique + recherche par nom en/fr).
-2. **Sélectionner** : clique sur une carte pour l'ajouter/retirer du deck. Le tiroir du bas
-   affiche les compteurs live et des avertissements (informatifs, non bloquants).
+   Compétences, Mots-clés, Unique + recherche par nom en/fr). La **recherche ignore les
+   accents** (« burat » trouve « Bûrat »).
+2. **Sélectionner (quantités)** : clique sur l'image d'une carte pour ajouter une copie, ou
+   utilise les boutons **− / +** en bas de la carte. Jusqu'à **3 exemplaires** par carte, sauf
+   les cartes **Unique** limitées à **1**. Le tiroir du bas affiche les compteurs live
+   (les copies sont comptées) et des avertissements (informatifs, non bloquants).
 3. **Sauvegarder** : « Mes decks » → nommer et enregistrer. Les decks sont stockés en
    `data/decks/*.json` et rechargeables plus tard.
 4. **Exporter** : « Exporter MPC » ouvre la fenêtre d'export, avec deux formats au choix
@@ -50,7 +53,8 @@ npm run dev:web   # Vite (HMR) sur :5173  → ouvre http://localhost:5173
 
 Chaque carte est agrandie puis complétée d'un bleed (extension des bords) pour produire un
 PNG **822 × 1122 px @ 300 DPI** (format US Game / Poker avec bleed, valeur MPC officielle :
-coupe 750×1050 + 36 px de bleed par bord). Le ZIP est organisé :
+coupe 750×1050 + 36 px de bleed par bord). Chaque exemplaire d'une carte en plusieurs copies
+est exporté comme un fichier distinct (`..._c1.png`, `..._c2.png`, …). Le ZIP est organisé :
 
 ```
 <deck>_MPC.zip

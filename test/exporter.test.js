@@ -68,4 +68,20 @@ describe('buildDeckZip', () => {
     // no location back appended when that group is empty
     expect(entries.some((e) => e.startsWith('locationdeck/'))).toBe(false);
   });
+
+  it('gives each copy of a repeated card a unique filename', async () => {
+    const cards = [
+      { id: 'AS-1', type: 'Character', name: { en: 'Bûrat' }, relativePath: 'as/minions/Burat.jpg' },
+      { id: 'AS-1', type: 'Character', name: { en: 'Bûrat' }, relativePath: 'as/minions/Burat.jpg' },
+      { id: 'AS-1', type: 'Character', name: { en: 'Bûrat' }, relativePath: 'as/minions/Burat.jpg' },
+    ];
+    const { buffer, counts } = await buildDeckZip({ deckName: 'Copies', cards, imagesRoot: IMAGES_ROOT });
+    expect(counts.playdeck).toBe(3);
+    const entries = new AdmZip(buffer).getEntries().map((e) => e.entryName).filter((e) => e.includes('/fronts/'));
+    expect(entries.sort()).toEqual([
+      'playdeck/fronts/AS-1_Burat_c1.png',
+      'playdeck/fronts/AS-1_Burat_c2.png',
+      'playdeck/fronts/AS-1_Burat_c3.png',
+    ]);
+  });
 });

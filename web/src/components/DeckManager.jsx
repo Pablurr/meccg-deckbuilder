@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import * as api from '../api.js';
 
-export default function DeckManager({ deck, cardIds, onClose, onLoad, onSaved }) {
+export default function DeckManager({ deck, cardIds, quantities, onClose, onLoad, onSaved }) {
   const [decks, setDecks] = useState([]);
   const [name, setName] = useState(deck.name || 'Nouveau deck');
   const [busy, setBusy] = useState(false);
@@ -14,7 +14,7 @@ export default function DeckManager({ deck, cardIds, onClose, onLoad, onSaved })
   async function save() {
     setBusy(true);
     try {
-      const payload = { name, cardIds, backAssignments: deck.backAssignments || {} };
+      const payload = { name, cardIds, quantities, backAssignments: deck.backAssignments || {} };
       const saved = deck.id ? await api.updateDeck(deck.id, payload) : await api.createDeck(payload);
       onSaved(saved);
       await refresh();
@@ -30,7 +30,7 @@ export default function DeckManager({ deck, cardIds, onClose, onLoad, onSaved })
 
   async function duplicate(id) {
     const d = await api.getDeck(id);
-    await api.createDeck({ name: `${d.name} (copie)`, cardIds: d.cardIds, backAssignments: d.backAssignments });
+    await api.createDeck({ name: `${d.name} (copie)`, cardIds: d.cardIds, quantities: d.quantities, backAssignments: d.backAssignments });
     await refresh();
   }
 

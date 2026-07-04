@@ -12,6 +12,28 @@ export function backGroupForType(type) {
   return BACK_GROUPS[type] || 'playdeck';
 }
 
+// Copy limits: unique cards max 1, everything else max 3.
+export const MAX_COPIES = 3;
+export function maxCopies(card) {
+  return card && card.attributes && card.attributes.unique === true ? 1 : MAX_COPIES;
+}
+
+// Expand a { id: count } map into an ordered list with repeats (for export/counts).
+export function expandQuantities(quantities = {}) {
+  const out = [];
+  for (const [id, count] of Object.entries(quantities)) {
+    for (let i = 0; i < count; i++) out.push(id);
+  }
+  return out;
+}
+
+// Rebuild a { id: count } map from a (possibly repeated) list of ids.
+export function countOccurrences(cardIds = []) {
+  const q = {};
+  for (const id of cardIds) q[id] = (q[id] || 0) + 1;
+  return q;
+}
+
 // Live counters for the deck drawer.
 // cardsById: Map<id, card>; cardIds: array of selected ids.
 export function deckCounts(cardsById, cardIds) {
