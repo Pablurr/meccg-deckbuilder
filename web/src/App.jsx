@@ -6,6 +6,7 @@ import CardBrowser from './components/CardBrowser.jsx';
 import DeckDrawer from './components/DeckDrawer.jsx';
 import DeckManager from './components/DeckManager.jsx';
 import ExportDialog from './components/ExportDialog.jsx';
+import ImportDialog from './components/ImportDialog.jsx';
 
 export default function App() {
   const [cards, setCards] = useState([]);
@@ -16,6 +17,7 @@ export default function App() {
   const [deck, setDeck] = useState({ id: null, name: 'Nouveau deck', backAssignments: {} });
   const [showManager, setShowManager] = useState(false);
   const [showExport, setShowExport] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -38,6 +40,27 @@ export default function App() {
     });
   }
 
+  // First click selects (1 copy), second click deselects.
+  function toggleCard(id) {
+    setQuantities((prev) => {
+      const out = { ...prev };
+      if (out[id]) delete out[id];
+      else out[id] = 1;
+      return out;
+    });
+  }
+
+  // Replace the current selection with an imported { id: count } map (clamped).
+  function importQuantities(imported) {
+    const clamped = {};
+    for (const [id, count] of Object.entries(imported)) {
+      const max = maxCopies(cardsById.get(id));
+      clamped[id] = Math.max(1, Math.min(max, count));
+    }
+    setQuantities(clamped);
+    setShowImport(false);
+  }
+
   function loadDeckIntoState(d) {
     setDeck({ id: d.id, name: d.name, backAssignments: d.backAssignments || {} });
     setQuantities(d.quantities || countOccurrences(d.cardIds || []));
@@ -58,7 +81,7 @@ export default function App() {
   return (
     <div className="app">
       <FilterBar facets={facets} filters={filters} onChange={setFilters} deckName={deck.name} />
-      <CardBrowser cards={cards} filters={filters} quantities={quantities} onChangeQty={changeQty} />
+      <CardBrowser cards={cards} filters={filters} quantities={quantities} onChangeQty={changeQty} onToggle={toggleCard} />
       <DeckDrawer
         cardsById={cardsById}
         cardIds={cardIds}
@@ -66,6 +89,7 @@ export default function App() {
         defaultBacks={defaultBacks}
         onManage={() => setShowManager(true)}
         onExport={() => setShowExport(true)}
+        onImport={() => setShowImport(true)}
         onNew={newDeck}
       />
       {showManager && (
@@ -85,6 +109,13 @@ export default function App() {
           defaultBacks={defaultBacks}
           onClose={() => setShowExport(false)}
           onBacksChange={(backAssignments) => setDeck((prev) => ({ ...prev, backAssignments }))}
+        />
+      )}
+      {showImport && (
+        <ImportDialog
+          cards={cards}
+          onClose={() => setShowImport(false)}
+          onImport={importQuantities}
         />
       )}
     </div>

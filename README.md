@@ -38,13 +38,18 @@ npm run dev:web   # Vite (HMR) sur :5173  → ouvre http://localhost:5173
 1. **Filtrer / rechercher** : barre du haut (Set, Type, Alignement, Rareté, Race, Sous-type,
    Compétences, Mots-clés, Unique + recherche par nom en/fr). La **recherche ignore les
    accents** (« burat » trouve « Bûrat »).
-2. **Sélectionner (quantités)** : clique sur l'image d'une carte pour ajouter une copie, ou
-   utilise les boutons **− / +** en bas de la carte. Jusqu'à **3 exemplaires** par carte, sauf
-   les cartes **Unique** limitées à **1**. Le tiroir du bas affiche les compteurs live
-   (les copies sont comptées) et des avertissements (informatifs, non bloquants).
-3. **Sauvegarder** : « Mes decks » → nommer et enregistrer. Les decks sont stockés en
+2. **Sélectionner (quantités)** : **1er clic** sur l'image = ajoute la carte, **2e clic** =
+   la retire. Les boutons **− / +** en bas de la carte ajustent la quantité. Limites de copies :
+   **3 max** par défaut, **1** pour les cartes **Unique** et pour tous les **Sites**, mais **3**
+   pour les **avatars** (magiciens, Nazgûl, magiciens déchus, Balrog) bien qu'ils soient uniques.
+   Le tiroir du bas affiche les compteurs live (les copies sont comptées).
+3. **Importer une liste** : bouton « Importer » → colle une liste `Nx nom de carte`
+   (accents ignorés, nom complet). L'écran d'analyse signale les cartes introuvables et, quand
+   un nom correspond à plusieurs cartes (ex. version héros / serviteur), propose un menu pour
+   choisir la bonne. L'import **remplace** la sélection courante.
+4. **Sauvegarder** : « Mes decks » → nommer et enregistrer. Les decks sont stockés en
    `data/decks/*.json` et rechargeables plus tard.
-4. **Exporter** : « Exporter MPC » ouvre la fenêtre d'export, avec deux formats au choix
+5. **Exporter** : « Exporter » ouvre la fenêtre d'export, avec deux formats au choix
    (voir ci-dessous). Les dos sont pré-remplis avec les défauts du projet (`card-backs/`).
 
 ## Deux formats d'export

@@ -1,7 +1,7 @@
 import React from 'react';
 import { deckCounts, deckWarnings } from '../lib/deck.js';
 
-export default function DeckDrawer({ cardsById, cardIds, backAssignments, defaultBacks, onManage, onExport, onNew }) {
+export default function DeckDrawer({ cardsById, cardIds, backAssignments, defaultBacks, onManage, onExport, onImport, onNew }) {
   const counts = deckCounts(cardsById, cardIds);
   const warnings = deckWarnings(cardsById, cardIds, backAssignments, defaultBacks);
 
@@ -20,8 +20,9 @@ export default function DeckDrawer({ cardsById, cardIds, backAssignments, defaul
       )}
       <div className="spacer" />
       <button className="btn secondary" onClick={onNew}>Nouveau</button>
+      <button className="btn secondary" onClick={onImport}>Importer</button>
       <button className="btn secondary" onClick={onManage}>Mes decks</button>
-      <button className="btn" onClick={onExport} disabled={counts.total === 0}>Exporter MPC</button>
+      <button className="btn" onClick={onExport} disabled={counts.total === 0}>Exporter</button>
     </div>
   );
 }

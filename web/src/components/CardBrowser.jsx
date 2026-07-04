@@ -4,7 +4,7 @@ import { maxCopies } from '../lib/deck.js';
 
 const CAP = 600; // safety cap on rendered cells
 
-export default function CardBrowser({ cards, filters, quantities, onChangeQty }) {
+export default function CardBrowser({ cards, filters, quantities, onChangeQty, onToggle }) {
   const filtered = useMemo(() => filterCards(cards, filters), [cards, filters]);
   const shown = filtered.slice(0, CAP);
 
@@ -24,12 +24,12 @@ export default function CardBrowser({ cards, filters, quantities, onChangeQty })
               className={`cardcell ${qty > 0 ? 'selected' : ''}`}
               title={name}
             >
-              {/* Click the image to add a copy (quick add). */}
+              {/* First click selects (qty 1), second click deselects. Use −/+ for copies. */}
               <img
                 src={`/images/${c.relativePath}`}
                 alt={name}
                 loading="lazy"
-                onClick={() => qty < max && onChangeQty(c.id, +1)}
+                onClick={() => onToggle(c.id)}
               />
               {qty > 0 && <div className="qty-badge">{qty}{max === 1 ? '' : `/${max}`}</div>}
               <div className="cap">{name}</div>

@@ -37,6 +37,15 @@ describe('maxCopies', () => {
     expect(maxCopies({ attributes: {} })).toBe(3);
     expect(maxCopies({ attributes: { unique: false } })).toBe(3);
   });
+
+  it('caps all Sites at 1 (even non-unique ones)', () => {
+    expect(maxCopies({ type: 'Site', attributes: { unique: true } })).toBe(1);
+    expect(maxCopies({ type: 'Site', attributes: {} })).toBe(1);
+  });
+
+  it('allows avatars up to 3 despite being unique', () => {
+    expect(maxCopies({ type: 'Character', attributes: { unique: true, avatar: true } })).toBe(3);
+  });
 });
 
 describe('expandQuantities / countOccurrences', () => {

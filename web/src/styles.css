@@ -232,3 +232,49 @@ body {
 .deck-list .name { flex: 1; }
 .muted { color: var(--muted); }
 .close-x { position: absolute; }
+
+/* ---- Import dialog ---- */
+.import-textarea {
+  width: 100%;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: var(--radius);
+  padding: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  resize: vertical;
+}
+.import-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0;
+  max-height: 300px;
+  overflow: auto;
+}
+.import-list li {
+  padding: 6px 8px;
+  border-radius: 6px;
+  margin-bottom: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.imp-ok { background: rgba(90, 160, 90, .12); }
+.imp-ambiguous { background: rgba(217, 164, 65, .14); }
+.imp-notfound { background: rgba(209, 73, 91, .14); color: #e0a0aa; }
+.import-list select {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 4px 6px;
+  max-width: 100%;
+}
+code {
+  background: var(--panel-2);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 12px;
+}
