@@ -41,12 +41,16 @@ npm run dev:web   # Vite (HMR) sur :5173  → ouvre http://localhost:5173
    affiche les compteurs live et des avertissements (informatifs, non bloquants).
 3. **Sauvegarder** : « Mes decks » → nommer et enregistrer. Les decks sont stockés en
    `data/decks/*.json` et rechargeables plus tard.
-4. **Exporter MPC** : « Exporter MPC » → choisir un dos par groupe → « Générer le ZIP ».
+4. **Exporter** : « Exporter MPC » ouvre la fenêtre d'export, avec deux formats au choix
+   (voir ci-dessous). Les dos sont pré-remplis avec les défauts du projet (`card-backs/`).
 
-## Export MPC
+## Deux formats d'export
+
+### 1. Images individuelles MPC (ZIP) — pour commander chez MPC
 
 Chaque carte est agrandie puis complétée d'un bleed (extension des bords) pour produire un
-PNG **816 × 1110 px @ 300 DPI** (format US Game / Poker avec bleed). Le ZIP est organisé :
+PNG **822 × 1122 px @ 300 DPI** (format US Game / Poker avec bleed, valeur MPC officielle :
+coupe 750×1050 + 36 px de bleed par bord). Le ZIP est organisé :
 
 ```
 <deck>_MPC.zip
@@ -58,13 +62,27 @@ PNG **816 × 1110 px @ 300 DPI** (format US Game / Poker avec bleed). Le ZIP est
 ```
 
 Prêt pour un glisser-déposer dans l'outil MPC en ligne ou dans
-[MPC Autofill](https://mpcautofill.github.io/).
+[MPC Autofill](https://mpcautofill.github.io/). MPC attend les **fichiers de dos distincts**
+(ici 2) que tu assignes ensuite aux emplacements — c'est exactement ce que produit le ZIP
+(`playdeck/back.png` + `locationdeck/back.png`).
+
+**Dos par défaut** (mapping demandé) : Site / Region → `card-backs/SiteCardBack300dpi.png`,
+toutes les autres cartes → `card-backs/CardBack300dpi.png`. On peut surcharger un dos par
+groupe dans la fenêtre d'export.
+
+### 2. Planches PDF US Letter — pour impression maison / autre imprimeur
+
+Génère un PDF **US Letter (8,5 × 11 po)** avec **3 × 3 cartes par page à taille réelle**
+(2,5 × 3,5 po) et des traits de coupe aux coins. Option « inclure les planches de dos » :
+ajoute après chaque page de faces une page de dos en **miroir** (colonnes inversées) pour
+une impression **recto-verso** (retournement bord long). Le mapping des dos par type est le
+même qu'en export MPC.
 
 ### ⚠️ À vérifier avant une vraie commande
 
-Les dimensions cible sont dans [`src/constants.js`](src/constants.js). **Vérifie-les contre le
-template exact que MPC te fait télécharger** pour ton produit avant de commander, et ajuste-les
-si besoin (un seul endroit à changer).
+Les dimensions cible (822 × 1122 px avec bleed) sont dans [`src/constants.js`](src/constants.js).
+**Vérifie-les contre le template exact que MPC te fait télécharger** pour ton produit avant de
+commander, et ajuste-les si besoin (un seul endroit à changer).
 
 ### Qualité d'image
 
