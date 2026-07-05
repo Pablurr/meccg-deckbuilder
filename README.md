@@ -88,7 +88,9 @@ coins. Trois formats de page, la grille s'adapte automatiquement :
 |---|---|---|
 | US Letter | 3 × 3 | 9 |
 | A4 | 3 × 3 | 9 |
-| A3 | 4 × 4 | **16** |
+| A3 (paysage) | 6 × 3 | **18** |
+
+L'A3 est en **paysage** pour tenir 18 cartes (l'équivalent de deux A4) et économiser du papier.
 
 Option « inclure les planches de dos » : ajoute après chaque page de faces une page de dos en
 **miroir** (colonnes inversées) pour une impression **recto-verso** (retournement bord long).

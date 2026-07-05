@@ -7,16 +7,19 @@ import { backGroupForType } from './exporter.js';
 const PT = 72;
 export const CARD = { w: 2.5 * PT, h: 3.5 * PT }; // 180 x 252 (poker cut size)
 
-// Supported page sizes (points). `name` is the pdfkit named size.
+// Supported page sizes (points), with the working orientation. `name` is the
+// pdfkit named size; `layout` its orientation. `w`/`h` are the dimensions in
+// that orientation. A3 uses landscape to fit 18 cards (= two A4 sheets) instead
+// of 16 in portrait, to save paper.
 export const PAGE_SIZES = {
-  letter: { name: 'LETTER', w: 8.5 * PT, h: 11 * PT }, // 612 x 792
-  a4: { name: 'A4', w: 595.28, h: 841.89 },
-  a3: { name: 'A3', w: 841.89, h: 1190.55 },
+  letter: { name: 'LETTER', layout: 'portrait', w: 8.5 * PT, h: 11 * PT }, // 612 x 792
+  a4: { name: 'A4', layout: 'portrait', w: 595.28, h: 841.89 },
+  a3: { name: 'A3', layout: 'landscape', w: 1190.55, h: 841.89 },
 };
 export const LETTER = PAGE_SIZES.letter; // back-compat
 
 // How many whole poker cards fit on a page (floor division on each axis).
-//   letter -> 3x3=9, a4 -> 3x3=9, a3 -> 4x4=16
+//   letter -> 3x3=9, a4 -> 3x3=9, a3 (landscape) -> 6x3=18
 export function gridFor(pageW, pageH, cardW = CARD.w, cardH = CARD.h) {
   return {
     cols: Math.max(1, Math.floor(pageW / cardW)),
@@ -80,7 +83,7 @@ function cropMarks(doc, x, y, w, h, len = 9) {
 export async function buildSheetPdf({ cards = [], imagesRoot, backPaths = {}, includeBacks = true, format = 'letter' }) {
   const page = PAGE_SIZES[format] || PAGE_SIZES.letter;
   const layout = sheetLayout({ pageW: page.w, pageH: page.h });
-  const doc = new PDFDocument({ size: page.name, margin: 0 });
+  const doc = new PDFDocument({ size: page.name, layout: page.layout, margin: 0 });
   const chunks = [];
   doc.on('data', (c) => chunks.push(c));
   const done = new Promise((resolve) => doc.on('end', resolve));
@@ -112,7 +115,7 @@ export async function buildSheetPdf({ cards = [], imagesRoot, backPaths = {}, in
   const pages = chunk(printable, layout.perPage);
 
   pages.forEach((pageCards, pageIdx) => {
-    if (pageIdx > 0) doc.addPage({ size: page.name, margin: 0 });
+    if (pageIdx > 0) doc.addPage({ size: page.name, layout: page.layout, margin: 0 });
     // Fronts
     pageCards.forEach((card, i) => {
       const cell = layout.cells[i];
@@ -121,7 +124,7 @@ export async function buildSheetPdf({ cards = [], imagesRoot, backPaths = {}, in
     });
 
     if (includeBacks) {
-      doc.addPage({ size: page.name, margin: 0 });
+      doc.addPage({ size: page.name, layout: page.layout, margin: 0 });
       pageCards.forEach((card, i) => {
         const row = Math.floor(i / layout.cols);
         const col = i % layout.cols;

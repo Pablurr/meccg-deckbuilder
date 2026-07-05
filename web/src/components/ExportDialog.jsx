@@ -11,7 +11,7 @@ const GROUPS = [
 const PAGE_FORMATS = [
   { key: 'letter', label: 'US Letter', perPage: '3×3 = 9' },
   { key: 'a4', label: 'A4', perPage: '3×3 = 9' },
-  { key: 'a3', label: 'A3', perPage: '4×4 = 16' },
+  { key: 'a3', label: 'A3 paysage', perPage: '6×3 = 18' },
 ];
 
 function downloadText(text, filename) {

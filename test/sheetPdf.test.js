@@ -27,16 +27,17 @@ describe('gridFor', () => {
   it('computes how many poker cards fit per page size', () => {
     expect(gridFor(PAGE_SIZES.letter.w, PAGE_SIZES.letter.h)).toEqual({ cols: 3, rows: 3 });
     expect(gridFor(PAGE_SIZES.a4.w, PAGE_SIZES.a4.h)).toEqual({ cols: 3, rows: 3 });
-    expect(gridFor(PAGE_SIZES.a3.w, PAGE_SIZES.a3.h)).toEqual({ cols: 4, rows: 4 });
+    // A3 is landscape → 6x3 = 18 (two A4 sheets' worth)
+    expect(gridFor(PAGE_SIZES.a3.w, PAGE_SIZES.a3.h)).toEqual({ cols: 6, rows: 3 });
   });
 });
 
 describe('sheetLayout per format', () => {
-  it('A3 lays out a centered 4x4 grid (16 per page)', () => {
+  it('A3 landscape lays out a centered 6x3 grid (18 per page)', () => {
     const l = sheetLayout({ pageW: PAGE_SIZES.a3.w, pageH: PAGE_SIZES.a3.h });
-    expect(l.perPage).toBe(16);
-    expect(l.cols).toBe(4);
-    expect(l.marginX).toBeCloseTo((PAGE_SIZES.a3.w - 4 * CARD.w) / 2, 4);
+    expect(l.perPage).toBe(18);
+    expect(l.cols).toBe(6);
+    expect(l.marginX).toBeCloseTo((PAGE_SIZES.a3.w - 6 * CARD.w) / 2, 4);
   });
 });
 
@@ -76,12 +77,12 @@ describe('buildSheetPdf', () => {
     expect(pageCount).toBe(2); // 1 fronts + 1 backs page
   });
 
-  it('produces an A3 PDF with the A3 media box', async () => {
+  it('produces an A3 landscape PDF with the A3 media box', async () => {
     const { buffer, failures } = await buildSheetPdf({ cards, imagesRoot: IMAGES_ROOT, includeBacks: false, format: 'a3' });
     expect(failures).toEqual([]);
     const s = buffer.toString('latin1');
     const boxes = [...new Set([...s.matchAll(/MediaBox\s*\[([^\]]+)\]/g)].map((m) => m[1].trim()))];
-    // A3 = 841.89 x 1190.55 pt
-    expect(boxes.some((b) => b.startsWith('0 0 841'))).toBe(true);
+    // A3 landscape = 1190.55 x 841.89 pt
+    expect(boxes.some((b) => b.startsWith('0 0 1190'))).toBe(true);
   });
 });
