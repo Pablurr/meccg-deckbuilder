@@ -110,17 +110,18 @@ export async function buildServer() {
   // Export selected cards as a US-Letter PDF, 3x3 poker cards per page at true
   // size with crop marks; optional mirrored backs pages for duplex printing.
   app.post('/api/export-pdf', async (req, reply) => {
-    const { cardIds = [], deckName = 'deck', backAssignments = {}, includeBacks = true } = req.body || {};
+    const { cardIds = [], deckName = 'deck', backAssignments = {}, includeBacks = true, format = 'letter' } = req.body || {};
     const selected = cardIds.map((id) => index.get(id)).filter(Boolean);
     const { buffer, failures, pageCount } = await buildSheetPdf({
       cards: selected,
       imagesRoot: IMAGES_ROOT,
       backPaths: resolveBackPaths(backAssignments),
       includeBacks,
+      format,
     });
     reply
       .header('Content-Type', 'application/pdf')
-      .header('Content-Disposition', `attachment; filename="${safeName(deckName)}_sheets.pdf"`)
+      .header('Content-Disposition', `attachment; filename="${safeName(deckName)}_${format}_sheets.pdf"`)
       .header('X-Export-Pages', String(pageCount))
       .header('X-Export-Failures', JSON.stringify(failures));
     return reply.send(buffer);

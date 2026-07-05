@@ -106,6 +106,8 @@ export default function App() {
         <ExportDialog
           deck={deck}
           cardIds={cardIds}
+          cardsById={cardsById}
+          quantities={quantities}
           defaultBacks={defaultBacks}
           onClose={() => setShowExport(false)}
           onBacksChange={(backAssignments) => setDeck((prev) => ({ ...prev, backAssignments }))}

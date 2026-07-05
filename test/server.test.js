@@ -87,4 +87,15 @@ describe('server', () => {
     // 2 cards → 1 fronts page + 1 backs page (default backs applied)
     expect(res.headers['x-export-pages']).toBe('2');
   });
+
+  it('exports an A3 PDF when format=a3', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/export-pdf',
+      payload: { deckName: 'A3 Test', cardIds: ['AS-1', 'AS-7'], includeBacks: false, format: 'a3' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-disposition']).toContain('_a3_sheets.pdf');
+    expect(res.rawPayload.toString('latin1')).toContain('MediaBox');
+  });
 });

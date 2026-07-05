@@ -45,16 +45,16 @@ export async function exportDeck({ deckName, cardIds, backAssignments }) {
   return { counts, failures };
 }
 
-// Triggers a US-Letter PDF download (3x3 sheets); returns { pages, failures }.
-export async function exportPdf({ deckName, cardIds, backAssignments, includeBacks }) {
+// Triggers a PDF sheet download (letter/a4/a3); returns { pages, failures }.
+export async function exportPdf({ deckName, cardIds, backAssignments, includeBacks, format = 'letter' }) {
   const res = await fetch('/api/export-pdf', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ deckName, cardIds, backAssignments, includeBacks }),
+    body: JSON.stringify({ deckName, cardIds, backAssignments, includeBacks, format }),
   });
   if (!res.ok) throw new Error(`export-pdf → ${res.status}`);
   const pages = Number(res.headers.get('X-Export-Pages') || '0');
   const failures = JSON.parse(res.headers.get('X-Export-Failures') || '[]');
-  downloadBlob(await res.blob(), `${safeName(deckName)}_sheets.pdf`);
+  downloadBlob(await res.blob(), `${safeName(deckName)}_${format}_sheets.pdf`);
   return { pages, failures };
 }

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { sheetLayout, backColumnIndex, buildSheetPdf, LETTER, CARD } from '../src/sheetPdf.js';
+import { sheetLayout, backColumnIndex, buildSheetPdf, gridFor, PAGE_SIZES, LETTER, CARD } from '../src/sheetPdf.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const IMAGES_ROOT = path.join(__dirname, '..', 'remastered-all');
@@ -23,11 +23,31 @@ describe('sheetLayout', () => {
   });
 });
 
+describe('gridFor', () => {
+  it('computes how many poker cards fit per page size', () => {
+    expect(gridFor(PAGE_SIZES.letter.w, PAGE_SIZES.letter.h)).toEqual({ cols: 3, rows: 3 });
+    expect(gridFor(PAGE_SIZES.a4.w, PAGE_SIZES.a4.h)).toEqual({ cols: 3, rows: 3 });
+    expect(gridFor(PAGE_SIZES.a3.w, PAGE_SIZES.a3.h)).toEqual({ cols: 4, rows: 4 });
+  });
+});
+
+describe('sheetLayout per format', () => {
+  it('A3 lays out a centered 4x4 grid (16 per page)', () => {
+    const l = sheetLayout({ pageW: PAGE_SIZES.a3.w, pageH: PAGE_SIZES.a3.h });
+    expect(l.perPage).toBe(16);
+    expect(l.cols).toBe(4);
+    expect(l.marginX).toBeCloseTo((PAGE_SIZES.a3.w - 4 * CARD.w) / 2, 4);
+  });
+});
+
 describe('backColumnIndex', () => {
   it('mirrors columns for duplex long-edge flip', () => {
-    expect(backColumnIndex(0)).toBe(2);
-    expect(backColumnIndex(1)).toBe(1);
-    expect(backColumnIndex(2)).toBe(0);
+    expect(backColumnIndex(0, 3)).toBe(2);
+    expect(backColumnIndex(1, 3)).toBe(1);
+    expect(backColumnIndex(2, 3)).toBe(0);
+    // a3 grid has 4 columns
+    expect(backColumnIndex(0, 4)).toBe(3);
+    expect(backColumnIndex(3, 4)).toBe(0);
   });
 });
 
@@ -54,5 +74,14 @@ describe('buildSheetPdf', () => {
     });
     expect(buffer.subarray(0, 4).toString()).toBe('%PDF');
     expect(pageCount).toBe(2); // 1 fronts + 1 backs page
+  });
+
+  it('produces an A3 PDF with the A3 media box', async () => {
+    const { buffer, failures } = await buildSheetPdf({ cards, imagesRoot: IMAGES_ROOT, includeBacks: false, format: 'a3' });
+    expect(failures).toEqual([]);
+    const s = buffer.toString('latin1');
+    const boxes = [...new Set([...s.matchAll(/MediaBox\s*\[([^\]]+)\]/g)].map((m) => m[1].trim()))];
+    // A3 = 841.89 x 1190.55 pt
+    expect(boxes.some((b) => b.startsWith('0 0 841'))).toBe(true);
   });
 });

@@ -79,13 +79,26 @@ Prêt pour un glisser-déposer dans l'outil MPC en ligne ou dans
 toutes les autres cartes → `card-backs/CardBack300dpi.png`. On peut surcharger un dos par
 groupe dans la fenêtre d'export.
 
-### 2. Planches PDF US Letter — pour impression maison / autre imprimeur
+### 2. Planches PDF — pour impression maison / autre imprimeur
 
-Génère un PDF **US Letter (8,5 × 11 po)** avec **3 × 3 cartes par page à taille réelle**
-(2,5 × 3,5 po) et des traits de coupe aux coins. Option « inclure les planches de dos » :
-ajoute après chaque page de faces une page de dos en **miroir** (colonnes inversées) pour
-une impression **recto-verso** (retournement bord long). Le mapping des dos par type est le
-même qu'en export MPC.
+Génère un PDF avec les cartes **à taille réelle** (2,5 × 3,5 po) et des traits de coupe aux
+coins. Trois formats de page, la grille s'adapte automatiquement :
+
+| Format | Grille | Cartes / page |
+|---|---|---|
+| US Letter | 3 × 3 | 9 |
+| A4 | 3 × 3 | 9 |
+| A3 | 4 × 4 | **16** |
+
+Option « inclure les planches de dos » : ajoute après chaque page de faces une page de dos en
+**miroir** (colonnes inversées) pour une impression **recto-verso** (retournement bord long).
+Le mapping des dos par type est le même qu'en export MPC.
+
+### 3. Deck list (texte)
+
+Télécharge un fichier `.txt` listant les cartes **triées par type** (Characters, Resources,
+Hazards, Sites, Regions) avec les quantités, au format `Nx nom` — directement ré-importable
+via le bouton « Importer ».
 
 ### ⚠️ À vérifier avant une vraie commande
 

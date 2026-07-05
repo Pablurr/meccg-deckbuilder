@@ -5,13 +5,33 @@ import { backGroupForType } from './exporter.js';
 
 // PDF points: 72pt per inch.
 const PT = 72;
-export const LETTER = { w: 8.5 * PT, h: 11 * PT }; // 612 x 792
 export const CARD = { w: 2.5 * PT, h: 3.5 * PT }; // 180 x 252 (poker cut size)
-export const COLS = 3;
-export const ROWS = 3; // 3x3 poker cards is the largest grid that fits US Letter at true size
 
-// Pure layout: card cell rectangles centered on the page.
-export function sheetLayout({ pageW = LETTER.w, pageH = LETTER.h, cardW = CARD.w, cardH = CARD.h, cols = COLS, rows = ROWS } = {}) {
+// Supported page sizes (points). `name` is the pdfkit named size.
+export const PAGE_SIZES = {
+  letter: { name: 'LETTER', w: 8.5 * PT, h: 11 * PT }, // 612 x 792
+  a4: { name: 'A4', w: 595.28, h: 841.89 },
+  a3: { name: 'A3', w: 841.89, h: 1190.55 },
+};
+export const LETTER = PAGE_SIZES.letter; // back-compat
+
+// How many whole poker cards fit on a page (floor division on each axis).
+//   letter -> 3x3=9, a4 -> 3x3=9, a3 -> 4x4=16
+export function gridFor(pageW, pageH, cardW = CARD.w, cardH = CARD.h) {
+  return {
+    cols: Math.max(1, Math.floor(pageW / cardW)),
+    rows: Math.max(1, Math.floor(pageH / cardH)),
+  };
+}
+
+// Pure layout: card cell rectangles centered on the page. Grid is computed from
+// the page/card sizes unless cols/rows are given.
+export function sheetLayout({ pageW = LETTER.w, pageH = LETTER.h, cardW = CARD.w, cardH = CARD.h, cols, rows } = {}) {
+  if (cols == null || rows == null) {
+    const g = gridFor(pageW, pageH, cardW, cardH);
+    cols = g.cols;
+    rows = g.rows;
+  }
   const marginX = (pageW - cols * cardW) / 2;
   const marginY = (pageH - rows * cardH) / 2;
   const cells = [];
@@ -24,7 +44,7 @@ export function sheetLayout({ pageW = LETTER.w, pageH = LETTER.h, cardW = CARD.w
 }
 
 // For duplex printing flipped on the long (left-right) edge, back columns mirror.
-export function backColumnIndex(col, cols = COLS) {
+export function backColumnIndex(col, cols) {
   return cols - 1 - col;
 }
 
@@ -50,15 +70,17 @@ function cropMarks(doc, x, y, w, h, len = 9) {
   doc.restore();
 }
 
-// Build a US-Letter PDF with 3x3 poker cards per page at true size, with crop
-// marks. If includeBacks, a mirrored backs page follows each fronts page so the
-// deck can be duplex-printed (flip on long edge).
+// Build a PDF with poker cards per page at true size, with crop marks. The grid
+// adapts to the page size (letter/a4: 3x3, a3: 4x4). If includeBacks, a mirrored
+// backs page follows each fronts page so the deck can be duplex-printed.
 // - cards: flattened card objects
 // - imagesRoot: root for relativePath
 // - backPaths: { playdeck, locationdeck } absolute paths (defaults applied by caller)
-export async function buildSheetPdf({ cards = [], imagesRoot, backPaths = {}, includeBacks = true }) {
-  const layout = sheetLayout();
-  const doc = new PDFDocument({ size: 'letter', margin: 0 });
+// - format: 'letter' | 'a4' | 'a3'
+export async function buildSheetPdf({ cards = [], imagesRoot, backPaths = {}, includeBacks = true, format = 'letter' }) {
+  const page = PAGE_SIZES[format] || PAGE_SIZES.letter;
+  const layout = sheetLayout({ pageW: page.w, pageH: page.h });
+  const doc = new PDFDocument({ size: page.name, margin: 0 });
   const chunks = [];
   doc.on('data', (c) => chunks.push(c));
   const done = new Promise((resolve) => doc.on('end', resolve));
@@ -90,7 +112,7 @@ export async function buildSheetPdf({ cards = [], imagesRoot, backPaths = {}, in
   const pages = chunk(printable, layout.perPage);
 
   pages.forEach((pageCards, pageIdx) => {
-    if (pageIdx > 0) doc.addPage({ size: 'letter', margin: 0 });
+    if (pageIdx > 0) doc.addPage({ size: page.name, margin: 0 });
     // Fronts
     pageCards.forEach((card, i) => {
       const cell = layout.cells[i];
@@ -99,7 +121,7 @@ export async function buildSheetPdf({ cards = [], imagesRoot, backPaths = {}, in
     });
 
     if (includeBacks) {
-      doc.addPage({ size: 'letter', margin: 0 });
+      doc.addPage({ size: page.name, margin: 0 });
       pageCards.forEach((card, i) => {
         const row = Math.floor(i / layout.cols);
         const col = i % layout.cols;
