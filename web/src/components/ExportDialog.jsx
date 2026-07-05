@@ -2,17 +2,13 @@ import React, { useState } from 'react';
 import * as api from '../api.js';
 import { buildDeckListText } from '../lib/deckList.js';
 import { LIST_LANGUAGES } from '../lib/lang.js';
+import { useT } from '../i18n.jsx';
 
-const GROUPS = [
-  { key: 'playdeck', label: 'Play deck (Character / Resource / Hazard)' },
-  { key: 'locationdeck', label: 'Location deck (Site / Region)' },
-];
-
-// cards per page at true poker size, per format.
+// cards per page at true poker size, per format. Labels are proper nouns (kept).
 const PAGE_FORMATS = [
   { key: 'letter', label: 'US Letter', perPage: '3×3 = 9' },
   { key: 'a4', label: 'A4', perPage: '3×3 = 9' },
-  { key: 'a3', label: 'A3 paysage', perPage: '6×3 = 18' },
+  { key: 'a3', label: 'A3', perPage: '6×3 = 18' },
 ];
 
 function downloadText(text, filename) {
@@ -28,6 +24,7 @@ function downloadText(text, filename) {
 }
 
 export default function ExportDialog({ deck, cardIds, cardsById, quantities, defaultBacks = {}, uiLang = 'fr', onClose, onBacksChange }) {
+  const t = useT();
   const [backs, setBacks] = useState(deck.backAssignments || {});
   const [format, setFormat] = useState('mpc'); // 'mpc' | 'pdf' | 'list'
   const [pageFormat, setPageFormat] = useState('letter');
@@ -36,6 +33,11 @@ export default function ExportDialog({ deck, cardIds, cardsById, quantities, def
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+
+  const GROUPS = [
+    { key: 'playdeck', label: t('export.group.playdeck') },
+    { key: 'locationdeck', label: t('export.group.locationdeck') },
+  ];
 
   const showBackPickers = format === 'mpc' || format === 'pdf';
 
@@ -54,16 +56,20 @@ export default function ExportDialog({ deck, cardIds, cardsById, quantities, def
     try {
       if (format === 'mpc') {
         const r = await api.exportDeck({ deckName: deck.name, cardIds, backAssignments: backs });
-        setResult(`ZIP MPC généré — play deck : ${r.counts.playdeck}, location : ${r.counts.locationdeck}.` +
-          (r.failures.length ? ` ${r.failures.length} échec(s) (voir manifest.txt).` : ''));
+        setResult(
+          t('export.result.zip', { playdeck: r.counts.playdeck, locationdeck: r.counts.locationdeck }) +
+          (r.failures.length ? t('export.result.failuresManifest', { n: r.failures.length }) : '')
+        );
       } else if (format === 'pdf') {
         const r = await api.exportPdf({ deckName: deck.name, cardIds, backAssignments: backs, includeBacks, format: pageFormat });
-        setResult(`PDF ${pageFormat.toUpperCase()} généré — ${r.pages} page(s), cartes à taille réelle.` +
-          (r.failures.length ? ` ${r.failures.length} échec(s).` : ''));
+        setResult(
+          t('export.result.pdf', { fmt: pageFormat.toUpperCase(), pages: r.pages }) +
+          (r.failures.length ? t('export.result.failures', { n: r.failures.length }) : '')
+        );
       } else {
         const text = buildDeckListText(cardsById, quantities, deck.name, listLang);
         downloadText(text, `${(deck.name || 'deck').replace(/[^a-zA-Z0-9_-]+/g, '_')}.txt`);
-        setResult('Liste texte téléchargée.');
+        setResult(t('export.result.list'));
       }
     } catch (e) {
       setError(e.message);
@@ -72,25 +78,25 @@ export default function ExportDialog({ deck, cardIds, cardsById, quantities, def
     }
   }
 
-  const runLabel = busy ? 'Génération…' : format === 'mpc' ? 'Générer le ZIP' : format === 'pdf' ? 'Générer le PDF' : 'Télécharger la liste';
+  const runLabel = busy ? t('export.run.generating') : format === 'mpc' ? t('export.run.zip') : format === 'pdf' ? t('export.run.pdf') : t('export.run.list');
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h2>Export</h2>
+        <h2>{t('export.title')}</h2>
 
         <div className="options" style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
           <label className={`chip-toggle ${format === 'mpc' ? 'on' : ''}`} style={{ cursor: 'pointer' }}>
             <input type="radio" name="fmt" checked={format === 'mpc'} onChange={() => setFormat('mpc')} />
-            {' '}Images individuelles MPC (ZIP) — 822×1122 px, bleed inclus
+            {' '}{t('export.fmt.mpc')}
           </label>
           <label className={`chip-toggle ${format === 'pdf' ? 'on' : ''}`} style={{ cursor: 'pointer' }}>
             <input type="radio" name="fmt" checked={format === 'pdf'} onChange={() => setFormat('pdf')} />
-            {' '}Planches PDF — cartes à taille réelle, traits de coupe
+            {' '}{t('export.fmt.pdf')}
           </label>
           <label className={`chip-toggle ${format === 'list' ? 'on' : ''}`} style={{ cursor: 'pointer' }}>
             <input type="radio" name="fmt" checked={format === 'list'} onChange={() => setFormat('list')} />
-            {' '}Deck list (texte) — cartes triées par type
+            {' '}{t('export.fmt.list')}
           </label>
         </div>
 
@@ -99,7 +105,7 @@ export default function ExportDialog({ deck, cardIds, cardsById, quantities, def
             {PAGE_FORMATS.map((p) => (
               <label key={p.key} className={`chip-toggle ${pageFormat === p.key ? 'on' : ''}`} style={{ cursor: 'pointer' }}>
                 <input type="radio" name="page" checked={pageFormat === p.key} onChange={() => setPageFormat(p.key)} />
-                {' '}{p.label} <span className="muted">({p.perPage} cartes/page)</span>
+                {' '}{p.label} <span className="muted">{t('export.perPage', { info: p.perPage })}</span>
               </label>
             ))}
           </div>
@@ -107,7 +113,7 @@ export default function ExportDialog({ deck, cardIds, cardsById, quantities, def
 
         {format === 'list' && (
           <div className="row">
-            <span>Langue de la liste :</span>
+            <span>{t('export.listLanguage')}</span>
             <select value={listLang} onChange={(e) => setListLang(e.target.value)}>
               {LIST_LANGUAGES.map((l) => (
                 <option key={l.code} value={l.code}>{l.label}</option>
@@ -116,7 +122,7 @@ export default function ExportDialog({ deck, cardIds, cardsById, quantities, def
           </div>
         )}
 
-        <p className="muted">{cardIds.length} carte(s) sélectionnée(s).</p>
+        <p className="muted">{t('export.selected', { n: cardIds.length })}</p>
 
         {showBackPickers && GROUPS.map((g) => (
           <div className="row" key={g.key}>
@@ -124,14 +130,14 @@ export default function ExportDialog({ deck, cardIds, cardsById, quantities, def
               <div>{g.label}</div>
               <div className="muted" style={{ fontSize: 12 }}>
                 {backs[g.key]
-                  ? `Dos : ${backs[g.key]}`
+                  ? t('export.back.current', { path: backs[g.key] })
                   : defaultBacks[g.key]
-                    ? 'Dos par défaut du projet (card-backs/)'
-                    : 'Aucun dos sélectionné'}
+                    ? t('export.back.default')
+                    : t('export.back.none')}
               </div>
             </div>
             <label className="btn secondary" style={{ cursor: 'pointer' }}>
-              Choisir un dos
+              {t('export.chooseBack')}
               <input
                 type="file"
                 accept="image/*"
@@ -145,15 +151,15 @@ export default function ExportDialog({ deck, cardIds, cardsById, quantities, def
         {format === 'pdf' && (
           <label className="row" style={{ cursor: 'pointer' }}>
             <input type="checkbox" checked={includeBacks} onChange={(e) => setIncludeBacks(e.target.checked)} />
-            Inclure les planches de dos (miroir, pour impression recto-verso)
+            {t('export.includeBacks')}
           </label>
         )}
 
-        {error && <p style={{ color: 'var(--danger)' }}>Erreur : {error}</p>}
+        {error && <p style={{ color: 'var(--danger)' }}>{t('common.error', { msg: error })}</p>}
         {result && <p className="muted">✅ {result}</p>}
 
         <div className="row" style={{ justifyContent: 'flex-end' }}>
-          <button className="btn secondary" onClick={onClose}>Fermer</button>
+          <button className="btn secondary" onClick={onClose}>{t('common.close')}</button>
           <button className="btn" onClick={runExport} disabled={busy || cardIds.length === 0}>
             {runLabel}
           </button>

@@ -2,10 +2,12 @@ import React, { useMemo } from 'react';
 import { filterCards } from '../lib/filter.js';
 import { maxCopies } from '../lib/deck.js';
 import { cardName } from '../lib/lang.js';
+import { useT } from '../i18n.jsx';
 
 const CAP = 600; // safety cap on rendered cells
 
 export default function CardBrowser({ cards, filters, quantities, lang, onChangeQty, onToggle, onSelectAll }) {
+  const t = useT();
   const filtered = useMemo(() => filterCards(cards, filters), [cards, filters]);
   const shown = filtered.slice(0, CAP);
 
@@ -13,11 +15,11 @@ export default function CardBrowser({ cards, filters, quantities, lang, onChange
     <div className="browser">
       <div className="browser-meta">
         <span>
-          {filtered.length} carte(s){filtered.length > CAP ? ` — affichage des ${CAP} premières, affinez les filtres` : ''}
+          {t('browser.count', { n: filtered.length })}{filtered.length > CAP ? t('browser.capped', { cap: CAP }) : ''}
         </span>
         {filtered.length > 0 && (
           <button className="btn secondary small" onClick={() => onSelectAll(filtered.map((c) => c.id))}>
-            Tout sélectionner ({filtered.length})
+            {t('browser.selectAll', { n: filtered.length })}
           </button>
         )}
       </div>
@@ -46,14 +48,14 @@ export default function CardBrowser({ cards, filters, quantities, lang, onChange
                   className="qty-btn"
                   onClick={() => onChangeQty(c.id, -1)}
                   disabled={qty === 0}
-                  aria-label="Retirer une copie"
+                  aria-label={t('browser.removeCopy')}
                 >−</button>
                 <span className="qty-count">{qty}</span>
                 <button
                   className="qty-btn"
                   onClick={() => onChangeQty(c.id, +1)}
                   disabled={qty >= max}
-                  aria-label="Ajouter une copie"
+                  aria-label={t('browser.addCopy')}
                 >+</button>
               </div>
             </div>

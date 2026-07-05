@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { parseDeckList, buildNameIndex, resolveDeckList } from '../lib/importDeck.js';
 import { maxCopies } from '../lib/deck.js';
 import { cardName } from '../lib/lang.js';
+import { useT } from '../i18n.jsx';
 
 const PLACEHOLDER = `1x Bûrat
 2x Beautiful Gold Ring
@@ -13,6 +14,7 @@ function cardLabel(c, lang) {
 }
 
 export default function ImportDialog({ cards, lang = 'fr', onClose, onImport }) {
+  const t = useT();
   const [text, setText] = useState('');
   const [resolved, setResolved] = useState(null); // array of resolved lines
   const [choice, setChoice] = useState({}); // line index -> chosen card id (for ambiguous)
@@ -50,11 +52,9 @@ export default function ImportDialog({ cards, lang = 'fr', onClose, onImport }) 
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h2>Importer une liste</h2>
+        <h2>{t('import.title')}</h2>
         <p className="muted" style={{ marginTop: 0 }}>
-          Colle une liste au format <code>Nx nom de carte</code>. Le nom doit être complet, mais
-          la casse, les accents, les tirets/espaces et la ponctuation sont ignorés
-          (<code>star glass</code> = <code>Star-glass</code>). L'import remplace la sélection courante.
+          {t('import.help', { fmt: 'Nx name', ex: 'star glass = Star-glass' })}
         </p>
 
         <textarea
@@ -66,27 +66,27 @@ export default function ImportDialog({ cards, lang = 'fr', onClose, onImport }) 
         />
 
         <div className="row" style={{ justifyContent: 'flex-end' }}>
-          <button className="btn secondary" onClick={analyze} disabled={!text.trim()}>Analyser</button>
+          <button className="btn secondary" onClick={analyze} disabled={!text.trim()}>{t('import.analyze')}</button>
         </div>
 
         {resolved && (
           <>
             <p className="muted">
-              {okCount} ligne(s) reconnue(s){notFoundCount ? `, ${notFoundCount} introuvable(s)` : ''}.
+              {t('import.summary', { ok: okCount })}{notFoundCount ? t('import.summaryNotFound', { n: notFoundCount }) : ''}.
             </p>
             <ul className="import-list">
               {resolved.map((line, i) => {
                 if (line.status === 'notfound') {
                   return (
                     <li key={i} className="imp-notfound">
-                      ✗ {line.qty}× <b>{line.name}</b> — introuvable
+                      {t('import.notFound', { qty: line.qty, name: line.name })}
                     </li>
                   );
                 }
                 if (line.status === 'ambiguous') {
                   return (
                     <li key={i} className="imp-ambiguous">
-                      ⚠ {line.qty}× <b>{line.name}</b> — plusieurs cartes, choisis :
+                      {t('import.ambiguous', { qty: line.qty, name: line.name })}
                       <select
                         value={choice[i] || ''}
                         onChange={(e) => setChoice((prev) => ({ ...prev, [i]: e.target.value }))}
@@ -103,7 +103,7 @@ export default function ImportDialog({ cards, lang = 'fr', onClose, onImport }) 
                 return (
                   <li key={i} className="imp-ok">
                     ✓ {capped}× <b>{cardName(c, lang)}</b> <span className="muted">({c.id})</span>
-                    {capped < line.qty && <span className="muted"> — limité à {capped}</span>}
+                    {capped < line.qty && <span className="muted">{t('import.capped', { n: capped })}</span>}
                   </li>
                 );
               })}
@@ -112,13 +112,13 @@ export default function ImportDialog({ cards, lang = 'fr', onClose, onImport }) 
         )}
 
         <div className="row" style={{ justifyContent: 'flex-end' }}>
-          <button className="btn secondary" onClick={onClose}>Annuler</button>
+          <button className="btn secondary" onClick={onClose}>{t('common.cancel')}</button>
           <button
             className="btn"
             onClick={() => onImport(importable)}
             disabled={!resolved || Object.keys(importable).length === 0}
           >
-            Importer ({Object.values(importable).reduce((a, b) => a + b, 0)} cartes)
+            {t('import.submit', { n: Object.values(importable).reduce((a, b) => a + b, 0) })}
           </button>
         </div>
       </div>

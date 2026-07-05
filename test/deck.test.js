@@ -58,12 +58,12 @@ describe('expandQuantities / countOccurrences', () => {
 
 describe('deckWarnings', () => {
   it('warns on empty deck', () => {
-    expect(deckWarnings(cardsById, [])).toContain('Deck vide.');
+    expect(deckWarnings(cardsById, [])).toContainEqual({ code: 'emptyDeck' });
   });
 
   it('warns when a used group has no back assigned', () => {
     const w = deckWarnings(cardsById, ['AS-1', 'BA-1'], { playdeck: 'backs/a.png' });
-    expect(w.some((m) => m.includes('locationdeck'))).toBe(true);
-    expect(w.some((m) => m.includes('playdeck'))).toBe(false);
+    expect(w).toContainEqual({ code: 'missingBack', group: 'locationdeck' });
+    expect(w.some((m) => m.code === 'missingBack' && m.group === 'playdeck')).toBe(false);
   });
 });

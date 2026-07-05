@@ -1,0 +1,201 @@
+// UI translations. Add a new language by adding a block with the same keys.
+// Card names themselves are handled separately (see lang.js / cardName).
+// {tokens} in a string are replaced by params passed to t(key, params).
+
+export const translations = {
+  fr: {
+    // App shell
+    'app.loading': 'Chargement des cartes…',
+    'app.loadError': 'Erreur : {error}. Le serveur (npm start / npm run dev) tourne-t-il ?',
+    'app.newDeck': 'Nouveau deck',
+
+    // Common
+    'common.close': 'Fermer',
+    'common.cancel': 'Annuler',
+    'common.error': 'Erreur : {msg}',
+
+    // Filter bar
+    'filter.search': 'Rechercher un nom…',
+    'filter.set': 'Set',
+    'filter.type': 'Type',
+    'filter.alignment': 'Alignement',
+    'filter.rarity': 'Rareté',
+    'filter.race': 'Race',
+    'filter.subtype': 'Sous-type',
+    'filter.skills': 'Compétences',
+    'filter.keywords': 'Mots-clés',
+    'filter.unique': 'Unique',
+    'filter.reset': 'réinitialiser',
+
+    // Card browser
+    'browser.count': '{n} carte(s)',
+    'browser.capped': ' — affichage des {cap} premières, affinez les filtres',
+    'browser.selectAll': 'Tout sélectionner ({n})',
+    'browser.addCopy': 'Ajouter une copie',
+    'browser.removeCopy': 'Retirer une copie',
+
+    // Deck drawer
+    'drawer.total': 'Total',
+    'drawer.playdeck': 'Play deck',
+    'drawer.location': 'Location',
+    'drawer.new': 'Nouveau',
+    'drawer.import': 'Importer',
+    'drawer.myDecks': 'Mes decks',
+    'drawer.export': 'Exporter',
+    'group.playdeck': 'play deck',
+    'group.locationdeck': 'location',
+    'warn.emptyDeck': 'Deck vide.',
+    'warn.missingBack': 'Dos manquant pour le groupe « {group} ».',
+    'warn.missingImage': '{n} carte(s) sans image source.',
+
+    // Deck manager
+    'decks.title': 'Mes decks',
+    'decks.namePlaceholder': 'Nom du deck',
+    'decks.save': 'Enregistrer',
+    'decks.create': 'Créer',
+    'decks.current': 'Deck courant : {name}',
+    'decks.notSaved': 'Deck non encore sauvegardé',
+    'decks.none': 'Aucun deck sauvegardé.',
+    'decks.cardsCount': '{n} cartes',
+    'decks.load': 'Charger',
+    'decks.duplicate': 'Dupliquer',
+    'decks.delete': 'Suppr.',
+    'decks.copySuffix': '(copie)',
+
+    // Import dialog
+    'import.title': 'Importer une liste',
+    'import.help': 'Colle une liste au format {fmt}. Le nom doit être complet, mais la casse, les accents, les tirets/espaces et la ponctuation sont ignorés ({ex}). L’import remplace la sélection courante.',
+    'import.analyze': 'Analyser',
+    'import.summary': '{ok} ligne(s) reconnue(s)',
+    'import.summaryNotFound': ', {n} introuvable(s)',
+    'import.notFound': '✗ {qty}× {name} — introuvable',
+    'import.ambiguous': '⚠ {qty}× {name} — plusieurs cartes, choisis :',
+    'import.capped': ' — limité à {n}',
+    'import.submit': 'Importer ({n} cartes)',
+
+    // Export dialog
+    'export.title': 'Export',
+    'export.fmt.mpc': 'Images individuelles MPC (ZIP) — 822×1122 px, bleed inclus',
+    'export.fmt.pdf': 'Planches PDF — cartes à taille réelle, traits de coupe',
+    'export.fmt.list': 'Deck list (texte) — cartes triées par type',
+    'export.perPage': '({info} cartes/page)',
+    'export.listLanguage': 'Langue de la liste :',
+    'export.selected': '{n} carte(s) sélectionnée(s).',
+    'export.group.playdeck': 'Play deck (Character / Resource / Hazard)',
+    'export.group.locationdeck': 'Location deck (Site / Region)',
+    'export.back.current': 'Dos : {path}',
+    'export.back.default': 'Dos par défaut du projet (card-backs/)',
+    'export.back.none': 'Aucun dos sélectionné',
+    'export.chooseBack': 'Choisir un dos',
+    'export.includeBacks': 'Inclure les planches de dos (miroir, pour impression recto-verso)',
+    'export.result.zip': 'ZIP MPC généré — play deck : {playdeck}, location : {locationdeck}.',
+    'export.result.pdf': 'PDF {fmt} généré — {pages} page(s), cartes à taille réelle.',
+    'export.result.failures': ' {n} échec(s).',
+    'export.result.failuresManifest': ' {n} échec(s) (voir manifest.txt).',
+    'export.result.list': 'Liste texte téléchargée.',
+    'export.run.generating': 'Génération…',
+    'export.run.zip': 'Générer le ZIP',
+    'export.run.pdf': 'Générer le PDF',
+    'export.run.list': 'Télécharger la liste',
+  },
+
+  en: {
+    'app.loading': 'Loading cards…',
+    'app.loadError': 'Error: {error}. Is the server (npm start / npm run dev) running?',
+    'app.newDeck': 'New deck',
+
+    'common.close': 'Close',
+    'common.cancel': 'Cancel',
+    'common.error': 'Error: {msg}',
+
+    'filter.search': 'Search a name…',
+    'filter.set': 'Set',
+    'filter.type': 'Type',
+    'filter.alignment': 'Alignment',
+    'filter.rarity': 'Rarity',
+    'filter.race': 'Race',
+    'filter.subtype': 'Subtype',
+    'filter.skills': 'Skills',
+    'filter.keywords': 'Keywords',
+    'filter.unique': 'Unique',
+    'filter.reset': 'reset',
+
+    'browser.count': '{n} card(s)',
+    'browser.capped': ' — showing the first {cap}, refine the filters',
+    'browser.selectAll': 'Select all ({n})',
+    'browser.addCopy': 'Add a copy',
+    'browser.removeCopy': 'Remove a copy',
+
+    'drawer.total': 'Total',
+    'drawer.playdeck': 'Play deck',
+    'drawer.location': 'Location',
+    'drawer.new': 'New',
+    'drawer.import': 'Import',
+    'drawer.myDecks': 'My decks',
+    'drawer.export': 'Export',
+    'group.playdeck': 'play deck',
+    'group.locationdeck': 'location',
+    'warn.emptyDeck': 'Empty deck.',
+    'warn.missingBack': 'Missing back for the "{group}" group.',
+    'warn.missingImage': '{n} card(s) without a source image.',
+
+    'decks.title': 'My decks',
+    'decks.namePlaceholder': 'Deck name',
+    'decks.save': 'Save',
+    'decks.create': 'Create',
+    'decks.current': 'Current deck: {name}',
+    'decks.notSaved': 'Deck not saved yet',
+    'decks.none': 'No saved deck.',
+    'decks.cardsCount': '{n} cards',
+    'decks.load': 'Load',
+    'decks.duplicate': 'Duplicate',
+    'decks.delete': 'Delete',
+    'decks.copySuffix': '(copy)',
+
+    'import.title': 'Import a list',
+    'import.help': 'Paste a list in the {fmt} format. The name must be complete, but case, accents, hyphens/spaces and punctuation are ignored ({ex}). Importing replaces the current selection.',
+    'import.analyze': 'Analyze',
+    'import.summary': '{ok} line(s) recognized',
+    'import.summaryNotFound': ', {n} not found',
+    'import.notFound': '✗ {qty}× {name} — not found',
+    'import.ambiguous': '⚠ {qty}× {name} — several cards, choose:',
+    'import.capped': ' — capped at {n}',
+    'import.submit': 'Import ({n} cards)',
+
+    'export.title': 'Export',
+    'export.fmt.mpc': 'Individual MPC images (ZIP) — 822×1122 px, bleed included',
+    'export.fmt.pdf': 'PDF sheets — cards at true size, crop marks',
+    'export.fmt.list': 'Deck list (text) — cards sorted by type',
+    'export.perPage': '({info} cards/page)',
+    'export.listLanguage': 'List language:',
+    'export.selected': '{n} card(s) selected.',
+    'export.group.playdeck': 'Play deck (Character / Resource / Hazard)',
+    'export.group.locationdeck': 'Location deck (Site / Region)',
+    'export.back.current': 'Back: {path}',
+    'export.back.default': 'Project default back (card-backs/)',
+    'export.back.none': 'No back selected',
+    'export.chooseBack': 'Choose a back',
+    'export.includeBacks': 'Include back sheets (mirrored, for double-sided printing)',
+    'export.result.zip': 'MPC ZIP generated — play deck: {playdeck}, location: {locationdeck}.',
+    'export.result.pdf': '{fmt} PDF generated — {pages} page(s), cards at true size.',
+    'export.result.failures': ' {n} failure(s).',
+    'export.result.failuresManifest': ' {n} failure(s) (see manifest.txt).',
+    'export.result.list': 'Text list downloaded.',
+    'export.run.generating': 'Generating…',
+    'export.run.zip': 'Generate ZIP',
+    'export.run.pdf': 'Generate PDF',
+    'export.run.list': 'Download list',
+  },
+};
+
+function interpolate(str, params) {
+  if (!params) return str;
+  return str.replace(/\{(\w+)\}/g, (_, k) => (params[k] !== undefined ? params[k] : `{${k}}`));
+}
+
+// makeT('en') -> t('key', { param: value })
+export function makeT(lang) {
+  const dict = translations[lang] || translations.fr;
+  const fallback = translations.fr;
+  return (key, params) => interpolate(dict[key] ?? fallback[key] ?? key, params);
+}

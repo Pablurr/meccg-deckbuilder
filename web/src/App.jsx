@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import * as api from './api.js';
 import { maxCopies, expandQuantities, countOccurrences } from './lib/deck.js';
+import { I18nProvider } from './i18n.jsx';
+import { makeT } from './lib/i18n.js';
 import FilterBar from './components/FilterBar.jsx';
 import CardBrowser from './components/CardBrowser.jsx';
 import DeckDrawer from './components/DeckDrawer.jsx';
@@ -28,6 +30,7 @@ export default function App() {
   }, []);
 
   const cardsById = useMemo(() => new Map(cards.map((c) => [c.id, c])), [cards]);
+  const t = useMemo(() => makeT(uiLang), [uiLang]);
 
   // delta is +1 / -1; clamps to [0, maxCopies(card)].
   function changeQty(id, delta) {
@@ -78,17 +81,18 @@ export default function App() {
   }
 
   function newDeck() {
-    setDeck({ id: null, name: 'Nouveau deck', backAssignments: {} });
+    setDeck({ id: null, name: t('app.newDeck'), backAssignments: {} });
     setQuantities({});
     setShowManager(false);
   }
 
-  if (error) return <div style={{ padding: 24 }}>Erreur : {error}. Le serveur (npm start / npm run dev) tourne-t-il ?</div>;
-  if (!facets) return <div style={{ padding: 24 }}>Chargement des cartes…</div>;
+  if (error) return <div style={{ padding: 24 }}>{t('app.loadError', { error })}</div>;
+  if (!facets) return <div style={{ padding: 24 }}>{t('app.loading')}</div>;
 
   const cardIds = expandQuantities(quantities);
 
   return (
+    <I18nProvider lang={uiLang}>
     <div className="app">
       <FilterBar facets={facets} filters={filters} onChange={setFilters} lang={uiLang} onLangChange={setUiLang} />
       <CardBrowser cards={cards} filters={filters} quantities={quantities} lang={uiLang} onChangeQty={changeQty} onToggle={toggleCard} onSelectAll={selectAll} />
@@ -133,5 +137,6 @@ export default function App() {
         />
       )}
     </div>
+    </I18nProvider>
   );
 }

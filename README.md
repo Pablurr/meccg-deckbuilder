@@ -105,8 +105,13 @@ Deutsch, Nederlands — les langues complètes du JSON).
 
 ## Langue de l'interface
 
-Le sélecteur **FR / EN** en haut à droite change la langue d'affichage des noms de cartes
-(grille, import, etc.).
+Le sélecteur **FR / EN** en haut à droite change la langue de **toute l'interface** (boutons,
+filtres, dialogues, avertissements) **et** des noms de cartes.
+
+Les textes sont centralisés dans [`web/src/lib/i18n.js`](web/src/lib/i18n.js) (un dictionnaire
+par langue, clés partagées). Pour ajouter une langue, ajouter un bloc avec les mêmes clés et
+l'inscrire dans `UI_LANGUAGES` ([`web/src/lib/lang.js`](web/src/lib/lang.js)). Un test vérifie
+que les dictionnaires `fr`/`en` ont exactement les mêmes clés.
 
 ## Sélection en masse
 

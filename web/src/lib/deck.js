@@ -61,16 +61,17 @@ export function deckCounts(cardsById, cardIds) {
   return counts;
 }
 
-// Non-blocking warnings shown in the drawer.
+// Non-blocking warnings shown in the drawer, as translation-ready descriptors:
+//   { code: 'emptyDeck' } | { code: 'missingBack', group } | { code: 'missingImage', count }
 // defaultBacks: { playdeck: bool, locationdeck: bool } — groups covered by a shipped default.
 export function deckWarnings(cardsById, cardIds, backAssignments = {}, defaultBacks = {}) {
   const warnings = [];
-  if (cardIds.length === 0) warnings.push('Deck vide.');
+  if (cardIds.length === 0) warnings.push({ code: 'emptyDeck' });
   const groupsUsed = new Set(cardIds.map((id) => cardsById.get(id)).filter(Boolean).map((c) => backGroupForType(c.type)));
   for (const group of groupsUsed) {
-    if (!backAssignments[group] && !defaultBacks[group]) warnings.push(`Dos manquant pour le groupe « ${group} ».`);
+    if (!backAssignments[group] && !defaultBacks[group]) warnings.push({ code: 'missingBack', group });
   }
   const missingImg = cardIds.map((id) => cardsById.get(id)).filter((c) => c && !c.relativePath);
-  if (missingImg.length) warnings.push(`${missingImg.length} carte(s) sans image source.`);
+  if (missingImg.length) warnings.push({ code: 'missingImage', count: missingImg.length });
   return warnings;
 }
