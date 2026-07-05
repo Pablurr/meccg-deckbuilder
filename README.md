@@ -54,6 +54,14 @@ npm run dev:web   # Vite (HMR) sur :5173  → ouvre http://localhost:5173
 
 ## Deux formats d'export
 
+### Langue des images (ZIP et PDF)
+
+Les exports ZIP et PDF proposent une **langue d'images** : **English, Español, Français** — les
+3 langues pour lesquelles des images existent (`imageBaseUrl` dans `cards.json`). Les images sont
+téléchargées à la demande depuis le CDN (`imageBaseUrl[langue] + image`) et mises en cache dans
+`data/imgcache/`. *(Les noms existent aussi en de/nl, mais sans images — d'où seulement 3 langues
+ici, contre 5 pour la deck list texte.)*
+
 ### 1. Images individuelles MPC (ZIP) — pour commander chez MPC
 
 Chaque carte est agrandie puis complétée d'un bleed (extension des bords) pour produire un

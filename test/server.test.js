@@ -1,11 +1,19 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { buildServer } from '../src/server.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const IMAGES_ROOT = path.join(__dirname, '..', 'remastered-all');
 
 describe('server', () => {
   let app;
 
   beforeAll(async () => {
-    app = await buildServer();
+    // Offline resolver: read local files instead of fetching remote images.
+    app = await buildServer({
+      imageResolverFor: () => async (card) => path.join(IMAGES_ROOT, card.relativePath),
+    });
     await app.ready();
   });
 
@@ -95,7 +103,7 @@ describe('server', () => {
       payload: { deckName: 'A3 Test', cardIds: ['AS-1', 'AS-7'], includeBacks: false, format: 'a3' },
     });
     expect(res.statusCode).toBe(200);
-    expect(res.headers['content-disposition']).toContain('_a3_sheets.pdf');
+    expect(res.headers['content-disposition']).toContain('_a3_en_sheets.pdf');
     expect(res.rawPayload.toString('latin1')).toContain('MediaBox');
   });
 });

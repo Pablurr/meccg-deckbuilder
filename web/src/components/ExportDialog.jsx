@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import * as api from '../api.js';
 import { buildDeckListText } from '../lib/deckList.js';
-import { LIST_LANGUAGES } from '../lib/lang.js';
+import { LIST_LANGUAGES, IMAGE_LANGUAGES } from '../lib/lang.js';
 import { useT } from '../i18n.jsx';
 
 // cards per page at true poker size, per format. Labels are proper nouns (kept).
@@ -29,6 +29,8 @@ export default function ExportDialog({ deck, cardIds, cardsById, quantities, def
   const [format, setFormat] = useState('mpc'); // 'mpc' | 'pdf' | 'list'
   const [pageFormat, setPageFormat] = useState('letter');
   const [listLang, setListLang] = useState(uiLang);
+  const imgDefault = IMAGE_LANGUAGES.some((l) => l.code === uiLang) ? uiLang : 'en';
+  const [imageLang, setImageLang] = useState(imgDefault);
   const [includeBacks, setIncludeBacks] = useState(true);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
@@ -55,13 +57,13 @@ export default function ExportDialog({ deck, cardIds, cardsById, quantities, def
     setResult(null);
     try {
       if (format === 'mpc') {
-        const r = await api.exportDeck({ deckName: deck.name, cardIds, backAssignments: backs });
+        const r = await api.exportDeck({ deckName: deck.name, cardIds, backAssignments: backs, lang: imageLang });
         setResult(
           t('export.result.zip', { playdeck: r.counts.playdeck, locationdeck: r.counts.locationdeck }) +
           (r.failures.length ? t('export.result.failuresManifest', { n: r.failures.length }) : '')
         );
       } else if (format === 'pdf') {
-        const r = await api.exportPdf({ deckName: deck.name, cardIds, backAssignments: backs, includeBacks, format: pageFormat });
+        const r = await api.exportPdf({ deckName: deck.name, cardIds, backAssignments: backs, includeBacks, format: pageFormat, lang: imageLang });
         setResult(
           t('export.result.pdf', { fmt: pageFormat.toUpperCase(), pages: r.pages }) +
           (r.failures.length ? t('export.result.failures', { n: r.failures.length }) : '')
@@ -116,6 +118,17 @@ export default function ExportDialog({ deck, cardIds, cardsById, quantities, def
             <span>{t('export.listLanguage')}</span>
             <select value={listLang} onChange={(e) => setListLang(e.target.value)}>
               {LIST_LANGUAGES.map((l) => (
+                <option key={l.code} value={l.code}>{l.label}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {showBackPickers && (
+          <div className="row">
+            <span>{t('export.imageLanguage')}</span>
+            <select value={imageLang} onChange={(e) => setImageLang(e.target.value)}>
+              {IMAGE_LANGUAGES.map((l) => (
                 <option key={l.code} value={l.code}>{l.label}</option>
               ))}
             </select>

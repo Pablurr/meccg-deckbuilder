@@ -1,5 +1,4 @@
 import PDFDocument from 'pdfkit';
-import path from 'node:path';
 import { toCutBuffer } from './imageProcessor.js';
 import { backGroupForType } from './exporter.js';
 
@@ -77,10 +76,10 @@ function cropMarks(doc, x, y, w, h, len = 9) {
 // adapts to the page size (letter/a4: 3x3, a3: 4x4). If includeBacks, a mirrored
 // backs page follows each fronts page so the deck can be duplex-printed.
 // - cards: flattened card objects
-// - imagesRoot: root for relativePath
+// - getImage: async (card) => Buffer | path — the front image source
 // - backPaths: { playdeck, locationdeck } absolute paths (defaults applied by caller)
 // - format: 'letter' | 'a4' | 'a3'
-export async function buildSheetPdf({ cards = [], imagesRoot, backPaths = {}, includeBacks = true, format = 'letter' }) {
+export async function buildSheetPdf({ cards = [], getImage, backPaths = {}, includeBacks = true, format = 'letter' }) {
   const page = PAGE_SIZES[format] || PAGE_SIZES.letter;
   const layout = sheetLayout({ pageW: page.w, pageH: page.h });
   const doc = new PDFDocument({ size: page.name, layout: page.layout, margin: 0 });
@@ -94,7 +93,7 @@ export async function buildSheetPdf({ cards = [], imagesRoot, backPaths = {}, in
   const failures = [];
   for (const card of cards) {
     try {
-      frontBuf.set(card.id, await toCutBuffer(path.join(imagesRoot, card.relativePath)));
+      frontBuf.set(card.id, await toCutBuffer(await getImage(card)));
     } catch (e) {
       failures.push({ id: card.id, error: e.message });
     }

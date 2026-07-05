@@ -1,5 +1,4 @@
 import archiver from 'archiver';
-import path from 'node:path';
 import { toMpcBuffer } from './imageProcessor.js';
 import { CARD_W_BLEED, CARD_H_BLEED, DPI } from './constants.js';
 
@@ -29,9 +28,9 @@ export function slug(s) {
 // Build a ZIP buffer containing MPC-ready fronts grouped by back group,
 // the back image per used group, and a manifest.
 // - cards: array of flattened card objects (already resolved from ids)
-// - imagesRoot: folder that relativePath is relative to
+// - getImage: async (card) => Buffer | path — the front image source
 // - backPaths: { playdeck?: absPath, locationdeck?: absPath }
-export async function buildDeckZip({ deckName = 'deck', cards = [], imagesRoot, backPaths = {} }) {
+export async function buildDeckZip({ deckName = 'deck', cards = [], getImage, backPaths = {} }) {
   const archive = archiver('zip', { zlib: { level: 6 } });
   const chunks = [];
   archive.on('data', (c) => chunks.push(c));
@@ -57,7 +56,7 @@ export async function buildDeckZip({ deckName = 'deck', cards = [], imagesRoot, 
   for (const card of cards) {
     const group = backGroupForType(card.type);
     try {
-      const buf = await toMpcBuffer(path.join(imagesRoot, card.relativePath));
+      const buf = await toMpcBuffer(await getImage(card));
       seenPerId[card.id] = (seenPerId[card.id] || 0) + 1;
       const suffix = totalPerId[card.id] > 1 ? `_c${seenPerId[card.id]}` : '';
       const name = `${group}/fronts/${card.id}_${slug(card.name && card.name.en)}${suffix}.png`;

@@ -16,6 +16,7 @@ export function flattenCards(raw) {
         rarity: card.rarity || '',
         artist: card.artist || '',
         relativePath: card.relativePath || '',
+        image: card.image || '', // bare filename, e.g. "Burat.jpg"
         attributes: card.attributes || {},
       });
     }
@@ -41,10 +42,19 @@ export function computeFacets(cards) {
   };
 }
 
+// Per-set image base URLs, keyed by language: { AS: { en, es, fr, ... } }.
+export function collectImageBaseUrls(raw) {
+  const map = {};
+  for (const [setCode, setObj] of Object.entries(raw || {})) {
+    map[setCode] = (setObj && setObj.imageBaseUrl) || {};
+  }
+  return map;
+}
+
 // Load and index cards.json from disk.
 export async function loadCards(jsonPath) {
   const raw = JSON.parse(await readFile(jsonPath, 'utf-8'));
   const cards = flattenCards(raw);
   const index = new Map(cards.map((c) => [c.id, c]));
-  return { cards, facets: computeFacets(cards), index };
+  return { cards, facets: computeFacets(cards), index, imageBaseUrls: collectImageBaseUrls(raw) };
 }

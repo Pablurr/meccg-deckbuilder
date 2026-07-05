@@ -59,7 +59,7 @@ describe('buildSheetPdf', () => {
   ];
 
   it('returns a PDF buffer with fronts only', async () => {
-    const { buffer, pageCount, failures } = await buildSheetPdf({ cards, imagesRoot: IMAGES_ROOT, includeBacks: false });
+    const { buffer, pageCount, failures } = await buildSheetPdf({ cards, getImage: (c) => path.join(IMAGES_ROOT, c.relativePath), includeBacks: false });
     expect(failures).toEqual([]);
     expect(buffer.subarray(0, 4).toString()).toBe('%PDF');
     expect(pageCount).toBe(1); // 2 cards → 1 fronts page
@@ -69,7 +69,7 @@ describe('buildSheetPdf', () => {
     const backPath = path.join(IMAGES_ROOT, '..', 'card-backs', 'CardBack300dpi.png');
     const { buffer, pageCount } = await buildSheetPdf({
       cards,
-      imagesRoot: IMAGES_ROOT,
+      getImage: (c) => path.join(IMAGES_ROOT, c.relativePath),
       backPaths: { playdeck: backPath },
       includeBacks: true,
     });
@@ -78,7 +78,7 @@ describe('buildSheetPdf', () => {
   });
 
   it('produces an A3 landscape PDF with the A3 media box', async () => {
-    const { buffer, failures } = await buildSheetPdf({ cards, imagesRoot: IMAGES_ROOT, includeBacks: false, format: 'a3' });
+    const { buffer, failures } = await buildSheetPdf({ cards, getImage: (c) => path.join(IMAGES_ROOT, c.relativePath), includeBacks: false, format: 'a3' });
     expect(failures).toEqual([]);
     const s = buffer.toString('latin1');
     const boxes = [...new Set([...s.matchAll(/MediaBox\s*\[([^\]]+)\]/g)].map((m) => m[1].trim()))];

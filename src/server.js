@@ -9,6 +9,7 @@ import { loadCards } from './cards.js';
 import { createDeckStore } from './deckStore.js';
 import { buildDeckZip } from './exporter.js';
 import { buildSheetPdf } from './sheetPdf.js';
+import { makeImageResolver, IMAGE_LANGUAGES } from './imageSource.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
@@ -17,6 +18,7 @@ const CARDS_JSON = path.join(IMAGES_ROOT, 'cards.json');
 const DECKS_DIR = path.join(ROOT, 'data', 'decks');
 const BACKS_DIR = path.join(ROOT, 'data', 'backs');
 const CARD_BACKS_DIR = path.join(ROOT, 'card-backs');
+const IMG_CACHE_DIR = path.join(ROOT, 'data', 'imgcache');
 const WEB_DIST = path.join(ROOT, 'web', 'dist');
 
 // Default backs shipped with the project (used when a group has no explicit back).
@@ -25,14 +27,21 @@ const DEFAULT_BACKS = {
   locationdeck: path.join(CARD_BACKS_DIR, 'SiteCardBack300dpi.png'),
 };
 
-export async function buildServer() {
+export async function buildServer(opts = {}) {
   const app = Fastify({ logger: false });
   await app.register(fastifyMultipart, { limits: { fileSize: 30 * 1024 * 1024 } });
 
-  const { cards, facets, index } = await loadCards(CARDS_JSON);
+  const { cards, facets, index, imageBaseUrls } = await loadCards(CARDS_JSON);
   const store = createDeckStore(DECKS_DIR);
   await store.init();
   await mkdir(BACKS_DIR, { recursive: true });
+
+  // Resolve the front-image source for an export in a given language: fetch
+  // from imageBaseUrl[lang] + card.image, cached on disk. Falls back to en.
+  // Tests can inject `opts.imageResolverFor` to read local files (offline).
+  const resolveLang = (lang) => (IMAGE_LANGUAGES.includes(lang) ? lang : 'en');
+  const imageResolverFor = opts.imageResolverFor
+    || ((lang) => makeImageResolver(imageBaseUrls, resolveLang(lang), IMG_CACHE_DIR));
 
   // Source card images.
   await app.register(fastifyStatic, { root: IMAGES_ROOT, prefix: '/images/' });
@@ -91,17 +100,17 @@ export async function buildServer() {
 
   // Export selected cards as an MPC ZIP (individual images, bleed included).
   app.post('/api/export', async (req, reply) => {
-    const { cardIds = [], deckName = 'deck', backAssignments = {} } = req.body || {};
+    const { cardIds = [], deckName = 'deck', backAssignments = {}, lang = 'en' } = req.body || {};
     const selected = cardIds.map((id) => index.get(id)).filter(Boolean);
     const { buffer, counts, failures } = await buildDeckZip({
       deckName,
       cards: selected,
-      imagesRoot: IMAGES_ROOT,
+      getImage: imageResolverFor(lang),
       backPaths: resolveBackPaths(backAssignments),
     });
     reply
       .header('Content-Type', 'application/zip')
-      .header('Content-Disposition', `attachment; filename="${safeName(deckName)}_MPC.zip"`)
+      .header('Content-Disposition', `attachment; filename="${safeName(deckName)}_${resolveLang(lang)}_MPC.zip"`)
       .header('X-Export-Counts', JSON.stringify(counts))
       .header('X-Export-Failures', JSON.stringify(failures));
     return reply.send(buffer);
@@ -110,18 +119,18 @@ export async function buildServer() {
   // Export selected cards as a US-Letter PDF, 3x3 poker cards per page at true
   // size with crop marks; optional mirrored backs pages for duplex printing.
   app.post('/api/export-pdf', async (req, reply) => {
-    const { cardIds = [], deckName = 'deck', backAssignments = {}, includeBacks = true, format = 'letter' } = req.body || {};
+    const { cardIds = [], deckName = 'deck', backAssignments = {}, includeBacks = true, format = 'letter', lang = 'en' } = req.body || {};
     const selected = cardIds.map((id) => index.get(id)).filter(Boolean);
     const { buffer, failures, pageCount } = await buildSheetPdf({
       cards: selected,
-      imagesRoot: IMAGES_ROOT,
+      getImage: imageResolverFor(lang),
       backPaths: resolveBackPaths(backAssignments),
       includeBacks,
       format,
     });
     reply
       .header('Content-Type', 'application/pdf')
-      .header('Content-Disposition', `attachment; filename="${safeName(deckName)}_${format}_sheets.pdf"`)
+      .header('Content-Disposition', `attachment; filename="${safeName(deckName)}_${format}_${resolveLang(lang)}_sheets.pdf"`)
       .header('X-Export-Pages', String(pageCount))
       .header('X-Export-Failures', JSON.stringify(failures));
     return reply.send(buffer);

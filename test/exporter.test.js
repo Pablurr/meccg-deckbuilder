@@ -53,7 +53,7 @@ describe('buildDeckZip', () => {
     const { buffer, counts, failures } = await buildDeckZip({
       deckName: 'Test Deck',
       cards,
-      imagesRoot: IMAGES_ROOT,
+      getImage: (card) => path.join(IMAGES_ROOT, card.relativePath),
       backPaths: { playdeck: backPath },
     });
 
@@ -75,7 +75,7 @@ describe('buildDeckZip', () => {
       { id: 'AS-1', type: 'Character', name: { en: 'Bûrat' }, relativePath: 'as/minions/Burat.jpg' },
       { id: 'AS-1', type: 'Character', name: { en: 'Bûrat' }, relativePath: 'as/minions/Burat.jpg' },
     ];
-    const { buffer, counts } = await buildDeckZip({ deckName: 'Copies', cards, imagesRoot: IMAGES_ROOT });
+    const { buffer, counts } = await buildDeckZip({ deckName: 'Copies', cards, getImage: (c) => path.join(IMAGES_ROOT, c.relativePath) });
     expect(counts.playdeck).toBe(3);
     const entries = new AdmZip(buffer).getEntries().map((e) => e.entryName).filter((e) => e.includes('/fronts/'));
     expect(entries.sort()).toEqual([

@@ -14,6 +14,14 @@ export const UI_LANGUAGES = [
   { code: 'en', label: 'EN' },
 ];
 
+// Languages for which card IMAGES exist (imageBaseUrl en/es/fr only).
+// Used for the ZIP/PDF export image language.
+export const IMAGE_LANGUAGES = [
+  { code: 'en', label: 'English' },
+  { code: 'es', label: 'Español' },
+  { code: 'fr', label: 'Français' },
+];
+
 // Card name in the requested language, falling back to en then fr then id.
 export function cardName(card, lang = 'fr') {
   const n = (card && card.name) || {};

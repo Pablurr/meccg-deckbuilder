@@ -32,29 +32,29 @@ function downloadBlob(blob, filename) {
 const safeName = (s) => (s || 'deck').replace(/[^a-zA-Z0-9_-]+/g, '_');
 
 // Triggers a ZIP download (MPC individual images); returns { counts, failures }.
-export async function exportDeck({ deckName, cardIds, backAssignments }) {
+export async function exportDeck({ deckName, cardIds, backAssignments, lang = 'en' }) {
   const res = await fetch('/api/export', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ deckName, cardIds, backAssignments }),
+    body: JSON.stringify({ deckName, cardIds, backAssignments, lang }),
   });
   if (!res.ok) throw new Error(`export → ${res.status}`);
   const counts = JSON.parse(res.headers.get('X-Export-Counts') || '{}');
   const failures = JSON.parse(res.headers.get('X-Export-Failures') || '[]');
-  downloadBlob(await res.blob(), `${safeName(deckName)}_MPC.zip`);
+  downloadBlob(await res.blob(), `${safeName(deckName)}_${lang}_MPC.zip`);
   return { counts, failures };
 }
 
 // Triggers a PDF sheet download (letter/a4/a3); returns { pages, failures }.
-export async function exportPdf({ deckName, cardIds, backAssignments, includeBacks, format = 'letter' }) {
+export async function exportPdf({ deckName, cardIds, backAssignments, includeBacks, format = 'letter', lang = 'en' }) {
   const res = await fetch('/api/export-pdf', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ deckName, cardIds, backAssignments, includeBacks, format }),
+    body: JSON.stringify({ deckName, cardIds, backAssignments, includeBacks, format, lang }),
   });
   if (!res.ok) throw new Error(`export-pdf → ${res.status}`);
   const pages = Number(res.headers.get('X-Export-Pages') || '0');
   const failures = JSON.parse(res.headers.get('X-Export-Failures') || '[]');
-  downloadBlob(await res.blob(), `${safeName(deckName)}_${format}_sheets.pdf`);
+  downloadBlob(await res.blob(), `${safeName(deckName)}_${format}_${lang}_sheets.pdf`);
   return { pages, failures };
 }

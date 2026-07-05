@@ -4,6 +4,9 @@ web/dist/
 .superpowers/
 *.log
 
+# Downloaded image cache for language exports
+data/imgcache/
+
 # Large local assets (kept on disk, not versioned)
 remastered-all/
 deckA/
