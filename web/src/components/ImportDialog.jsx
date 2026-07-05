@@ -51,8 +51,9 @@ export default function ImportDialog({ cards, onClose, onImport }) {
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <h2>Importer une liste</h2>
         <p className="muted" style={{ marginTop: 0 }}>
-          Colle une liste au format <code>Nx nom de carte</code>. Le nom doit être complet
-          (accents ignorés). L'import remplace la sélection courante.
+          Colle une liste au format <code>Nx nom de carte</code>. Le nom doit être complet, mais
+          la casse, les accents, les tirets/espaces et la ponctuation sont ignorés
+          (<code>star glass</code> = <code>Star-glass</code>). L'import remplace la sélection courante.
         </p>
 
         <textarea

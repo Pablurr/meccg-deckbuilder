@@ -1,4 +1,21 @@
-import { normalizeText } from './filter.js';
+// Aggressive normalization for full-name matching so the pasted list is
+// forgiving. Beyond accents/case, it makes these all equivalent:
+//   - hyphen vs space vs underscore ("star-glass" = "star glass")
+//   - apostrophes/quotes/punctuation ("Thrór's Map" = "thrors map")
+//   - "&" and "and", common ligatures (œ→oe, æ→ae, ß→ss)
+//   - any extra whitespace
+// It reduces a name to its bare alphanumeric characters.
+export function normalizeName(s) {
+  return String(s || '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '') // strip diacritics
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/œ/g, 'oe')
+    .replace(/æ/g, 'ae')
+    .replace(/ß/g, 'ss')
+    .replace(/[^a-z0-9]/g, ''); // drop spaces, hyphens, apostrophes, punctuation
+}
 
 // Parse a pasted deck list. Each non-empty line is "<qty>x <name>" (the "x" and
 // count are optional; a bare name means quantity 1).
@@ -26,7 +43,7 @@ export function parseDeckList(text) {
 export function buildNameIndex(cards) {
   const idx = new Map();
   const add = (name, card) => {
-    const key = normalizeText(name).trim();
+    const key = normalizeName(name);
     if (!key) return;
     if (!idx.has(key)) idx.set(key, []);
     const arr = idx.get(key);
@@ -43,7 +60,7 @@ export function buildNameIndex(cards) {
 //   status: 'ok' (1 match) | 'ambiguous' (>1) | 'notfound' (0)
 export function resolveDeckList(parsed, nameIndex) {
   return parsed.map((item) => {
-    const key = normalizeText(item.name).trim();
+    const key = normalizeName(item.name);
     const matches = nameIndex.get(key) || [];
     let status = 'ok';
     if (matches.length === 0) status = 'notfound';

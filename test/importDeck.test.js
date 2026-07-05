@@ -1,11 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { parseDeckList, buildNameIndex, resolveDeckList } from '../web/src/lib/importDeck.js';
+import { parseDeckList, buildNameIndex, resolveDeckList, normalizeName } from '../web/src/lib/importDeck.js';
 
 const cards = [
   { id: 'AS-1', name: { en: 'Bûrat', fr: 'Bûrat' } },
   { id: 'AS-58', name: { en: 'Angmarim', fr: 'Angmarim' }, alignment: 'Hero' },
   { id: 'AS-62', name: { en: 'Angmarim', fr: 'Angmarim' }, alignment: 'Minion' },
   { id: 'AS-44', name: { en: 'All the Bells Ringing', fr: 'Sonner le tocsin' } },
+  { id: 'TW-1', name: { en: 'Star-glass', fr: 'Verre-étoile' } },
+  { id: 'DM-1', name: { en: 'Thrór’s Map', fr: 'Carte de Thrór' } },
 ];
 
 describe('parseDeckList', () => {
@@ -46,5 +48,24 @@ describe('resolveDeckList', () => {
     const [line] = resolveDeckList(parseDeckList('1x nonexistent card'), idx);
     expect(line.status).toBe('notfound');
     expect(line.matches).toEqual([]);
+  });
+
+  it('treats hyphen and space as interchangeable', () => {
+    expect(resolveDeckList(parseDeckList('1x star glass'), idx)[0].matches[0]?.id).toBe('TW-1');
+    expect(resolveDeckList(parseDeckList('1x star-glass'), idx)[0].matches[0]?.id).toBe('TW-1');
+    expect(resolveDeckList(parseDeckList('1x STARGLASS'), idx)[0].matches[0]?.id).toBe('TW-1');
+  });
+
+  it('ignores apostrophes and punctuation', () => {
+    expect(resolveDeckList(parseDeckList("1x thrors map"), idx)[0].matches[0]?.id).toBe('DM-1');
+    expect(resolveDeckList(parseDeckList("1x thror's map"), idx)[0].matches[0]?.id).toBe('DM-1');
+  });
+});
+
+describe('normalizeName', () => {
+  it('reduces names to bare alphanumerics, equivalently', () => {
+    expect(normalizeName('Star-glass')).toBe(normalizeName('star glass'));
+    expect(normalizeName('Thrór’s Map')).toBe(normalizeName('thrors map'));
+    expect(normalizeName('Fire & Ice')).toBe(normalizeName('fire and ice'));
   });
 });
