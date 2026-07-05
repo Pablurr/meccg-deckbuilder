@@ -35,4 +35,13 @@ describe('buildDeckListText', () => {
     expect(text).toContain('1x Bûrat');
     expect(text).not.toContain('ZZ-9');
   });
+
+  it('uses the requested language for names', () => {
+    const en = buildDeckListText(cardsById, { 'AS-44': 2, 'BA-9': 1 }, 'D', 'en');
+    expect(en).toContain('2x All the Bells Ringing');
+    expect(en).toContain('1x Bag End');
+    const fr = buildDeckListText(cardsById, { 'AS-44': 2, 'BA-9': 1 }, 'D', 'fr');
+    expect(fr).toContain('2x Sonner le tocsin');
+    expect(fr).toContain('1x Cul-de-Sac');
+  });
 });

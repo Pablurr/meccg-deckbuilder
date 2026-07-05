@@ -10,13 +10,11 @@
 //   ## Sites (2)
 //   ...
 
+import { cardName } from './lang.js';
+
 const TYPE_ORDER = ['Character', 'Resource', 'Hazard', 'Site', 'Region'];
 
-function displayName(card) {
-  return (card.name && (card.name.fr || card.name.en)) || card.id;
-}
-
-export function buildDeckListText(cardsById, quantities = {}, deckName = 'Deck') {
+export function buildDeckListText(cardsById, quantities = {}, deckName = 'Deck', lang = 'fr') {
   const byType = {};
   for (const [id, count] of Object.entries(quantities)) {
     const card = cardsById.get(id);
@@ -32,10 +30,10 @@ export function buildDeckListText(cardsById, quantities = {}, deckName = 'Deck')
 
   const lines = [`# ${deckName}`, ''];
   for (const type of orderedTypes) {
-    const entries = byType[type].sort((a, b) => displayName(a.card).localeCompare(displayName(b.card)));
+    const entries = byType[type].sort((a, b) => cardName(a.card, lang).localeCompare(cardName(b.card, lang)));
     const total = entries.reduce((sum, e) => sum + e.count, 0);
     lines.push(`## ${type}s (${total})`);
-    for (const e of entries) lines.push(`${e.count}x ${displayName(e.card)}`);
+    for (const e of entries) lines.push(`${e.count}x ${cardName(e.card, lang)}`);
     lines.push('');
   }
   return lines.join('\n').trim() + '\n';

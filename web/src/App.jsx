@@ -13,6 +13,7 @@ export default function App() {
   const [facets, setFacets] = useState(null);
   const [defaultBacks, setDefaultBacks] = useState({});
   const [filters, setFilters] = useState({});
+  const [uiLang, setUiLang] = useState('fr'); // display language for card names
   const [quantities, setQuantities] = useState({}); // id -> copy count
   const [deck, setDeck] = useState({ id: null, name: 'Nouveau deck', backAssignments: {} });
   const [showManager, setShowManager] = useState(false);
@@ -50,6 +51,15 @@ export default function App() {
     });
   }
 
+  // Add one copy of every currently-filtered card that isn't selected yet.
+  function selectAll(ids) {
+    setQuantities((prev) => {
+      const out = { ...prev };
+      for (const id of ids) if (!out[id]) out[id] = 1;
+      return out;
+    });
+  }
+
   // Replace the current selection with an imported { id: count } map (clamped).
   function importQuantities(imported) {
     const clamped = {};
@@ -80,8 +90,8 @@ export default function App() {
 
   return (
     <div className="app">
-      <FilterBar facets={facets} filters={filters} onChange={setFilters} deckName={deck.name} />
-      <CardBrowser cards={cards} filters={filters} quantities={quantities} onChangeQty={changeQty} onToggle={toggleCard} />
+      <FilterBar facets={facets} filters={filters} onChange={setFilters} lang={uiLang} onLangChange={setUiLang} />
+      <CardBrowser cards={cards} filters={filters} quantities={quantities} lang={uiLang} onChangeQty={changeQty} onToggle={toggleCard} onSelectAll={selectAll} />
       <DeckDrawer
         cardsById={cardsById}
         cardIds={cardIds}
@@ -102,6 +112,14 @@ export default function App() {
           onSaved={(d) => setDeck((prev) => ({ ...prev, id: d.id, name: d.name }))}
         />
       )}
+      {showImport && (
+        <ImportDialog
+          cards={cards}
+          lang={uiLang}
+          onClose={() => setShowImport(false)}
+          onImport={importQuantities}
+        />
+      )}
       {showExport && (
         <ExportDialog
           deck={deck}
@@ -109,15 +127,9 @@ export default function App() {
           cardsById={cardsById}
           quantities={quantities}
           defaultBacks={defaultBacks}
+          uiLang={uiLang}
           onClose={() => setShowExport(false)}
           onBacksChange={(backAssignments) => setDeck((prev) => ({ ...prev, backAssignments }))}
-        />
-      )}
-      {showImport && (
-        <ImportDialog
-          cards={cards}
-          onClose={() => setShowImport(false)}
-          onImport={importQuantities}
         />
       )}
     </div>

@@ -100,7 +100,18 @@ Le mapping des dos par type est le même qu'en export MPC.
 
 Télécharge un fichier `.txt` listant les cartes **triées par type** (Characters, Resources,
 Hazards, Sites, Regions) avec les quantités, au format `Nx nom` — directement ré-importable
-via le bouton « Importer ».
+via le bouton « Importer ». La **langue** de la liste est réglable (English, Français, Español,
+Deutsch, Nederlands — les langues complètes du JSON).
+
+## Langue de l'interface
+
+Le sélecteur **FR / EN** en haut à droite change la langue d'affichage des noms de cartes
+(grille, import, etc.).
+
+## Sélection en masse
+
+Le bouton **« Tout sélectionner (N) »** au-dessus de la grille ajoute une copie de chaque carte
+actuellement affichée par les filtres. « Nouveau » (tiroir du bas) vide la sélection.
 
 ### ⚠️ À vérifier avant une vraie commande
 

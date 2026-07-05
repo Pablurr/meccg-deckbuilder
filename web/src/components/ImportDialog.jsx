@@ -1,17 +1,18 @@
 import React, { useMemo, useState } from 'react';
 import { parseDeckList, buildNameIndex, resolveDeckList } from '../lib/importDeck.js';
 import { maxCopies } from '../lib/deck.js';
+import { cardName } from '../lib/lang.js';
 
 const PLACEHOLDER = `1x Bûrat
 2x Beautiful Gold Ring
 3x Glamour of Surpassing Excellence`;
 
-function cardLabel(c) {
+function cardLabel(c, lang) {
   const bits = [c.setCode, c.type, c.alignment].filter(Boolean).join(' · ');
-  return `${c.id} — ${c.name?.en || c.name?.fr || c.id} (${bits})`;
+  return `${c.id} — ${cardName(c, lang)} (${bits})`;
 }
 
-export default function ImportDialog({ cards, onClose, onImport }) {
+export default function ImportDialog({ cards, lang = 'fr', onClose, onImport }) {
   const [text, setText] = useState('');
   const [resolved, setResolved] = useState(null); // array of resolved lines
   const [choice, setChoice] = useState({}); // line index -> chosen card id (for ambiguous)
@@ -91,7 +92,7 @@ export default function ImportDialog({ cards, onClose, onImport }) {
                         onChange={(e) => setChoice((prev) => ({ ...prev, [i]: e.target.value }))}
                       >
                         {line.matches.map((c) => (
-                          <option key={c.id} value={c.id}>{cardLabel(c)}</option>
+                          <option key={c.id} value={c.id}>{cardLabel(c, lang)}</option>
                         ))}
                       </select>
                     </li>
@@ -101,7 +102,7 @@ export default function ImportDialog({ cards, onClose, onImport }) {
                 const capped = Math.min(maxCopies(c), line.qty);
                 return (
                   <li key={i} className="imp-ok">
-                    ✓ {capped}× <b>{c.name?.en || c.name?.fr}</b> <span className="muted">({c.id})</span>
+                    ✓ {capped}× <b>{cardName(c, lang)}</b> <span className="muted">({c.id})</span>
                     {capped < line.qty && <span className="muted"> — limité à {capped}</span>}
                   </li>
                 );

@@ -1,23 +1,31 @@
 import React, { useMemo } from 'react';
 import { filterCards } from '../lib/filter.js';
 import { maxCopies } from '../lib/deck.js';
+import { cardName } from '../lib/lang.js';
 
 const CAP = 600; // safety cap on rendered cells
 
-export default function CardBrowser({ cards, filters, quantities, onChangeQty, onToggle }) {
+export default function CardBrowser({ cards, filters, quantities, lang, onChangeQty, onToggle, onSelectAll }) {
   const filtered = useMemo(() => filterCards(cards, filters), [cards, filters]);
   const shown = filtered.slice(0, CAP);
 
   return (
     <div className="browser">
       <div className="browser-meta">
-        {filtered.length} carte(s){filtered.length > CAP ? ` — affichage des ${CAP} premières, affinez les filtres` : ''}
+        <span>
+          {filtered.length} carte(s){filtered.length > CAP ? ` — affichage des ${CAP} premières, affinez les filtres` : ''}
+        </span>
+        {filtered.length > 0 && (
+          <button className="btn secondary small" onClick={() => onSelectAll(filtered.map((c) => c.id))}>
+            Tout sélectionner ({filtered.length})
+          </button>
+        )}
       </div>
       <div className="grid">
         {shown.map((c) => {
           const qty = quantities[c.id] || 0;
           const max = maxCopies(c);
-          const name = c.name?.fr || c.name?.en || c.id;
+          const name = cardName(c, lang);
           return (
             <div
               key={c.id}

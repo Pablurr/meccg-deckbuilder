@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import * as api from '../api.js';
 import { buildDeckListText } from '../lib/deckList.js';
+import { LIST_LANGUAGES } from '../lib/lang.js';
 
 const GROUPS = [
   { key: 'playdeck', label: 'Play deck (Character / Resource / Hazard)' },
@@ -26,10 +27,11 @@ function downloadText(text, filename) {
   URL.revokeObjectURL(url);
 }
 
-export default function ExportDialog({ deck, cardIds, cardsById, quantities, defaultBacks = {}, onClose, onBacksChange }) {
+export default function ExportDialog({ deck, cardIds, cardsById, quantities, defaultBacks = {}, uiLang = 'fr', onClose, onBacksChange }) {
   const [backs, setBacks] = useState(deck.backAssignments || {});
   const [format, setFormat] = useState('mpc'); // 'mpc' | 'pdf' | 'list'
   const [pageFormat, setPageFormat] = useState('letter');
+  const [listLang, setListLang] = useState(uiLang);
   const [includeBacks, setIncludeBacks] = useState(true);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
@@ -59,7 +61,7 @@ export default function ExportDialog({ deck, cardIds, cardsById, quantities, def
         setResult(`PDF ${pageFormat.toUpperCase()} généré — ${r.pages} page(s), cartes à taille réelle.` +
           (r.failures.length ? ` ${r.failures.length} échec(s).` : ''));
       } else {
-        const text = buildDeckListText(cardsById, quantities, deck.name);
+        const text = buildDeckListText(cardsById, quantities, deck.name, listLang);
         downloadText(text, `${(deck.name || 'deck').replace(/[^a-zA-Z0-9_-]+/g, '_')}.txt`);
         setResult('Liste texte téléchargée.');
       }
@@ -100,6 +102,17 @@ export default function ExportDialog({ deck, cardIds, cardsById, quantities, def
                 {' '}{p.label} <span className="muted">({p.perPage} cartes/page)</span>
               </label>
             ))}
+          </div>
+        )}
+
+        {format === 'list' && (
+          <div className="row">
+            <span>Langue de la liste :</span>
+            <select value={listLang} onChange={(e) => setListLang(e.target.value)}>
+              {LIST_LANGUAGES.map((l) => (
+                <option key={l.code} value={l.code}>{l.label}</option>
+              ))}
+            </select>
           </div>
         )}
 

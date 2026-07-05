@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { UI_LANGUAGES } from '../lib/lang.js';
 
 function FacetDropdown({ label, options, selected = [], onChange }) {
   const [open, setOpen] = useState(false);
@@ -26,7 +27,7 @@ function FacetDropdown({ label, options, selected = [], onChange }) {
   );
 }
 
-export default function FilterBar({ facets, filters, onChange }) {
+export default function FilterBar({ facets, filters, onChange, lang, onLangChange }) {
   const set = (key, value) => onChange({ ...filters, [key]: value });
   const anyActive =
     (filters.search && filters.search.length) ||
@@ -56,6 +57,15 @@ export default function FilterBar({ facets, filters, onChange }) {
       {anyActive ? (
         <button className="linkbtn" onClick={() => onChange({})}>réinitialiser</button>
       ) : null}
+      <div className="lang-toggle">
+        {UI_LANGUAGES.map((l) => (
+          <button
+            key={l.code}
+            className={lang === l.code ? 'on' : ''}
+            onClick={() => onLangChange(l.code)}
+          >{l.label}</button>
+        ))}
+      </div>
     </div>
   );
 }
