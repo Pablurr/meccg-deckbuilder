@@ -6,12 +6,19 @@ export function normalizeText(s) {
     .toLowerCase();
 }
 
+import { cardTags } from './tags.js';
+
 // Pure, in-memory filtering of the card list.
-// filters: { search, sets[], types[], alignments[], rarities[], races[],
-//            subtypes[], skills[], keywords[], unique(bool) }
+// filters: { search, cardText, sets[], types[], alignments[], rarities[],
+//            races[], subtypes[], skills[], keywords[], unique(bool) }
 export function filterCards(cards, filters = {}) {
   const q = normalizeText((filters.search || '').trim());
+  const qText = normalizeText((filters.cardText || '').trim());
   const has = (arr) => Array.isArray(arr) && arr.length > 0;
+  // race/subtype/skills hold compound values; match if any selected base tag
+  // is among the card's tags (OR within the facet).
+  const tagMatch = (c, key) =>
+    !has(filters[key]) || filters[key].some((t) => cardTags(c, key).includes(t));
 
   return cards.filter((c) => {
     const a = c.attributes || {};
@@ -19,9 +26,9 @@ export function filterCards(cards, filters = {}) {
     if (has(filters.types) && !filters.types.includes(c.type)) return false;
     if (has(filters.alignments) && !filters.alignments.includes(c.alignment)) return false;
     if (has(filters.rarities) && !filters.rarities.includes(c.rarity)) return false;
-    if (has(filters.races) && !filters.races.includes(a.race)) return false;
-    if (has(filters.subtypes) && !filters.subtypes.includes(a.subtype)) return false;
-    if (has(filters.skills) && !filters.skills.includes(a.skills)) return false;
+    if (!tagMatch(c, 'races')) return false;
+    if (!tagMatch(c, 'subtypes')) return false;
+    if (!tagMatch(c, 'skills')) return false;
     if (has(filters.keywords)) {
       const kw = a.keywords || [];
       if (!filters.keywords.some((k) => kw.includes(k))) return false;
@@ -30,6 +37,9 @@ export function filterCards(cards, filters = {}) {
     if (q) {
       const names = normalizeText([c.name?.en, c.name?.fr].filter(Boolean).join(' '));
       if (!names.includes(q)) return false;
+    }
+    if (qText) {
+      if (!normalizeText(c.text || '').includes(qText)) return false;
     }
     return true;
   });

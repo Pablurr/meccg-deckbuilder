@@ -16,6 +16,7 @@ export const translations = {
 
     // Filter bar
     'filter.search': 'Rechercher un nom…',
+    'filter.searchText': 'Rechercher dans le texte…',
     'filter.set': 'Set',
     'filter.type': 'Type',
     'filter.alignment': 'Alignement',
@@ -130,6 +131,7 @@ export const translations = {
     'common.error': 'Error: {msg}',
 
     'filter.search': 'Search a name…',
+    'filter.searchText': 'Search card text…',
     'filter.set': 'Set',
     'filter.type': 'Type',
     'filter.alignment': 'Alignment',

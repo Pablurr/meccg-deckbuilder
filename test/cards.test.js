@@ -9,7 +9,7 @@ const CARDS_JSON = path.join(__dirname, '..', 'cards', 'remastered-all', 'cards.
 const fixture = {
   AS: {
     cards: {
-      'AS-1': { id: 'AS-1', type: 'Character', alignment: 'Minion', rarity: 'U2', attributes: { race: 'Troll', keywords: ['Maia'] }, relativePath: 'as/minions/Burat.jpg' },
+      'AS-1': { id: 'AS-1', type: 'Character', alignment: 'Minion', rarity: 'U2', attributes: { race: 'Troll', keywords: ['Maia'] }, relativePath: 'as/minions/Burat.jpg', text: { en: '<p>+1 <b>prowess</b> against Dwarves.</p>', fr: '<p>+1 prouesse contre les Nains.</p>', es: '' } },
       'AS-2': { id: 'AS-2', type: 'Resource', alignment: 'Hero', rarity: 'C1', attributes: { subtype: 'Short-event' }, relativePath: 'as/resources/x.jpg' },
     },
   },
@@ -27,6 +27,12 @@ describe('flattenCards', () => {
     expect(cards[0].setCode).toBe('AS');
     expect(cards[0].id).toBe('AS-1');
     expect(cards[2].setCode).toBe('BA');
+  });
+
+  it('builds a stripped, concatenated searchable text field', () => {
+    const cards = flattenCards(fixture);
+    expect(cards[0].text).toBe('+1 prowess against Dwarves. +1 prouesse contre les Nains.');
+    expect(cards[1].text).toBe(''); // no text field
   });
 });
 

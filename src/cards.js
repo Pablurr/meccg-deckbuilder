@@ -1,5 +1,17 @@
 import { readFile } from 'node:fs/promises';
 
+// Strip HTML tags and collapse whitespace, for the searchable card text.
+function stripHtml(s) {
+  return String(s || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+// Plain-text, searchable card text: en + fr + es game text, tags stripped,
+// joined into one compact string (no per-language HTML shipped to the client).
+function searchableText(text) {
+  const t = text || {};
+  return [t.en, t.fr, t.es].map(stripHtml).filter(Boolean).join(' ');
+}
+
 // Flatten the nested cards.json ({ SET: { cards: { "AS-1": {...} } } })
 // into a single array of normalized card objects.
 export function flattenCards(raw) {
@@ -18,6 +30,7 @@ export function flattenCards(raw) {
         relativePath: card.relativePath || '',
         image: card.image || '', // bare filename, e.g. "Burat.jpg"
         attributes: card.attributes || {},
+        text: searchableText(card.text), // stripped en+fr+es game text, for search
       });
     }
   }

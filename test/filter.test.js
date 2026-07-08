@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { filterCards } from '../web/src/lib/filter.js';
 
 const cards = [
-  { id: 'AS-1', setCode: 'AS', type: 'Character', alignment: 'Minion', rarity: 'U2', name: { en: 'Bûrat', fr: 'Bûrat' }, attributes: { race: 'Troll', unique: true, keywords: ['Maia'] } },
-  { id: 'AS-44', setCode: 'AS', type: 'Resource', alignment: 'Hero', rarity: 'C1', name: { en: 'All the Bells Ringing', fr: 'Sonner le tocsin' }, attributes: { subtype: 'Short-event' } },
-  { id: 'BA-1', setCode: 'BA', type: 'Site', alignment: 'Neutral', rarity: 'R', name: { en: 'Bag End', fr: 'Cul-de-Sac' }, attributes: {} },
+  { id: 'AS-1', setCode: 'AS', type: 'Character', alignment: 'Minion', rarity: 'U2', name: { en: 'Bûrat', fr: 'Bûrat' }, text: 'Manifestation of Bert. +1 prowess against Dwarves.', attributes: { race: 'Troll', skills: 'Warrior/Ranger', unique: true, keywords: ['Maia'] } },
+  { id: 'AS-44', setCode: 'AS', type: 'Resource', alignment: 'Hero', rarity: 'C1', name: { en: 'All the Bells Ringing', fr: 'Sonner le tocsin' }, text: 'Tap to make each opposing company move.', attributes: { subtype: 'Creature/Short-event', skills: 'Sage/Diplomat' } },
+  { id: 'BA-1', setCode: 'BA', type: 'Site', alignment: 'Neutral', rarity: 'R', name: { en: 'Bag End', fr: 'Cul-de-Sac' }, text: '', attributes: { race: 'Orcs,Men' } },
 ];
 
 describe('filterCards', () => {
@@ -35,5 +35,31 @@ describe('filterCards', () => {
     // query without accent matches accented name
     expect(filterCards(cards, { search: 'burat' }).map((c) => c.id)).toEqual(['AS-1']);
     expect(filterCards(cards, { search: 'BÛRAT' }).map((c) => c.id)).toEqual(['AS-1']);
+  });
+
+  it('matches skills by base token across compound values', () => {
+    // AS-1 is Warrior/Ranger, AS-44 is Sage/Diplomat
+    expect(filterCards(cards, { skills: ['Warrior'] }).map((c) => c.id)).toEqual(['AS-1']);
+    expect(filterCards(cards, { skills: ['Sage'] }).map((c) => c.id)).toEqual(['AS-44']);
+    // cumulative (OR): either skill
+    expect(filterCards(cards, { skills: ['Ranger', 'Diplomat'] }).map((c) => c.id)).toEqual(['AS-1', 'AS-44']);
+  });
+
+  it('matches subtypes by base token across compound values', () => {
+    expect(filterCards(cards, { subtypes: ['Creature'] }).map((c) => c.id)).toEqual(['AS-44']);
+    expect(filterCards(cards, { subtypes: ['Short-event'] }).map((c) => c.id)).toEqual(['AS-44']);
+  });
+
+  it('matches races by base token, splitting commas and folding plural to singular', () => {
+    // BA-1 race is "Orcs,Men"
+    expect(filterCards(cards, { races: ['Man'] }).map((c) => c.id)).toEqual(['BA-1']);
+    expect(filterCards(cards, { races: ['Orc'] }).map((c) => c.id)).toEqual(['BA-1']);
+    expect(filterCards(cards, { races: ['Troll'] }).map((c) => c.id)).toEqual(['AS-1']);
+  });
+
+  it('searches card text ignoring accents', () => {
+    expect(filterCards(cards, { cardText: 'dwarves' }).map((c) => c.id)).toEqual(['AS-1']);
+    expect(filterCards(cards, { cardText: 'company' }).map((c) => c.id)).toEqual(['AS-44']);
+    expect(filterCards(cards, { cardText: 'nothing here' })).toHaveLength(0);
   });
 });

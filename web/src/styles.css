@@ -31,20 +31,28 @@ body {
 /* ---- Filter bar ---- */
 .filterbar {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   gap: 8px;
   padding: 10px 14px;
   background: var(--panel);
   border-bottom: 1px solid var(--line);
 }
-.brand {
-  font-weight: 700;
-  letter-spacing: .3px;
-  color: var(--accent);
-  margin-right: 6px;
-  white-space: nowrap;
+.filterbar-top,
+.filterbar-bottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
 }
+.brand-logo {
+  height: 34px;
+  width: auto;
+  display: block;
+  margin-right: 4px;
+}
+/* Language toggle sits at the far right of the top row. */
+.filterbar-top .lang-toggle { margin-left: auto; }
 .filterbar input[type="search"] {
   flex: 1 1 200px;
   min-width: 160px;

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import * as api from './api.js';
 import { maxCopies, expandQuantities, countOccurrences, deckCounts, deckWarnings } from './lib/deck.js';
+import { baseOptions } from './lib/tags.js';
 import { I18nProvider } from './i18n.jsx';
 import { makeT } from './lib/i18n.js';
 import FilterBar from './components/FilterBar.jsx';
@@ -35,6 +36,18 @@ export default function App() {
 
   const cardsById = useMemo(() => new Map(cards.map((c) => [c.id, c])), [cards]);
   const t = useMemo(() => makeT(uiLang), [uiLang]);
+
+  // race/subtype/skills hold compound values; show only deduplicated base
+  // options (built from the cards we already have), matching the tag filtering.
+  const derivedFacets = useMemo(() => {
+    if (!facets) return facets;
+    return {
+      ...facets,
+      races: baseOptions(cards, 'races'),
+      subtypes: baseOptions(cards, 'subtypes'),
+      skills: baseOptions(cards, 'skills'),
+    };
+  }, [facets, cards]);
 
   // delta is +1 / -1; clamps to [0, maxCopies(card)].
   function changeQty(id, delta) {
@@ -101,7 +114,7 @@ export default function App() {
   return (
     <I18nProvider lang={uiLang}>
     <div className="app">
-      <FilterBar facets={facets} filters={filters} onChange={setFilters} lang={uiLang} onLangChange={setUiLang} />
+      <FilterBar facets={derivedFacets} filters={filters} onChange={setFilters} lang={uiLang} onLangChange={setUiLang} />
       <div className="main-row">
         <CardBrowser cards={cards} filters={filters} quantities={quantities} lang={uiLang} onChangeQty={changeQty} onToggle={toggleCard} onSelectAll={selectAll} />
         {hasSelection && (
