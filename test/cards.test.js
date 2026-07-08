@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { flattenCards, computeFacets, loadCards } from '../src/cards.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const CARDS_JSON = path.join(__dirname, '..', 'remastered-all', 'cards.json');
+const CARDS_JSON = path.join(__dirname, '..', 'cards', 'remastered-all', 'cards.json');
 
 const fixture = {
   AS: {

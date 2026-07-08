@@ -1,13 +1,13 @@
 # MECCG Deck Builder
 
 App web **locale** et minimaliste pour construire des decks MECCG à partir de la collection
-`remastered-all/` (1683 cartes, 7 sets) et exporter des images prêtes à imprimer chez
+`cards/remastered-all/` (1683 cartes, 7 sets) et exporter des images prêtes à imprimer chez
 **MPC (MakePlayingCards)**.
 
 ## Prérequis
 
 - Node.js 18+ (testé sur Node 24)
-- Le dossier `remastered-all/` (images + `cards.json`) à la racine du projet
+- Le dossier `cards/remastered-all/` (images + `cards.json`) dans le projet
 
 ## Installation
 
@@ -57,9 +57,11 @@ npm run dev:web   # Vite (HMR) sur :5173  → ouvre http://localhost:5173
 ### Langue des images (ZIP et PDF)
 
 Les exports ZIP et PDF proposent une **langue d'images** : **English, Español, Français** — les
-3 langues pour lesquelles des images existent (`imageBaseUrl` dans `cards.json`). Les images sont
-téléchargées à la demande depuis le CDN (`imageBaseUrl[langue] + image`) et mises en cache dans
-`data/imgcache/`. *(Les noms existent aussi en de/nl, mais sans images — d'où seulement 3 langues
+3 langues pour lesquelles des images existent. **English** et **Français** sont lus directement
+depuis les images locales (`cards/remastered-all/` et `cards/fr/`) — export **hors-ligne et
+rapide**. **Español** (sans images locales) est téléchargé à la demande depuis le CDN
+(`imageBaseUrl[es] + image`) et mis en cache dans `data/imgcache/` ; ce repli CDN sert aussi si une
+image locale manque. *(Les noms existent aussi en de/nl, mais sans images — d'où seulement 3 langues
 ici, contre 5 pour la deck list texte.)*
 
 ### 1. Images individuelles MPC (ZIP) — pour commander chez MPC
@@ -114,7 +116,10 @@ Deutsch, Nederlands — les langues complètes du JSON).
 ## Langue de l'interface
 
 Le sélecteur **FR / EN** en haut à droite change la langue de **toute l'interface** (boutons,
-filtres, dialogues, avertissements) **et** des noms de cartes.
+filtres, dialogues, avertissements), des **noms de cartes** **et** des **images de cartes** : en
+mode **FR**, les visuels sont servis depuis les images françaises locales (`cards/fr/`, servies sur
+`/images-fr/`) ; en **EN**, depuis `cards/remastered-all/` (`/images/`). Si une image FR manque,
+l'affichage retombe automatiquement sur la version anglaise.
 
 Les textes sont centralisés dans [`web/src/lib/i18n.js`](web/src/lib/i18n.js) (un dictionnaire
 par langue, clés partagées). Pour ajouter une langue, ajouter un bloc avec les mêmes clés et

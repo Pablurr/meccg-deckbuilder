@@ -56,6 +56,38 @@ export function buildNameIndex(cards) {
   return idx;
 }
 
+// Alignment preferences for auto-resolving duplicate-name lines on import.
+// Each preference maps a (lowercased) alignment to a rank; lower = preferred.
+// Alignments absent from a table are excluded (never auto-picked). See
+// preferredMatchId for the tie/exclusion rules.
+export const ALIGNMENT_PREFERENCES = {
+  hero: { hero: 0, neutral: 1, dual: 1 },
+  minion: { minion: 0, neutral: 1, dual: 1 },
+  balrog: { balrog: 0, minion: 1, neutral: 2, dual: 2 },
+  // Fallen-wizard/Stage win; neutral/dual next; a lone hero *or* minion is
+  // acceptable, but a hero+minion pair ties (rank 2) so the player chooses.
+  fallenWizard: { 'fallen-wizard': 0, stage: 0, neutral: 1, dual: 1, hero: 2, minion: 2 },
+};
+
+// Auto-pick one card from `matches` according to an alignment `preference` key
+// (a key of ALIGNMENT_PREFERENCES). Returns the chosen id, or null when there
+// is no preference, nothing qualifies, or the top rank is shared by several
+// cards (a tie the player must resolve manually).
+export function preferredMatchId(matches, preference) {
+  const table = ALIGNMENT_PREFERENCES[preference];
+  if (!table || !matches || matches.length === 0) return null;
+  let bestRank = Infinity;
+  let best = [];
+  for (const c of matches) {
+    const a = String((c && c.alignment) || '').toLowerCase();
+    const rank = table[a] !== undefined ? table[a] : Infinity;
+    if (rank < bestRank) { bestRank = rank; best = [c]; }
+    else if (rank === bestRank && rank !== Infinity) best.push(c);
+  }
+  if (bestRank === Infinity || best.length !== 1) return null;
+  return best[0].id;
+}
+
 // Resolve each parsed line to card matches by full-name equality (accent-insensitive).
 //   status: 'ok' (1 match) | 'ambiguous' (>1) | 'notfound' (0)
 export function resolveDeckList(parsed, nameIndex) {

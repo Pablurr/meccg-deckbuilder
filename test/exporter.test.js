@@ -8,7 +8,7 @@ import AdmZip from 'adm-zip';
 import { backGroupForType, slug, buildDeckZip } from '../src/exporter.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const IMAGES_ROOT = path.join(__dirname, '..', 'remastered-all');
+const IMAGES_ROOT = path.join(__dirname, '..', 'cards', 'remastered-all');
 
 describe('backGroupForType', () => {
   it('maps types to back groups with a playdeck default', () => {

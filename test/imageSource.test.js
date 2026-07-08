@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { imageUrl, IMAGE_LANGUAGES } from '../src/imageSource.js';
+import path from 'node:path';
+import { imageUrl, IMAGE_LANGUAGES, localImagePath } from '../src/imageSource.js';
 
 const imageBaseUrls = {
   AS: { en: 'https://cdn/en/as/', es: 'https://cdn/es/as/', fr: 'https://cdn/fr/as/' },
@@ -25,5 +26,27 @@ describe('imageUrl', () => {
 
   it('exposes only the languages that actually have images', () => {
     expect(IMAGE_LANGUAGES).toEqual(['en', 'es', 'fr']);
+  });
+});
+
+describe('localImagePath', () => {
+  const roots = { en: '/EN', fr: '/FR' };
+  const card = { relativePath: 'as/minions/Burat.jpg', image: 'Burat.jpg' };
+
+  it('uses the nested remastered layout for en', () => {
+    expect(localImagePath(card, 'en', roots)).toBe(path.join('/EN', 'as/minions/Burat.jpg'));
+  });
+
+  it('uses the flat per-set layout for fr', () => {
+    expect(localImagePath(card, 'fr', roots)).toBe(path.join('/FR', 'as', 'Burat.jpg'));
+  });
+
+  it('returns null for languages with no local tree (es)', () => {
+    expect(localImagePath(card, 'es', roots)).toBeNull();
+  });
+
+  it('returns null when the relevant root is not configured', () => {
+    expect(localImagePath(card, 'fr', { en: '/EN' })).toBeNull();
+    expect(localImagePath(card, 'en', { fr: '/FR' })).toBeNull();
   });
 });

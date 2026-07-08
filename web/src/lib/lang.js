@@ -27,3 +27,19 @@ export function cardName(card, lang = 'fr') {
   const n = (card && card.name) || {};
   return (n[lang] && n[lang].trim()) || n.en || n.fr || (card && card.id) || '';
 }
+
+// Browser image URL for a card. The English/remastered images use a nested
+// layout (served at /images/<relativePath>, e.g. as/minions/Burat.jpg); the
+// local French images use a flat per-set layout (served at /images-fr/, e.g.
+// as/Burat.jpg). Any other language falls back to the English image.
+export function cardImageEn(card) {
+  return `/images/${(card && card.relativePath) || ''}`;
+}
+
+export function cardImageSrc(card, lang = 'en') {
+  if (lang === 'fr') {
+    const setDir = ((card && card.relativePath) || '').split('/')[0];
+    if (setDir && card && card.image) return `/images-fr/${setDir}/${card.image}`;
+  }
+  return cardImageEn(card);
+}

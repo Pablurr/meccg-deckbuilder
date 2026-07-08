@@ -105,6 +105,9 @@ body {
   text-decoration: underline;
 }
 
+/* ---- Main row: card grid + deck panel side by side ---- */
+.main-row { flex: 1; display: flex; min-height: 0; }
+
 /* ---- Card grid ---- */
 .browser { flex: 1; overflow: auto; padding: 14px; }
 .browser-meta {
@@ -149,49 +152,48 @@ body {
 .cardcell img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .cardcell.selected { border-color: var(--accent); }
 .cardcell img { cursor: pointer; }
-.qty-badge {
-  position: absolute;
-  top: 4px; right: 6px;
-  background: var(--accent);
-  color: #14141a;
-  font-weight: 700;
-  min-width: 22px; height: 22px;
-  padding: 0 6px;
-  border-radius: 11px;
-  display: grid; place-items: center;
-  font-size: 12px;
+/* Full-size image shown on hover; positioned imperatively (see CardBrowser). */
+.card-preview {
+  position: fixed;
+  z-index: 1000;
+  pointer-events: none;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
-.cardcell .cap {
+.card-preview img { display: block; width: 100%; height: auto; }
+/* Compact vertical +/count/− control, centred in the 2nd quarter, right side.
+   Shown only when the card is selected (qty > 0). */
+.qty-ctrl {
   position: absolute;
-  bottom: 30px; left: 0; right: 0;
-  padding: 3px 5px;
-  font-size: 11px;
-  background: linear-gradient(transparent, rgba(0,0,0,.85));
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.qty-bar {
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  height: 30px;
+  top: 25%; height: 25%; right: 4px;
   display: flex;
-  align-items: stretch;
-  background: rgba(0,0,0,.75);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 2px 1px;
+  background: rgba(0,0,0,.7);
+  border-radius: 6px;
 }
 .qty-btn {
-  flex: 1;
+  width: 20px; height: 18px;
+  display: grid; place-items: center;
   background: none;
   border: none;
   color: var(--text);
-  font-size: 18px;
+  font-size: 15px;
   line-height: 1;
   cursor: pointer;
+  padding: 0;
 }
-.qty-btn:hover:not(:disabled) { background: rgba(255,255,255,.12); }
+.qty-btn:hover:not(:disabled) { color: var(--accent); }
 .qty-btn:disabled { opacity: .3; cursor: default; }
 .qty-count {
-  min-width: 26px;
-  display: grid; place-items: center;
   font-weight: 700;
+  font-size: 12px;
+  line-height: 1;
   color: var(--accent);
 }
 
@@ -221,6 +223,117 @@ body {
 }
 .btn.secondary { background: var(--panel-2); border: 1px solid var(--line); color: var(--text); }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ---- Deck panel (right, collapsible) ---- */
+.deckpanel {
+  position: relative;
+  flex: 0 0 360px;
+  width: 360px;
+  background: var(--panel);
+  border-left: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+/* Drag the left edge to resize the panel (up to near full width). */
+.deckpanel-resizer {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 6px;
+  cursor: ew-resize;
+  z-index: 5;
+}
+.deckpanel-resizer:hover { background: var(--accent-2); }
+.deckpanel-max {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: var(--radius);
+  cursor: pointer;
+  padding: 3px 8px;
+  font-size: 14px;
+  line-height: 1;
+}
+.deckpanel-max:hover { border-color: var(--accent); color: var(--accent); }
+.deckpanel.collapsed {
+  flex: 0 0 44px;
+  width: 44px;
+  align-items: center;
+  padding-top: 10px;
+}
+.deckpanel-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.deckpanel-counts { display: flex; gap: 8px; flex-wrap: wrap; width: 100%; }
+.deckpanel-zoom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  color: var(--muted);
+  font-size: 12px;
+}
+.deckpanel-zoom input[type="range"] { flex: 1; accent-color: var(--accent); cursor: pointer; }
+.deckpanel-zoom-val { min-width: 36px; text-align: right; color: var(--text); font-variant-numeric: tabular-nums; }
+.deckpanel-toggle {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: var(--radius);
+  cursor: pointer;
+  padding: 4px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.deckpanel-toggle:hover { border-color: var(--accent); }
+.deckpanel-toggle .chevron { font-size: 18px; line-height: 1; color: var(--accent); }
+.deckpanel-badge {
+  background: var(--accent);
+  color: #14141a;
+  font-weight: 700;
+  border-radius: 12px;
+  padding: 1px 7px;
+  font-size: 12px;
+}
+.deckpanel-body { overflow: auto; padding: 10px 12px; }
+.deck-group { margin-bottom: 14px; }
+.deck-group-head {
+  font-weight: 700;
+  color: var(--accent);
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 4px;
+  margin-bottom: 8px;
+}
+/* Cards render at ~50% of the source image (570×796 → ~285px wide), so they
+   are noticeably larger than the browser grid cells. min(285px, 100%) keeps a
+   card from overflowing when the panel is dragged narrow. */
+.deck-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(285px, 100%), 285px));
+  gap: 10px;
+}
+/* Otherwise identical to a browser grid cell (same image + −/count/+ control). */
+/* Confirmation overlay shown when a selected mini card is clicked. */
+.deck-mini-confirm {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 4px;
+  padding: 5px;
+  background: rgba(0, 0, 0, .74);
+}
+.deck-mini-confirm .btn { padding: 8px 6px; font-size: 14px; font-weight: 600; }
+.btn.danger { background: var(--danger); color: #fff; }
 
 /* ---- Modal ---- */
 .modal-backdrop {

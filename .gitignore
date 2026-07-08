@@ -8,5 +8,5 @@ web/dist/
 data/imgcache/
 
 # Large local assets (kept on disk, not versioned)
-remastered-all/
+cards/
 deckA/

@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import * as api from './api.js';
-import { maxCopies, expandQuantities, countOccurrences } from './lib/deck.js';
+import { maxCopies, expandQuantities, countOccurrences, deckCounts, deckWarnings } from './lib/deck.js';
 import { I18nProvider } from './i18n.jsx';
 import { makeT } from './lib/i18n.js';
 import FilterBar from './components/FilterBar.jsx';
 import CardBrowser from './components/CardBrowser.jsx';
 import DeckDrawer from './components/DeckDrawer.jsx';
+import DeckPanel from './components/DeckPanel.jsx';
 import DeckManager from './components/DeckManager.jsx';
 import ExportDialog from './components/ExportDialog.jsx';
 import ImportDialog from './components/ImportDialog.jsx';
@@ -21,6 +22,9 @@ export default function App() {
   const [showManager, setShowManager] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [panelCollapsed, setPanelCollapsed] = useState(false);
+  const [panelWidth, setPanelWidth] = useState(360); // right deck panel width in px
+  const [cardZoom, setCardZoom] = useState(50); // deck-panel card size, % of original image
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -90,17 +94,36 @@ export default function App() {
   if (!facets) return <div style={{ padding: 24 }}>{t('app.loading')}</div>;
 
   const cardIds = expandQuantities(quantities);
+  const counts = deckCounts(cardsById, cardIds);
+  const warnings = deckWarnings(cardsById, cardIds, deck.backAssignments, defaultBacks);
+  const hasSelection = counts.total > 0;
 
   return (
     <I18nProvider lang={uiLang}>
     <div className="app">
       <FilterBar facets={facets} filters={filters} onChange={setFilters} lang={uiLang} onLangChange={setUiLang} />
-      <CardBrowser cards={cards} filters={filters} quantities={quantities} lang={uiLang} onChangeQty={changeQty} onToggle={toggleCard} onSelectAll={selectAll} />
+      <div className="main-row">
+        <CardBrowser cards={cards} filters={filters} quantities={quantities} lang={uiLang} onChangeQty={changeQty} onToggle={toggleCard} onSelectAll={selectAll} />
+        {hasSelection && (
+          <DeckPanel
+            cardsById={cardsById}
+            quantities={quantities}
+            lang={uiLang}
+            counts={counts}
+            warnings={warnings}
+            collapsed={panelCollapsed}
+            onToggleCollapsed={() => setPanelCollapsed((v) => !v)}
+            width={panelWidth}
+            onResize={setPanelWidth}
+            zoom={cardZoom}
+            onZoom={setCardZoom}
+            onChangeQty={changeQty}
+            onToggle={toggleCard}
+          />
+        )}
+      </div>
       <DeckDrawer
-        cardsById={cardsById}
-        cardIds={cardIds}
-        backAssignments={deck.backAssignments}
-        defaultBacks={defaultBacks}
+        total={counts.total}
         onManage={() => setShowManager(true)}
         onExport={() => setShowExport(true)}
         onImport={() => setShowImport(true)}

@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { sheetLayout, backColumnIndex, buildSheetPdf, gridFor, PAGE_SIZES, LETTER, CARD } from '../src/sheetPdf.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const IMAGES_ROOT = path.join(__dirname, '..', 'remastered-all');
+const IMAGES_ROOT = path.join(__dirname, '..', 'cards', 'remastered-all');
 
 describe('sheetLayout', () => {
   it('centers a 3x3 grid of poker cards on US Letter', () => {

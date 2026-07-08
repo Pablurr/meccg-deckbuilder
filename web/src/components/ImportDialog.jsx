@@ -1,8 +1,18 @@
-import React, { useMemo, useState } from 'react';
-import { parseDeckList, buildNameIndex, resolveDeckList } from '../lib/importDeck.js';
+import React, { useEffect, useMemo, useState } from 'react';
+import { parseDeckList, buildNameIndex, resolveDeckList, preferredMatchId } from '../lib/importDeck.js';
 import { maxCopies } from '../lib/deck.js';
 import { cardName } from '../lib/lang.js';
 import { useT } from '../i18n.jsx';
+
+// Alignment preference options for auto-resolving duplicate-name lines.
+// value '' means "no preference" (keep the first match).
+const ALIGN_OPTIONS = [
+  { value: '', key: 'import.alignPref.none' },
+  { value: 'hero', key: 'import.alignPref.hero' },
+  { value: 'minion', key: 'import.alignPref.minion' },
+  { value: 'balrog', key: 'import.alignPref.balrog' },
+  { value: 'fallenWizard', key: 'import.alignPref.fallenWizard' },
+];
 
 const PLACEHOLDER = `1x Bûrat
 2x Beautiful Gold Ring
@@ -18,18 +28,29 @@ export default function ImportDialog({ cards, lang = 'fr', onClose, onImport }) 
   const [text, setText] = useState('');
   const [resolved, setResolved] = useState(null); // array of resolved lines
   const [choice, setChoice] = useState({}); // line index -> chosen card id (for ambiguous)
+  const [alignPref, setAlignPref] = useState(''); // '' | hero | minion | balrog | fallenWizard
 
   const nameIndex = useMemo(() => buildNameIndex(cards), [cards]);
 
   function analyze() {
-    const lines = resolveDeckList(parseDeckList(text), nameIndex);
-    const initialChoice = {};
-    lines.forEach((line, i) => {
-      if (line.matches.length >= 1) initialChoice[i] = line.matches[0].id;
-    });
-    setChoice(initialChoice);
-    setResolved(lines);
+    setResolved(resolveDeckList(parseDeckList(text), nameIndex));
   }
+
+  // (Re)compute the per-line default selection whenever the results or the
+  // alignment preference change. The preference pre-selects a match for
+  // ambiguous lines; the player can still override any line's dropdown after
+  // (a manual pick survives until the preference changes or the list is
+  // re-analyzed). Falls back to the first match when the preference doesn't
+  // resolve a single winner.
+  useEffect(() => {
+    if (!resolved) return;
+    const next = {};
+    resolved.forEach((line, i) => {
+      if (line.matches.length === 0) return;
+      next[i] = preferredMatchId(line.matches, alignPref) || line.matches[0].id;
+    });
+    setChoice(next);
+  }, [resolved, alignPref]);
 
   // Build the final { id: count } map from resolved+chosen lines (capped).
   const importable = useMemo(() => {
@@ -74,6 +95,14 @@ export default function ImportDialog({ cards, lang = 'fr', onClose, onImport }) 
             <p className="muted">
               {t('import.summary', { ok: okCount })}{notFoundCount ? t('import.summaryNotFound', { n: notFoundCount }) : ''}.
             </p>
+            <label className="import-alignpref">
+              {t('import.alignPref')}
+              <select value={alignPref} onChange={(e) => setAlignPref(e.target.value)}>
+                {ALIGN_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{t(o.key)}</option>
+                ))}
+              </select>
+            </label>
             <ul className="import-list">
               {resolved.map((line, i) => {
                 if (line.status === 'notfound') {

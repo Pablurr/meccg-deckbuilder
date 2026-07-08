@@ -9,11 +9,12 @@ import { loadCards } from './cards.js';
 import { createDeckStore } from './deckStore.js';
 import { buildDeckZip } from './exporter.js';
 import { buildSheetPdf } from './sheetPdf.js';
-import { makeImageResolver, IMAGE_LANGUAGES } from './imageSource.js';
+import { makeLocalImageResolver, IMAGE_LANGUAGES } from './imageSource.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
-const IMAGES_ROOT = path.join(ROOT, 'remastered-all');
+const IMAGES_ROOT = path.join(ROOT, 'cards', 'remastered-all');
+const IMAGES_FR_ROOT = path.join(ROOT, 'cards', 'fr');
 const CARDS_JSON = path.join(IMAGES_ROOT, 'cards.json');
 const DECKS_DIR = path.join(ROOT, 'data', 'decks');
 const BACKS_DIR = path.join(ROOT, 'data', 'backs');
@@ -36,15 +37,21 @@ export async function buildServer(opts = {}) {
   await store.init();
   await mkdir(BACKS_DIR, { recursive: true });
 
-  // Resolve the front-image source for an export in a given language: fetch
-  // from imageBaseUrl[lang] + card.image, cached on disk. Falls back to en.
-  // Tests can inject `opts.imageResolverFor` to read local files (offline).
+  // Resolve the front-image source for an export in a given language. Prefers
+  // the local image trees (en → cards/remastered-all, fr → cards/fr) and only
+  // downloads from imageBaseUrl[lang] + card.image (cached on disk) when there
+  // is no local copy (e.g. es). Tests can inject `opts.imageResolverFor`.
   const resolveLang = (lang) => (IMAGE_LANGUAGES.includes(lang) ? lang : 'en');
   const imageResolverFor = opts.imageResolverFor
-    || ((lang) => makeImageResolver(imageBaseUrls, resolveLang(lang), IMG_CACHE_DIR));
+    || ((lang) => makeLocalImageResolver(imageBaseUrls, resolveLang(lang), IMG_CACHE_DIR, { en: IMAGES_ROOT, fr: IMAGES_FR_ROOT }));
 
-  // Source card images.
+  // Source card images (English/remastered layout: <set>/<subtype>/<Name>.jpg).
   await app.register(fastifyStatic, { root: IMAGES_ROOT, prefix: '/images/' });
+  // Local French card images (flat layout: <set>/<Name>.jpg). Optional — the
+  // front-end falls back to the English image when a file is missing here.
+  if (existsSync(IMAGES_FR_ROOT)) {
+    await app.register(fastifyStatic, { root: IMAGES_FR_ROOT, prefix: '/images-fr/', decorateReply: false });
+  }
   // Uploaded back images.
   await app.register(fastifyStatic, { root: BACKS_DIR, prefix: '/backs/', decorateReply: false });
 

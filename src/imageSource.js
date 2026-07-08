@@ -46,3 +46,31 @@ export function makeImageResolver(imageBaseUrls, lang, cacheDir) {
     return fetchImageBuffer(url, cacheDir);
   };
 }
+
+// On-disk path for a card's image in a language, or null when that language
+// has no local image tree. `en` uses the remastered nested layout
+// (roots.en/<relativePath>, e.g. as/minions/Burat.jpg); `fr` uses the flat
+// per-set layout (roots.fr/<setDir>/<image>, e.g. as/Burat.jpg). Any other
+// language (es, …) has no local copy and returns null.
+export function localImagePath(card, lang, roots = {}) {
+  if (lang === 'en' && roots.en && card.relativePath) {
+    return path.join(roots.en, card.relativePath);
+  }
+  if (lang === 'fr' && roots.fr && card.image) {
+    const setDir = (card.relativePath || '').split('/')[0];
+    if (setDir) return path.join(roots.fr, setDir, card.image);
+  }
+  return null;
+}
+
+// Resolver that prefers a local image file and only downloads from the CDN
+// (with disk cache) when there is no local copy — e.g. Spanish, or a card
+// missing from the local set. Keeps en/fr exports fully offline and fast.
+export function makeLocalImageResolver(imageBaseUrls, lang, cacheDir, roots) {
+  const remote = makeImageResolver(imageBaseUrls, lang, cacheDir);
+  return async (card) => {
+    const local = localImagePath(card, lang, roots);
+    if (local && existsSync(local)) return readFile(local);
+    return remote(card);
+  };
+}

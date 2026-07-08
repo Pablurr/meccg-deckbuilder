@@ -5,7 +5,7 @@ import sharp from 'sharp';
 import { toMpcBuffer, toCutBuffer } from '../src/imageProcessor.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const SAMPLE = path.join(__dirname, '..', 'remastered-all', 'as', 'minions', 'Burat.jpg');
+const SAMPLE = path.join(__dirname, '..', 'cards', 'remastered-all', 'as', 'minions', 'Burat.jpg');
 
 describe('toMpcBuffer', () => {
   it('produces an 822x1122 PNG tagged at 300 DPI', async () => {

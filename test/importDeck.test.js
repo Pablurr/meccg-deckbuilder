@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseDeckList, buildNameIndex, resolveDeckList, normalizeName } from '../web/src/lib/importDeck.js';
+import { parseDeckList, buildNameIndex, resolveDeckList, normalizeName, preferredMatchId } from '../web/src/lib/importDeck.js';
 
 const cards = [
   { id: 'AS-1', name: { en: 'Bûrat', fr: 'Bûrat' } },
@@ -59,6 +59,57 @@ describe('resolveDeckList', () => {
   it('ignores apostrophes and punctuation', () => {
     expect(resolveDeckList(parseDeckList("1x thrors map"), idx)[0].matches[0]?.id).toBe('DM-1');
     expect(resolveDeckList(parseDeckList("1x thror's map"), idx)[0].matches[0]?.id).toBe('DM-1');
+  });
+});
+
+describe('preferredMatchId', () => {
+  const H = { id: 'H', alignment: 'Hero' };
+  const M = { id: 'M', alignment: 'Minion' };
+  const N = { id: 'N', alignment: 'Neutral' };
+  const D = { id: 'D', alignment: 'Dual' };
+  const B = { id: 'B', alignment: 'Balrog' };
+  const F = { id: 'F', alignment: 'Fallen-wizard' };
+  const S = { id: 'S', alignment: 'Stage' };
+
+  it('returns null when there is no preference', () => {
+    expect(preferredMatchId([H, M], '')).toBe(null);
+    expect(preferredMatchId([H, M], null)).toBe(null);
+  });
+
+  it('Hero prefers hero over minion', () => {
+    expect(preferredMatchId([M, H], 'hero')).toBe('H');
+  });
+
+  it('Hero prefers hero over neutral/dual', () => {
+    expect(preferredMatchId([N, H, D], 'hero')).toBe('H');
+  });
+
+  it('Minion prefers minion over hero', () => {
+    expect(preferredMatchId([H, M], 'minion')).toBe('M');
+  });
+
+  it('Balrog prefers balrog, then minion, then neutral/dual', () => {
+    expect(preferredMatchId([N, M, B], 'balrog')).toBe('B');
+    expect(preferredMatchId([N, M], 'balrog')).toBe('M');
+    expect(preferredMatchId([N, H], 'balrog')).toBe('N'); // hero excluded, neutral wins
+  });
+
+  it('Fallen Wizard prefers fallen-wizard/stage', () => {
+    expect(preferredMatchId([H, F], 'fallenWizard')).toBe('F');
+    expect(preferredMatchId([M, S], 'fallenWizard')).toBe('S');
+  });
+
+  it('Fallen Wizard leaves a hero/minion pair for manual choice (tie -> null)', () => {
+    expect(preferredMatchId([H, M], 'fallenWizard')).toBe(null);
+  });
+
+  it('returns null on a tie between equally-ranked matches', () => {
+    expect(preferredMatchId([N, D], 'hero')).toBe(null);
+  });
+
+  it('returns null when no match qualifies under the preference', () => {
+    expect(preferredMatchId([H], 'minion')).toBe(null); // only hero, excluded
+    expect(preferredMatchId([H, S], 'minion')).toBe(null); // hero + stage, neither qualifies
   });
 });
 
