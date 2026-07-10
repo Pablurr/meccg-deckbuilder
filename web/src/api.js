@@ -1,6 +1,9 @@
 import { parseCards } from './lib/parseCards.js';
 import { createDeckStore } from './lib/deckStore.js';
 import { CARD_W_CUT, CARD_H_CUT } from './lib/constants.js';
+import { fetchBytes, fetchCardImageBytes, dataUrlToBytes, mapLimit } from './lib/export/images.js';
+import { toMpcPng } from './lib/export/bleedCanvas.js';
+import { buildDeckZip } from './lib/export/zip.js';
 
 async function json(url, opts) {
   const res = await fetch(url, opts);
@@ -59,17 +62,50 @@ function downloadBlob(blob, filename) {
 
 const safeName = (s) => (s || 'deck').replace(/[^a-zA-Z0-9_-]+/g, '_');
 
-// Triggers a ZIP download (MPC individual images); returns { counts, failures }.
-export async function exportDeck({ deckName, cardIds, backAssignments, lang = 'en' }) {
-  const res = await fetch('/api/export', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ deckName, cardIds, backAssignments, lang }),
+const DEFAULT_BACK_URLS = {
+  playdeck: '/card-backs/CardBack300dpi.png',
+  locationdeck: '/card-backs/SiteCardBack300dpi.png',
+};
+
+// Back image bytes per group: custom data URL if assigned, else shipped default.
+// Legacy non-dataURL assignments (old server paths) fall back to the default.
+function makeGetBackBytes(backAssignments = {}) {
+  return async (group) => {
+    const v = backAssignments[group];
+    if (v && String(v).startsWith('data:')) return dataUrlToBytes(v);
+    return fetchBytes(DEFAULT_BACK_URLS[group]);
+  };
+}
+
+// Fetch + process each unique card's front once (copies reuse it), with
+// bounded concurrency. Returns a lookup that throws for failed cards.
+async function prefetchFronts(cards, lang, process) {
+  const unique = [...new Map(cards.map((c) => [c.id, c])).values()];
+  const cache = new Map();
+  await mapLimit(unique, 6, async (card) => {
+    try {
+      cache.set(card.id, { bytes: await process(await fetchCardImageBytes(card, lang)) });
+    } catch (e) {
+      cache.set(card.id, { error: e });
+    }
   });
-  if (!res.ok) throw new Error(`export → ${res.status}`);
-  const counts = JSON.parse(res.headers.get('X-Export-Counts') || '{}');
-  const failures = JSON.parse(res.headers.get('X-Export-Failures') || '[]');
-  downloadBlob(await res.blob(), `${safeName(deckName)}_${lang}_MPC.zip`);
+  return (card) => {
+    const r = cache.get(card.id);
+    if (!r) throw new Error(`no image for ${card.id}`);
+    if (r.error) throw r.error;
+    return r.bytes;
+  };
+}
+
+// Builds the MPC ZIP in the browser and triggers the download.
+export async function exportDeck({ deckName, cardIds, backAssignments, lang = 'en' }) {
+  const index = requireIndex();
+  const cards = cardIds.map((id) => index.get(id)).filter(Boolean);
+  const getFrontPng = await prefetchFronts(cards, lang, toMpcPng);
+  const getBackBytes = makeGetBackBytes(backAssignments);
+  const getBackPng = async (group) => toMpcPng(await getBackBytes(group));
+  const { bytes, counts, failures } = await buildDeckZip({ deckName, cards, getFrontPng, getBackPng });
+  downloadBlob(new Blob([bytes], { type: 'application/zip' }), `${safeName(deckName)}_${lang}_MPC.zip`);
   return { counts, failures };
 }
 
