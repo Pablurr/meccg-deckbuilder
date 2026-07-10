@@ -10,9 +10,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': API,
-      '/images': API,
       '/backs': API,
-      '/cards.json': API,
     },
   },
   build: {

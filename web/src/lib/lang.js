@@ -28,18 +28,16 @@ export function cardName(card, lang = 'fr') {
   return (n[lang] && n[lang].trim()) || n.en || n.fr || (card && card.id) || '';
 }
 
-// Browser image URL for a card. The English/remastered images use a nested
-// layout (served at /images/<relativePath>, e.g. as/minions/Burat.jpg); the
-// local French images use a flat per-set layout (served at /images-fr/, e.g.
-// as/Burat.jpg). Any other language falls back to the English image.
+// CDN image URL for a card: per-set imageBaseUrl (attached by parseCards)
+// + bare filename. Falls back to the English base when the requested
+// language has none (matches the on-screen <img> onError fallback).
 export function cardImageEn(card) {
-  return `/images/${(card && card.relativePath) || ''}`;
+  const base = (card && card.imageBaseUrl) || {};
+  return base.en && card.image ? base.en + card.image : '';
 }
 
 export function cardImageSrc(card, lang = 'en') {
-  if (lang === 'fr') {
-    const setDir = ((card && card.relativePath) || '').split('/')[0];
-    if (setDir && card && card.image) return `/images-fr/${setDir}/${card.image}`;
-  }
-  return cardImageEn(card);
+  const base = (card && card.imageBaseUrl) || {};
+  const root = base[lang] || base.en;
+  return root && card && card.image ? root + card.image : '';
 }

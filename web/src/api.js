@@ -1,10 +1,25 @@
+import { parseCards } from './lib/parseCards.js';
+
 async function json(url, opts) {
   const res = await fetch(url, opts);
   if (!res.ok) throw new Error(`${opts?.method || 'GET'} ${url} → ${res.status}`);
   return res.json();
 }
 
-export const getCards = () => json('/api/cards');
+let _index = null; // id -> card, set by getCards(); used by the export functions
+
+export async function getCards() {
+  const res = await fetch('/cards.json');
+  if (!res.ok) throw new Error(`GET /cards.json → ${res.status}`);
+  const { cards, facets, index } = parseCards(await res.json());
+  _index = index;
+  return { cards, facets, defaultBacks: { playdeck: true, locationdeck: true } };
+}
+
+export function requireIndex() {
+  if (!_index) throw new Error('cards not loaded yet');
+  return _index;
+}
 
 export const listDecks = () => json('/api/decks');
 export const getDeck = (id) => json(`/api/decks/${id}`);
