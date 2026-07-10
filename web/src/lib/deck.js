@@ -71,7 +71,7 @@ export function deckWarnings(cardsById, cardIds, backAssignments = {}, defaultBa
   for (const group of groupsUsed) {
     if (!backAssignments[group] && !defaultBacks[group]) warnings.push({ code: 'missingBack', group });
   }
-  const missingImg = cardIds.map((id) => cardsById.get(id)).filter((c) => c && !c.relativePath);
+  const missingImg = cardIds.map((id) => cardsById.get(id)).filter((c) => c && !c.image);
   if (missingImg.length) warnings.push({ code: 'missingImage', count: missingImg.length });
   return warnings;
 }

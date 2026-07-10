@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { backGroupForType, deckCounts, deckWarnings, maxCopies, expandQuantities, countOccurrences } from '../web/src/lib/deck.js';
 
 const cardsById = new Map([
-  ['AS-1', { id: 'AS-1', type: 'Character', alignment: 'Minion', relativePath: 'x.jpg' }],
-  ['AS-7', { id: 'AS-7', type: 'Hazard', alignment: 'Neutral', relativePath: 'y.jpg' }],
-  ['BA-1', { id: 'BA-1', type: 'Site', alignment: 'Neutral', relativePath: 'z.jpg' }],
+  ['AS-1', { id: 'AS-1', type: 'Character', alignment: 'Minion', image: 'x.jpg' }],
+  ['AS-7', { id: 'AS-7', type: 'Hazard', alignment: 'Neutral', image: 'y.jpg' }],
+  ['BA-1', { id: 'BA-1', type: 'Site', alignment: 'Neutral', image: 'z.jpg' }],
 ]);
 
 describe('backGroupForType', () => {

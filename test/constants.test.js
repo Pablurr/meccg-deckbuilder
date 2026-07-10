@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { DPI, BLEED_PX, CARD_W_BLEED, CARD_H_BLEED, CARD_W_CUT, CARD_H_CUT } from '../src/constants.js';
+import { DPI, BLEED_PX, CARD_W_BLEED, CARD_H_BLEED, CARD_W_CUT, CARD_H_CUT } from '../web/src/lib/constants.js';
 
 describe('MPC constants', () => {
   it('has the expected MPC poker bleed dimensions', () => {
