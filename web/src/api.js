@@ -1,4 +1,6 @@
 import { parseCards } from './lib/parseCards.js';
+import { createDeckStore } from './lib/deckStore.js';
+import { CARD_W_CUT, CARD_H_CUT } from './lib/constants.js';
 
 async function json(url, opts) {
   const res = await fetch(url, opts);
@@ -21,16 +23,27 @@ export function requireIndex() {
   return _index;
 }
 
-export const listDecks = () => json('/api/decks');
-export const getDeck = (id) => json(`/api/decks/${id}`);
-export const createDeck = (body) => json('/api/decks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-export const updateDeck = (id, body) => json(`/api/decks/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-export const deleteDeck = (id) => json(`/api/decks/${id}`, { method: 'DELETE' });
+const store = createDeckStore();
 
+export const listDecks = () => store.list();
+export const getDeck = (id) => store.get(id);
+export const createDeck = (body) => store.create(body || {});
+export const updateDeck = (id, body) => store.update(id, body || {});
+export const deleteDeck = async (id) => {
+  await store.remove(id);
+  return { ok: true };
+};
+
+// Custom back: normalized in the browser to a cut-size JPEG data URL and
+// stored with the deck (bounded size, fits in localStorage).
 export async function uploadBack(file) {
-  const fd = new FormData();
-  fd.append('file', file);
-  return json('/api/backs', { method: 'POST', body: fd });
+  const bmp = await createImageBitmap(file);
+  const canvas = document.createElement('canvas');
+  canvas.width = CARD_W_CUT;
+  canvas.height = CARD_H_CUT;
+  canvas.getContext('2d').drawImage(bmp, 0, 0, CARD_W_CUT, CARD_H_CUT);
+  bmp.close();
+  return { path: canvas.toDataURL('image/jpeg', 0.9) };
 }
 
 function downloadBlob(blob, filename) {

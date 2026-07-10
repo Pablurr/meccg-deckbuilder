@@ -1,42 +1,51 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import path from 'node:path';
-import os from 'node:os';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { createDeckStore } from '../src/deckStore.js';
+import { describe, it, expect } from 'vitest';
+import { createDeckStore } from '../web/src/lib/deckStore.js';
 
-describe('deckStore', () => {
-  let dir;
-  let store;
+function fakeStorage() {
+  const m = new Map();
+  return {
+    getItem: (k) => (m.has(k) ? m.get(k) : null),
+    setItem: (k, v) => m.set(k, String(v)),
+    removeItem: (k) => m.delete(k),
+  };
+}
 
-  beforeAll(async () => {
-    dir = await mkdtemp(path.join(os.tmpdir(), 'meccg-decks-'));
-    store = createDeckStore(dir);
-    await store.init();
-  });
-
-  afterAll(async () => {
-    await rm(dir, { recursive: true, force: true });
-  });
-
-  it('creates, reads, lists, updates and removes decks', async () => {
-    const created = await store.create({ name: 'My Deck', cardIds: ['AS-1', 'BA-1'] });
-    expect(created.id).toMatch(/^d_/);
-    expect(created.createdAt).toBeTruthy();
-
-    const fetched = await store.get(created.id);
-    expect(fetched.name).toBe('My Deck');
-    expect(fetched.cardIds).toEqual(['AS-1', 'BA-1']);
-
+describe('localStorage deck store', () => {
+  it('creates a deck with id/timestamps and lists it with a count', async () => {
+    const store = createDeckStore(fakeStorage());
+    const deck = await store.create({ name: 'Test', cardIds: ['AS-1', 'AS-1'], quantities: { 'AS-1': 2 } });
+    expect(deck.id).toMatch(/^d_/);
+    expect(deck.createdAt).toBeTruthy();
     const list = await store.list();
-    expect(list).toHaveLength(1);
-    expect(list[0]).toMatchObject({ id: created.id, name: 'My Deck', count: 2 });
+    expect(list).toEqual([{ id: deck.id, name: 'Test', count: 2, updatedAt: deck.updatedAt }]);
+  });
 
-    const updated = await store.update(created.id, { name: 'Renamed', cardIds: ['AS-1'] });
-    expect(updated.name).toBe('Renamed');
-    expect(updated.cardIds).toEqual(['AS-1']);
-    expect(updated.id).toBe(created.id);
+  it('gets, updates (preserving createdAt) and removes decks', async () => {
+    const store = createDeckStore(fakeStorage());
+    const d = await store.create({ name: 'A' });
+    const updated = await store.update(d.id, { name: 'B', cardIds: ['X'] });
+    expect(updated.name).toBe('B');
+    expect(updated.createdAt).toBe(d.createdAt);
+    expect((await store.get(d.id)).name).toBe('B');
+    await store.remove(d.id);
+    await expect(store.get(d.id)).rejects.toThrow('not found');
+  });
 
-    await store.remove(created.id);
-    expect(await store.list()).toHaveLength(0);
+  it('lists newest-updated first', async () => {
+    const store = createDeckStore(fakeStorage());
+    const a = await store.create({ name: 'old' });
+    await new Promise((r) => setTimeout(r, 5));
+    await store.create({ name: 'new' });
+    const list = await store.list();
+    expect(list[0].name).toBe('new');
+    expect(list[1].id).toBe(a.id);
+  });
+
+  it('throws on updating a missing deck and survives corrupt storage', async () => {
+    const bad = fakeStorage();
+    bad.setItem('meccg.decks.v1', '{not json');
+    const store = createDeckStore(bad);
+    expect(await store.list()).toEqual([]);
+    await expect(store.update('nope', {})).rejects.toThrow('not found');
   });
 });

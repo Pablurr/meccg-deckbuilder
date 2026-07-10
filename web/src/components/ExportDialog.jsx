@@ -143,7 +143,7 @@ export default function ExportDialog({ deck, cardIds, cardsById, quantities, def
               <div>{g.label}</div>
               <div className="muted" style={{ fontSize: 12 }}>
                 {backs[g.key]
-                  ? t('export.back.current', { path: backs[g.key] })
+                  ? t('export.back.custom')
                   : defaultBacks[g.key]
                     ? t('export.back.default')
                     : t('export.back.none')}
