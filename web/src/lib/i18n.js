@@ -75,6 +75,7 @@ export const translations = {
     'decks.load': 'Charger',
     'decks.duplicate': 'Dupliquer',
     'decks.delete': 'Suppr.',
+    'decks.confirmDelete': 'Supprimer « {name} » ?',
     'decks.copySuffix': '(copie)',
     'decks.storageFull': 'Stockage plein : impossible d’enregistrer. Supprime des decks ou des dos personnalisés.',
 
@@ -187,6 +188,7 @@ export const translations = {
     'decks.load': 'Load',
     'decks.duplicate': 'Duplicate',
     'decks.delete': 'Delete',
+    'decks.confirmDelete': 'Delete “{name}”?',
     'decks.copySuffix': '(copy)',
     'decks.storageFull': 'Storage full: cannot save. Remove some decks or custom backs.',
 
