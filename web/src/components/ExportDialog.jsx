@@ -45,10 +45,17 @@ export default function ExportDialog({ deck, cardIds, cardsById, quantities, def
 
   async function pickBack(group, file) {
     if (!file) return;
-    const { path } = await api.uploadBack(file);
-    const next = { ...backs, [group]: path };
-    setBacks(next);
-    onBacksChange(next);
+    setError(null);
+    try {
+      const { path } = await api.uploadBack(file);
+      const next = { ...backs, [group]: path };
+      setBacks(next);
+      onBacksChange(next);
+    } catch {
+      // accept="image/*" is only advisory: an SVG, a corrupt file, or a renamed
+      // non-image passes it and makes createImageBitmap reject. Surface it.
+      setError(t('export.back.uploadError'));
+    }
   }
 
   async function runExport() {

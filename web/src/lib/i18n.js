@@ -75,6 +75,7 @@ export const translations = {
     'decks.load': 'Charger',
     'decks.duplicate': 'Dupliquer',
     'decks.delete': 'Suppr.',
+    'decks.confirmDelete': 'Supprimer « {name} » ?',
     'decks.copySuffix': '(copie)',
     'decks.storageFull': 'Stockage plein : impossible d’enregistrer. Supprime des decks ou des dos personnalisés.',
 
@@ -109,6 +110,7 @@ export const translations = {
     'export.back.custom': 'Dos personnalisé',
     'export.back.default': 'Dos par défaut du projet (card-backs/)',
     'export.back.none': 'Aucun dos sélectionné',
+    'export.back.uploadError': 'Image illisible — choisis un autre fichier.',
     'export.chooseBack': 'Choisir un dos',
     'export.includeBacks': 'Inclure les planches de dos (miroir, pour impression recto-verso)',
     'export.result.zip': 'ZIP MPC généré — play deck : {playdeck}, location : {locationdeck}.',
@@ -187,6 +189,7 @@ export const translations = {
     'decks.load': 'Load',
     'decks.duplicate': 'Duplicate',
     'decks.delete': 'Delete',
+    'decks.confirmDelete': 'Delete “{name}”?',
     'decks.copySuffix': '(copy)',
     'decks.storageFull': 'Storage full: cannot save. Remove some decks or custom backs.',
 
@@ -219,6 +222,7 @@ export const translations = {
     'export.back.custom': 'Custom back',
     'export.back.default': 'Project default back (card-backs/)',
     'export.back.none': 'No back selected',
+    'export.back.uploadError': 'Unreadable image — pick another file.',
     'export.chooseBack': 'Choose a back',
     'export.includeBacks': 'Include back sheets (mirrored, for double-sided printing)',
     'export.result.zip': 'MPC ZIP generated — play deck: {playdeck}, location: {locationdeck}.',

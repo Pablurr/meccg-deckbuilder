@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cardImageSrc, cardImageEn, cardName, cardThumbSrc } from '../web/src/lib/lang.js';
+import { cardImageSrc, cardImageEn, cardName, cardThumbSrc, deckThumbWidth } from '../web/src/lib/lang.js';
 
 const card = {
   id: 'AS-1',
@@ -44,5 +44,21 @@ describe('cardName', () => {
   it('uses the requested language with en fallback', () => {
     expect(cardName(card, 'fr')).toBe('Bûrat-fr');
     expect(cardName({ id: 'X' }, 'fr')).toBe('X');
+  });
+});
+
+describe('deckThumbWidth', () => {
+  it('rounds up to 100px steps', () => {
+    expect(deckThumbWidth(285)).toBe(300);
+    expect(deckThumbWidth(300)).toBe(300);
+    expect(deckThumbWidth(301)).toBe(400);
+  });
+  it('floors at 200px', () => {
+    expect(deckThumbWidth(85)).toBe(200);
+    expect(deckThumbWidth(150)).toBe(200);
+  });
+  it('caps at the 570px source width', () => {
+    expect(deckThumbWidth(570)).toBe(570);
+    expect(deckThumbWidth(9999)).toBe(570);
   });
 });

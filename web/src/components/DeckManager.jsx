@@ -8,6 +8,7 @@ export default function DeckManager({ deck, cardIds, quantities, onClose, onLoad
   const [name, setName] = useState(deck.name || t('app.newDeck'));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const [confirmId, setConfirmId] = useState(null); // deck id awaiting delete confirmation
 
   async function refresh() {
     setDecks(await api.listDecks());
@@ -42,6 +43,7 @@ export default function DeckManager({ deck, cardIds, quantities, onClose, onLoad
 
   async function remove(id) {
     await api.deleteDeck(id);
+    setConfirmId(null);
     await refresh();
   }
 
@@ -66,9 +68,19 @@ export default function DeckManager({ deck, cardIds, quantities, onClose, onLoad
           {decks.map((d) => (
             <li key={d.id}>
               <span className="name">{d.name} <span className="muted">· {t('decks.cardsCount', { n: d.count })}</span></span>
-              <button className="btn secondary" onClick={() => load(d.id)}>{t('decks.load')}</button>
-              <button className="btn secondary" onClick={() => duplicate(d.id)}>{t('decks.duplicate')}</button>
-              <button className="btn secondary" onClick={() => remove(d.id)}>{t('decks.delete')}</button>
+              {confirmId === d.id ? (
+                <>
+                  <span className="muted">{t('decks.confirmDelete', { name: d.name })}</span>
+                  <button className="btn danger small" onClick={() => remove(d.id)}>{t('panel.remove')}</button>
+                  <button className="btn secondary small" onClick={() => setConfirmId(null)}>{t('common.cancel')}</button>
+                </>
+              ) : (
+                <>
+                  <button className="btn secondary" onClick={() => load(d.id)}>{t('decks.load')}</button>
+                  <button className="btn secondary" onClick={() => duplicate(d.id)}>{t('decks.duplicate')}</button>
+                  <button className="btn secondary" onClick={() => setConfirmId(d.id)}>{t('decks.delete')}</button>
+                </>
+              )}
             </li>
           ))}
         </ul>
