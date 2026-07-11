@@ -1,13 +1,13 @@
 # MECCG Deck Builder
 
-App web **locale** et minimaliste pour construire des decks MECCG à partir de la collection
-`cards/remastered-all/` (1683 cartes, 7 sets) et exporter des images prêtes à imprimer chez
-**MPC (MakePlayingCards)**.
+App web **statique** pour construire des decks MECCG à partir de la collection Remastered
+(1683 cartes, 7 sets) et exporter des images prêtes à imprimer chez **MPC (MakePlayingCards)**
+ou en planches PDF. Aucun serveur : c'est une SPA Vite/React, les données de cartes sont un
+fichier `cards.json` statique et les images sont servies par un CDN (jsDelivr).
 
 ## Prérequis
 
-- Node.js 18+ (testé sur Node 24)
-- Le dossier `cards/remastered-all/` (images + `cards.json`) dans le projet
+- Node.js 18+ (testé sur Node 24) — uniquement pour builder/développer, pas pour faire tourner l'app
 
 ## Installation
 
@@ -15,22 +15,33 @@ App web **locale** et minimaliste pour construire des decks MECCG à partir de l
 npm install
 ```
 
-## Lancer l'app
+## Développement
 
 ```bash
-npm start
+npm run dev
 ```
 
-Cela build le front puis démarre le serveur sur **http://localhost:3000**.
-Tout reste sur ta machine — rien n'est envoyé sur Internet.
+Lance le serveur de dev Vite (HMR) sur **http://localhost:5173**.
 
-### Mode développement (rechargement à chaud)
-
-Deux terminaux :
+## Build & preview
 
 ```bash
-npm run dev       # API Fastify sur :3000
-npm run dev:web   # Vite (HMR) sur :5173  → ouvre http://localhost:5173
+npm run build     # build statique → web/dist
+npm run preview   # sert web/dist en local pour vérifier le build
+```
+
+## Déploiement (Cloudflare Pages)
+
+- Build command : `npm run build`
+- Output directory : `web/dist`
+- Le fichier [`web/public/_redirects`](web/public/_redirects) (copié tel quel dans `web/dist`)
+  fournit le fallback SPA (`/* /index.html 200`) nécessaire pour que les routes côté client
+  fonctionnent sur Cloudflare Pages.
+
+Déploiement direct alternatif (sans passer par un dépôt Git connecté à Pages) :
+
+```bash
+npx wrangler pages deploy web/dist
 ```
 
 ## Utilisation
@@ -47,22 +58,27 @@ npm run dev:web   # Vite (HMR) sur :5173  → ouvre http://localhost:5173
    (accents ignorés, nom complet). L'écran d'analyse signale les cartes introuvables et, quand
    un nom correspond à plusieurs cartes (ex. version héros / serviteur), propose un menu pour
    choisir la bonne. L'import **remplace** la sélection courante.
-4. **Sauvegarder** : « Mes decks » → nommer et enregistrer. Les decks sont stockés en
-   `data/decks/*.json` et rechargeables plus tard.
-5. **Exporter** : « Exporter » ouvre la fenêtre d'export, avec deux formats au choix
-   (voir ci-dessous). Les dos sont pré-remplis avec les défauts du projet (`card-backs/`).
+4. **Sauvegarder** : « Mes decks » → nommer et enregistrer. Les decks sont stockés dans le
+   `localStorage` du navigateur (pas de compte, pas de synchronisation entre appareils). Pour
+   sauvegarder/transférer un deck, utilise l'export « Deck list (texte) » (voir plus bas) : le
+   fichier `.txt` produit est ré-importable via « Importer ».
+5. **Exporter** : « Exporter » ouvre la fenêtre d'export, avec les formats ci-dessous. Les dos
+   sont pré-remplis avec les défauts du projet (voir `web/public/card-backs/`) et peuvent être
+   remplacés par une image perso (stockée avec le deck, en `localStorage`).
 
-## Deux formats d'export
+## Formats d'export
+
+Tous les exports (ZIP, PDF) tournent **entièrement dans le navigateur** : les images de cartes
+sont récupérées depuis le CDN puis composées côté client (canvas pour le bleed MPC, `pdf-lib`
+pour les planches PDF, `jszip` pour l'archive), sans passer par aucun serveur.
 
 ### Langue des images (ZIP et PDF)
 
 Les exports ZIP et PDF proposent une **langue d'images** : **English, Español, Français** — les
-3 langues pour lesquelles des images existent. **English** et **Français** sont lus directement
-depuis les images locales (`cards/remastered-all/` et `cards/fr/`) — export **hors-ligne et
-rapide**. **Español** (sans images locales) est téléchargé à la demande depuis le CDN
-(`imageBaseUrl[es] + image`) et mis en cache dans `data/imgcache/` ; ce repli CDN sert aussi si une
-image locale manque. *(Les noms existent aussi en de/nl, mais sans images — d'où seulement 3 langues
-ici, contre 5 pour la deck list texte.)*
+3 langues pour lesquelles des images existent sur le CDN (`imageBaseUrl[lang]` dans
+`cards.json`). Si l'image dans la langue demandée est absente, l'export retombe automatiquement
+sur la version anglaise. *(Les noms existent aussi en de/nl, mais sans images — d'où seulement 3
+langues ici, contre 5 pour la deck list texte.)*
 
 ### 1. Images individuelles MPC (ZIP) — pour commander chez MPC
 
@@ -85,9 +101,9 @@ Prêt pour un glisser-déposer dans l'outil MPC en ligne ou dans
 (ici 2) que tu assignes ensuite aux emplacements — c'est exactement ce que produit le ZIP
 (`playdeck/back.png` + `locationdeck/back.png`).
 
-**Dos par défaut** (mapping demandé) : Site / Region → `card-backs/SiteCardBack300dpi.png`,
-toutes les autres cartes → `card-backs/CardBack300dpi.png`. On peut surcharger un dos par
-groupe dans la fenêtre d'export.
+**Dos par défaut** (mapping demandé) : Site / Region → `SiteCardBack300dpi.png`,
+toutes les autres cartes → `CardBack300dpi.png` (servis depuis `web/public/card-backs/`). On
+peut surcharger un dos par groupe dans la fenêtre d'export (image perso stockée avec le deck).
 
 ### 2. Planches PDF — pour impression maison / autre imprimeur
 
@@ -116,10 +132,10 @@ Deutsch, Nederlands — les langues complètes du JSON).
 ## Langue de l'interface
 
 Le sélecteur **FR / EN** en haut à droite change la langue de **toute l'interface** (boutons,
-filtres, dialogues, avertissements), des **noms de cartes** **et** des **images de cartes** : en
-mode **FR**, les visuels sont servis depuis les images françaises locales (`cards/fr/`, servies sur
-`/images-fr/`) ; en **EN**, depuis `cards/remastered-all/` (`/images/`). Si une image FR manque,
-l'affichage retombe automatiquement sur la version anglaise.
+filtres, dialogues, avertissements), des **noms de cartes** **et** des **images de cartes** : les
+visuels sont chargés depuis le CDN dans la langue choisie (`imageBaseUrl[fr|en]` + nom de
+fichier). Si l'image dans la langue choisie manque, l'affichage retombe automatiquement sur la
+version anglaise.
 
 Les textes sont centralisés dans [`web/src/lib/i18n.js`](web/src/lib/i18n.js) (un dictionnaire
 par langue, clés partagées). Pour ajouter une langue, ajouter un bloc avec les mêmes clés et
@@ -133,9 +149,10 @@ actuellement affichée par les filtres. « Nouveau » (tiroir du bas) vide la s�
 
 ### ⚠️ À vérifier avant une vraie commande
 
-Les dimensions cible (822 × 1122 px avec bleed) sont dans [`src/constants.js`](src/constants.js).
-**Vérifie-les contre le template exact que MPC te fait télécharger** pour ton produit avant de
-commander, et ajuste-les si besoin (un seul endroit à changer).
+Les dimensions cible (822 × 1122 px avec bleed) sont dans
+[`web/src/lib/constants.js`](web/src/lib/constants.js). **Vérifie-les contre le template exact
+que MPC te fait télécharger** pour ton produit avant de commander, et ajuste-les si besoin (un
+seul endroit à changer).
 
 ### Qualité d'image
 
@@ -151,7 +168,6 @@ npm test
 
 ## Structure
 
-- `src/` — backend (Fastify, chargement cartes, traitement image `sharp`, export ZIP, store decks)
-- `web/` — front Vite + React
-- `data/` — decks sauvegardés + dos importés (non versionné)
+- `web/` — front Vite + React (toute l'app, y compris la logique d'export en `web/src/lib/export/`)
+- `web/public/` — assets statiques servis tels quels : `cards.json`, `card-backs/`, `_redirects`
 - `docs/superpowers/` — spec et plan d'implémentation
