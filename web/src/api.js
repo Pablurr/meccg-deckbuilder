@@ -4,12 +4,7 @@ import { CARD_W_CUT, CARD_H_CUT } from './lib/constants.js';
 import { fetchBytes, fetchCardImageBytes, dataUrlToBytes, mapLimit } from './lib/export/images.js';
 import { toMpcPng } from './lib/export/bleedCanvas.js';
 import { buildDeckZip } from './lib/export/zip.js';
-
-async function json(url, opts) {
-  const res = await fetch(url, opts);
-  if (!res.ok) throw new Error(`${opts?.method || 'GET'} ${url} → ${res.status}`);
-  return res.json();
-}
+import { buildSheetPdf } from './lib/export/pdf.js';
 
 let _index = null; // id -> card, set by getCards(); used by the export functions
 
@@ -109,16 +104,18 @@ export async function exportDeck({ deckName, cardIds, backAssignments, lang = 'e
   return { counts, failures };
 }
 
-// Triggers a PDF sheet download (letter/a4/a3); returns { pages, failures }.
+// Builds the print-sheet PDF in the browser and triggers the download.
 export async function exportPdf({ deckName, cardIds, backAssignments, includeBacks, format = 'letter', lang = 'en' }) {
-  const res = await fetch('/api/export-pdf', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ deckName, cardIds, backAssignments, includeBacks, format, lang }),
+  const index = requireIndex();
+  const cards = cardIds.map((id) => index.get(id)).filter(Boolean);
+  const getFrontBytes = await prefetchFronts(cards, lang, async (b) => b); // raw bytes, PDF scales them
+  const { bytes, failures, pageCount } = await buildSheetPdf({
+    cards,
+    getFrontBytes,
+    getBackBytes: makeGetBackBytes(backAssignments),
+    includeBacks,
+    format,
   });
-  if (!res.ok) throw new Error(`export-pdf → ${res.status}`);
-  const pages = Number(res.headers.get('X-Export-Pages') || '0');
-  const failures = JSON.parse(res.headers.get('X-Export-Failures') || '[]');
-  downloadBlob(await res.blob(), `${safeName(deckName)}_${format}_${lang}_sheets.pdf`);
-  return { pages, failures };
+  downloadBlob(new Blob([bytes], { type: 'application/pdf' }), `${safeName(deckName)}_${format}_${lang}_sheets.pdf`);
+  return { pages: pageCount, failures };
 }
