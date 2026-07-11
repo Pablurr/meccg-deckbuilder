@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cardImageSrc, cardImageEn, cardName } from '../web/src/lib/lang.js';
+import { cardImageSrc, cardImageEn, cardName, cardThumbSrc } from '../web/src/lib/lang.js';
 
 const card = {
   id: 'AS-1',
@@ -21,6 +21,22 @@ describe('cardImageSrc (CDN)', () => {
   });
   it('cardImageEn always returns the English URL', () => {
     expect(cardImageEn(card)).toBe('https://cdn/en/as/Burat.jpg');
+  });
+});
+
+describe('cardThumbSrc (wsrv proxy)', () => {
+  it('wraps the full-res CDN url in the wsrv resizer as WebP', () => {
+    expect(cardThumbSrc(card, 'fr', 260)).toBe(
+      'https://wsrv.nl/?url=' + encodeURIComponent('https://cdn/fr/as/Burat.jpg') + '&w=260&output=webp'
+    );
+  });
+  it('follows the same English fallback as cardImageSrc', () => {
+    expect(cardThumbSrc(card, 'es', 100)).toBe(
+      'https://wsrv.nl/?url=' + encodeURIComponent('https://cdn/en/as/Burat.jpg') + '&w=100&output=webp'
+    );
+  });
+  it('returns empty string when there is no image', () => {
+    expect(cardThumbSrc({}, 'en')).toBe('');
   });
 });
 

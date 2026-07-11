@@ -41,3 +41,12 @@ export function cardImageSrc(card, lang = 'en') {
   const root = base[lang] || base.en;
   return root && card && card.image ? root + card.image : '';
 }
+
+// Lightweight thumbnail for the browser grid: the full-res CDN image resized
+// to ~w px WebP through the wsrv.nl image proxy (free, cached), cutting the
+// transferred bytes ~10-20x. Full-res cardImageSrc stays in use for the hover
+// preview, the deck panel, and the ZIP/PDF exports (which need 300 DPI).
+export function cardThumbSrc(card, lang = 'en', w = 260) {
+  const full = cardImageSrc(card, lang);
+  return full ? `https://wsrv.nl/?url=${encodeURIComponent(full)}&w=${w}&output=webp` : '';
+}

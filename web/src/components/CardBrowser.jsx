@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useEffect } from 'react';
 import { filterCards } from '../lib/filter.js';
 import { maxCopies } from '../lib/deck.js';
-import { cardName, cardImageSrc, cardImageEn } from '../lib/lang.js';
+import { cardName, cardImageSrc, cardImageEn, cardThumbSrc } from '../lib/lang.js';
 import { useT } from '../i18n.jsx';
 
 const CAP = 600; // safety cap on rendered cells
@@ -121,7 +121,7 @@ export default function CardBrowser({ cards, filters, quantities, lang, onChange
               {/* Click image to select (qty 1) / deselect. Use −/+ for copies once selected.
                   Hover shows a full-size preview. */}
               <img
-                src={cardImageSrc(c, lang)}
+                src={cardThumbSrc(c, lang)}
                 alt={name}
                 loading="lazy"
                 onClick={() => onToggle(c.id)}
@@ -129,10 +129,12 @@ export default function CardBrowser({ cards, filters, quantities, lang, onChange
                 onMouseMove={(e) => trackPointer(e, c)}
                 onMouseLeave={hidePreview}
                 onError={(e) => {
-                  // Fall back to the English image if the localized one is missing.
+                  // Missing localized thumb → English thumb → direct full-res
+                  // (the last step also covers the proxy being unavailable).
                   const el = e.currentTarget;
-                  const en = cardImageEn(c);
-                  if (el.getAttribute('src') !== en) el.src = en;
+                  const chain = [...new Set([cardThumbSrc(c, lang), cardThumbSrc(c, 'en'), cardImageSrc(c, 'en')].filter(Boolean))];
+                  const next = chain[chain.indexOf(el.getAttribute('src')) + 1];
+                  if (next) el.src = next;
                 }}
               />
               {qty > 0 && (
