@@ -31,7 +31,9 @@ export async function buildDeckZip({ deckName = 'deck', cards = [], getFrontPng,
       counts[group] += 1;
       manifest.push(`${group}\t${card.id}\t${(card.name && card.name.en) || ''}`);
     } catch (e) {
-      failures.push({ id: card.id, error: e.message });
+      // One entry per failing card id: copies share a single processed image,
+      // so a failure is reported once, not once per copy.
+      if (!failures.some((f) => f.id === card.id)) failures.push({ id: card.id, error: e.message });
     }
   }
 

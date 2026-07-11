@@ -14,7 +14,19 @@ export function createDeckStore(storage = globalThis.localStorage) {
       return {};
     }
   };
-  const writeAll = (decks) => storage.setItem(KEY, JSON.stringify(decks));
+  const writeAll = (decks) => {
+    try {
+      storage.setItem(KEY, JSON.stringify(decks));
+    } catch (e) {
+      // localStorage is full — custom card backs are stored as (large) data
+      // URLs, so a deck carrying backs can push past the ~5 MB quota. Surface a
+      // clear, identifiable error instead of a raw DOMException.
+      if (e && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || e.code === 22)) {
+        throw new Error('storage-full');
+      }
+      throw e;
+    }
+  };
 
   return {
     async list() {

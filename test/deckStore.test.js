@@ -48,4 +48,18 @@ describe('localStorage deck store', () => {
     expect(await store.list()).toEqual([]);
     await expect(store.update('nope', {})).rejects.toThrow('not found');
   });
+
+  it('surfaces a clear "storage-full" error when the quota is exceeded', async () => {
+    const full = {
+      getItem: () => null,
+      setItem: () => {
+        const e = new Error('quota');
+        e.name = 'QuotaExceededError';
+        throw e;
+      },
+      removeItem: () => {},
+    };
+    const store = createDeckStore(full);
+    await expect(store.create({ name: 'X' })).rejects.toThrow('storage-full');
+  });
 });

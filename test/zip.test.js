@@ -41,6 +41,16 @@ describe('buildDeckZip', () => {
     expect(manifest).toContain('XX-9: 404');
   });
 
+  it('records one failure entry for a failing card even across copies', async () => {
+    const three = [
+      { id: 'XX-9', type: 'Hazard', name: { en: 'Broken' } },
+      { id: 'XX-9', type: 'Hazard', name: { en: 'Broken' } },
+      { id: 'XX-9', type: 'Hazard', name: { en: 'Broken' } },
+    ];
+    const { failures } = await buildDeckZip({ deckName: 'Dupes', cards: three, getFrontPng, getBackPng });
+    expect(failures).toEqual([{ id: 'XX-9', error: '404' }]);
+  });
+
   it('omits a group back when the group is empty', async () => {
     const { bytes } = await buildDeckZip({
       deckName: 'OnlyPlay',

@@ -7,6 +7,7 @@ export default function DeckManager({ deck, cardIds, quantities, onClose, onLoad
   const [decks, setDecks] = useState([]);
   const [name, setName] = useState(deck.name || t('app.newDeck'));
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
 
   async function refresh() {
     setDecks(await api.listDecks());
@@ -15,11 +16,14 @@ export default function DeckManager({ deck, cardIds, quantities, onClose, onLoad
 
   async function save() {
     setBusy(true);
+    setError(null);
     try {
       const payload = { name, cardIds, quantities, backAssignments: deck.backAssignments || {} };
       const saved = deck.id ? await api.updateDeck(deck.id, payload) : await api.createDeck(payload);
       onSaved(saved);
       await refresh();
+    } catch (e) {
+      setError(e.message === 'storage-full' ? t('decks.storageFull') : t('common.error', { msg: e.message }));
     } finally {
       setBusy(false);
     }
@@ -55,6 +59,7 @@ export default function DeckManager({ deck, cardIds, quantities, onClose, onLoad
         <p className="muted" style={{ marginTop: 0 }}>
           {deck.id ? t('decks.current', { name: deck.name }) : t('decks.notSaved')}
         </p>
+        {error && <p style={{ color: 'var(--danger)', marginTop: 0 }}>{error}</p>}
 
         <ul className="deck-list">
           {decks.length === 0 && <li className="muted">{t('decks.none')}</li>}
