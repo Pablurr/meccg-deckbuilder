@@ -6,7 +6,7 @@ export const translations = {
   fr: {
     // App shell
     'app.loading': 'Chargement des cartes…',
-    'app.loadError': 'Erreur : {error}. Le serveur (npm start / npm run dev) tourne-t-il ?',
+    'app.loadError': 'Impossible de charger les cartes ({error}). Vérifie ta connexion internet et réessaie.',
     'app.newDeck': 'Nouveau deck',
 
     // Common
@@ -123,7 +123,7 @@ export const translations = {
 
   en: {
     'app.loading': 'Loading cards…',
-    'app.loadError': 'Error: {error}. Is the server (npm start / npm run dev) running?',
+    'app.loadError': 'Could not load cards ({error}). Check your internet connection and try again.',
     'app.newDeck': 'New deck',
 
     'common.close': 'Close',
