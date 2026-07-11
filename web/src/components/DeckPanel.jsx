@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { cardName, cardImageSrc, cardImageEn } from '../lib/lang.js';
+import { cardName, cardThumbSrc, cardImageEn, deckThumbWidth } from '../lib/lang.js';
 import { maxCopies } from '../lib/deck.js';
+import { useCardPreview, CardPreview } from './CardPreview.jsx';
 import { useT } from '../i18n.jsx';
 
 // Deck contents are grouped and displayed in this fixed type order.
@@ -21,9 +22,10 @@ function warningText(t, w) {
 }
 
 // One selected card, shown as a compact version of a browser grid cell: same
-// image + same −/count/+ control. Clicking the image asks for confirmation
+// thumbnail + same −/count/+ control. Clicking the image asks for confirmation
 // before removing the card, so a stray click can't silently empty the deck.
-function MiniCard({ card, qty, lang, onChangeQty, onToggle }) {
+// Hover shows the shared full-size preview so the card stays readable at any zoom.
+function MiniCard({ card, qty, lang, thumbW, onChangeQty, onToggle, trackPointer, hidePreview }) {
   const t = useT();
   const [confirming, setConfirming] = useState(false);
   const max = maxCopies(card);
@@ -31,14 +33,20 @@ function MiniCard({ card, qty, lang, onChangeQty, onToggle }) {
   return (
     <div className="cardcell deck-mini selected" title={name}>
       <img
-        src={cardImageSrc(card, lang)}
+        src={cardThumbSrc(card, lang, thumbW)}
         alt={name}
         loading="lazy"
         onClick={() => setConfirming(true)}
+        onMouseEnter={(e) => trackPointer(e, card)}
+        onMouseMove={(e) => trackPointer(e, card)}
+        onMouseLeave={hidePreview}
         onError={(e) => {
+          // Missing localized thumb → English thumb → full-res English
+          // (also covers the proxy being unavailable).
           const el = e.currentTarget;
-          const en = cardImageEn(card);
-          if (el.getAttribute('src') !== en) el.src = en;
+          const chain = [...new Set([cardThumbSrc(card, lang, thumbW), cardThumbSrc(card, 'en', thumbW), cardImageEn(card)].filter(Boolean))];
+          const next = chain[chain.indexOf(el.getAttribute('src')) + 1];
+          if (next) el.src = next;
         }}
       />
       {confirming ? (
@@ -88,10 +96,12 @@ export default function DeckPanel({
   onToggle,
 }) {
   const t = useT();
+  const { previewRef, previewImgRef, trackPointer, hidePreview } = useCardPreview(lang);
 
   // Card width driven by the zoom slider (% of the source image). min(…,100%)
   // keeps a card from overflowing when the panel is dragged narrower than it.
   const cardW = Math.round((SOURCE_WIDTH * zoom) / 100);
+  const thumbW = deckThumbWidth(cardW);
   const gridStyle = { gridTemplateColumns: `repeat(auto-fill, minmax(min(${cardW}px, 100%), ${cardW}px))` };
 
   // Drag the left edge to resize; released listeners live only for the drag.
@@ -191,8 +201,11 @@ export default function DeckPanel({
                     card={card}
                     qty={qty}
                     lang={lang}
+                    thumbW={thumbW}
                     onChangeQty={onChangeQty}
                     onToggle={onToggle}
+                    trackPointer={trackPointer}
+                    hidePreview={hidePreview}
                   />
                 ))}
               </div>
@@ -200,6 +213,8 @@ export default function DeckPanel({
           );
         })}
       </div>
+      {/* Shared hover preview (hidden until a card is hovered). */}
+      <CardPreview previewRef={previewRef} previewImgRef={previewImgRef} />
     </div>
   );
 }
