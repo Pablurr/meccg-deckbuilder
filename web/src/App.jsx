@@ -164,6 +164,8 @@ export default function App() {
         onExport={() => setShowExport(true)}
         onImport={() => setShowImport(true)}
         onNew={newDeck}
+        isMobile={isMobile}
+        onViewDeck={() => setDeckSheetOpen(true)}
       />
       {showManager && (
         <DeckManager

@@ -1,12 +1,17 @@
 import React from 'react';
 import { useT } from '../i18n.jsx';
 
-// Bottom action bar. Deck totals and warnings now live in the right-hand
-// DeckPanel; this bar only carries the deck-level actions.
-export default function DeckDrawer({ total, onManage, onExport, onImport, onNew }) {
+// Bottom action bar. On mobile it also surfaces the deck count and a button to
+// open the deck sheet (the right-hand DeckPanel is hidden on mobile).
+export default function DeckDrawer({ total, onManage, onExport, onImport, onNew, isMobile, onViewDeck }) {
   const t = useT();
   return (
     <div className="drawer">
+      {isMobile && (
+        <button className="btn secondary drawer-viewdeck" onClick={onViewDeck} disabled={total === 0}>
+          {t('drawer.viewDeck')} <span className="deckpanel-badge">{total}</span>
+        </button>
+      )}
       <div className="spacer" />
       <button className="btn secondary" onClick={onNew}>{t('drawer.new')}</button>
       <button className="btn secondary" onClick={onImport}>{t('drawer.import')}</button>

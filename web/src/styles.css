@@ -489,3 +489,5 @@ code {
   width: 40px; height: 40px;
   padding: 0;
 }
+
+.drawer-viewdeck { display: inline-flex; align-items: center; gap: 8px; }
