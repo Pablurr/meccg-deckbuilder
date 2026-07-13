@@ -122,7 +122,7 @@ export default function App() {
       <FilterBar facets={derivedFacets} filters={filters} onChange={setFilters} lang={uiLang} onLangChange={setUiLang} />
       <div className="main-row">
         <CardBrowser cards={cards} filters={filters} quantities={quantities} lang={uiLang} onChangeQty={changeQty} onToggle={toggleCard} onSelectAll={selectAll} isMobile={isMobile} onPreview={setPreviewCard} />
-        {hasSelection && (
+        {hasSelection && !isMobile && (
           <DeckPanel
             cardsById={cardsById}
             quantities={quantities}
@@ -140,6 +140,24 @@ export default function App() {
           />
         )}
       </div>
+      {isMobile && deckSheetOpen && hasSelection && (
+        <DeckPanel
+          asSheet
+          isMobile
+          cardsById={cardsById}
+          quantities={quantities}
+          lang={uiLang}
+          counts={counts}
+          warnings={warnings}
+          collapsed={false}
+          zoom={cardZoom}
+          onZoom={setCardZoom}
+          onChangeQty={changeQty}
+          onToggle={toggleCard}
+          onPreview={setPreviewCard}
+          onClose={() => setDeckSheetOpen(false)}
+        />
+      )}
       <DeckDrawer
         total={counts.total}
         onManage={() => setShowManager(true)}

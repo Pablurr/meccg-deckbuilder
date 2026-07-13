@@ -470,3 +470,22 @@ code {
 }
 .qty-btn.big { width: 44px; height: 44px; font-size: 26px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-2); }
 .card-modal-count { font-weight: 700; font-size: 20px; color: var(--accent); min-width: 28px; text-align: center; }
+
+/* ---- Deck panel as full-screen bottom sheet (mobile) ---- */
+.deckpanel.sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  width: 100%;
+  flex: none;
+  border-left: none;
+  animation: sheet-up .18s ease-out;
+}
+@keyframes sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.deckpanel-sheet-close {
+  position: absolute;
+  top: 8px; right: 10px;
+  z-index: 6;
+  width: 40px; height: 40px;
+  padding: 0;
+}
