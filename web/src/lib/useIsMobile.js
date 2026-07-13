@@ -15,8 +15,14 @@ export function useIsMobile() {
     const mql = window.matchMedia(MOBILE_QUERY);
     const onChange = (e) => setIsMobile(e.matches);
     setIsMobile(mql.matches);
-    mql.addEventListener('change', onChange);
-    return () => mql.removeEventListener('change', onChange);
+    // addEventListener is the modern API; fall back to addListener for older
+    // engines (e.g. iOS Safari < 14) where the former is undefined.
+    if (mql.addEventListener) {
+      mql.addEventListener('change', onChange);
+      return () => mql.removeEventListener('change', onChange);
+    }
+    mql.addListener(onChange);
+    return () => mql.removeListener(onChange);
   }, []);
 
   return isMobile;

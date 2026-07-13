@@ -33,6 +33,11 @@ export default function App() {
   const [deckSheetOpen, setDeckSheetOpen] = useState(false);
   const [previewCard, setPreviewCard] = useState(null);
 
+  // When the deck empties the mobile sheet unmounts; reset its flag so re-adding
+  // a card doesn't pop the sheet back open unprompted.
+  const deckEmpty = Object.keys(quantities).length === 0;
+  useEffect(() => { if (deckEmpty) setDeckSheetOpen(false); }, [deckEmpty]);
+
   useEffect(() => {
     api.getCards()
       .then(({ cards, facets, defaultBacks }) => { setCards(cards); setFacets(facets); setDefaultBacks(defaultBacks || {}); })
