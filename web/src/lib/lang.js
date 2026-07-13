@@ -8,10 +8,13 @@ export const LIST_LANGUAGES = [
   { code: 'nl', label: 'Nederlands' },
 ];
 
-// UI display language toggle (kept to the two main ones).
+// Card-name display languages offered by the language selector. Names in
+// cards.json cover en/fr/es fully, and card images exist for all three.
+// (UI chrome text is only translated fr/en; 'es' maps to 'en' — see App.jsx.)
 export const UI_LANGUAGES = [
   { code: 'fr', label: 'FR' },
   { code: 'en', label: 'EN' },
+  { code: 'es', label: 'ES' },
 ];
 
 // Languages for which card IMAGES exist (imageBaseUrl en/es/fr only).

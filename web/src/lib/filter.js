@@ -10,7 +10,7 @@ import { cardTags } from './tags.js';
 
 // Pure, in-memory filtering of the card list.
 // filters: { search, cardText, sets[], types[], alignments[], rarities[],
-//            races[], subtypes[], skills[], keywords[], unique(bool) }
+//            artists[], races[], subtypes[], skills[], keywords[], unique(bool) }
 export function filterCards(cards, filters = {}) {
   const q = normalizeText((filters.search || '').trim());
   const qText = normalizeText((filters.cardText || '').trim());
@@ -26,6 +26,7 @@ export function filterCards(cards, filters = {}) {
     if (has(filters.types) && !filters.types.includes(c.type)) return false;
     if (has(filters.alignments) && !filters.alignments.includes(c.alignment)) return false;
     if (has(filters.rarities) && !filters.rarities.includes(c.rarity)) return false;
+    if (has(filters.artists) && !filters.artists.includes(c.artist)) return false;
     if (!tagMatch(c, 'races')) return false;
     if (!tagMatch(c, 'subtypes')) return false;
     if (!tagMatch(c, 'skills')) return false;
@@ -35,7 +36,7 @@ export function filterCards(cards, filters = {}) {
     }
     if (filters.unique === true && a.unique !== true) return false;
     if (q) {
-      const names = normalizeText([c.name?.en, c.name?.fr].filter(Boolean).join(' '));
+      const names = normalizeText([c.name?.en, c.name?.fr, c.name?.es].filter(Boolean).join(' '));
       if (!names.includes(q)) return false;
     }
     if (qText) {

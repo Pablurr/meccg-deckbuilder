@@ -51,8 +51,15 @@ body {
   display: block;
   margin-right: 4px;
 }
-/* Language toggle sits at the far right of the top row. */
-.filterbar-top .lang-toggle { margin-left: auto; }
+/* Language link sits at the far right of the top row. */
+.filterbar-top .lang-link { margin-left: auto; }
+/* The two search boxes share one line and shrink together. */
+.search-group {
+  display: flex;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
 .filterbar input[type="search"] {
   flex: 1 1 200px;
   min-width: 160px;
@@ -62,6 +69,8 @@ body {
   padding: 7px 10px;
   border-radius: var(--radius);
 }
+/* Inside the group the inputs shrink to share the line (override the 160px). */
+.search-group input[type="search"] { flex: 1 1 0; min-width: 0; }
 .facet { position: relative; }
 .facet > button {
   background: var(--panel-2);
@@ -84,7 +93,11 @@ body {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 6px;
-  min-width: 180px;
+  /* Fit the widest option so long labels (e.g. artist names) stay readable,
+     capped so the menu never runs off the viewport. */
+  width: max-content;
+  min-width: 160px;
+  max-width: min(360px, calc(100vw - 20px));
   box-shadow: 0 8px 24px rgba(0,0,0,.4);
 }
 .facet-menu label {
@@ -128,21 +141,24 @@ body {
 }
 .btn.small { padding: 5px 10px; font-size: 13px; }
 
-.lang-toggle {
+/* Compact language selector: small text links, not a chunky toggle. */
+.lang-link {
   display: inline-flex;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  overflow: hidden;
+  align-items: center;
+  gap: 2px;
 }
-.lang-toggle button {
-  background: var(--panel-2);
+.lang-link button {
+  background: none;
   border: none;
   color: var(--muted);
-  padding: 7px 12px;
+  padding: 4px 6px;
   cursor: pointer;
   font-weight: 600;
+  font-size: 13px;
+  border-radius: 4px;
 }
-.lang-toggle button.on { background: var(--accent); color: #14141a; }
+.lang-link button:hover { color: var(--text); }
+.lang-link button.on { color: var(--accent); text-decoration: underline; }
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -499,15 +515,12 @@ code {
 
 /* ================= Mobile layout (keep in sync with MOBILE_QUERY) ============ */
 @media (max-width: 768px), (pointer: coarse) {
-  /* Filter bar: search inputs stack full-width; brand smaller. */
+  /* Filter bar: the two search boxes stay on one line (shrunk); brand smaller. */
   .filterbar { padding: 8px 10px; }
   .brand-logo { height: 26px; }
-  .filterbar input[type="search"] { flex: 1 1 100%; min-width: 0; }
   .filters-toggle { align-self: flex-start; }
   /* Comfortable touch targets for the filter controls. */
   .filters-toggle, .facet > button, .chip-toggle { min-height: 44px; }
-  /* Open facet menus must not spill off-screen. */
-  .facet-menu { left: 0; right: 0; min-width: 0; max-width: calc(100vw - 24px); }
 
   /* Card grid: ~3 columns, tighter gaps/padding. */
   .browser { padding: 8px; }

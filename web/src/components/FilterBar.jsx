@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { UI_LANGUAGES } from '../lib/lang.js';
 import { useT } from '../i18n.jsx';
 
-function FacetDropdown({ label, options, selected = [], onChange }) {
-  const [open, setOpen] = useState(false);
+// Controlled facet dropdown: the parent owns which one is open, so opening one
+// closes the others. The menu sizes to its content (see .facet-menu) so long
+// options — e.g. artist names — stay readable.
+function FacetDropdown({ label, options, selected = [], onChange, open, onToggle }) {
   const active = selected.length > 0;
   function toggle(value) {
     const next = selected.includes(value) ? selected.filter((v) => v !== value) : [...selected, value];
@@ -11,11 +13,11 @@ function FacetDropdown({ label, options, selected = [], onChange }) {
   }
   return (
     <div className="facet">
-      <button className={active ? 'active' : ''} onClick={() => setOpen((o) => !o)}>
+      <button className={active ? 'active' : ''} onClick={onToggle}>
         {label}{active ? ` (${selected.length})` : ''} ▾
       </button>
       {open && (
-        <div className="facet-menu" onMouseLeave={() => setOpen(false)}>
+        <div className="facet-menu">
           {options.map((opt) => (
             <label key={opt}>
               <input type="checkbox" checked={selected.includes(opt)} onChange={() => toggle(opt)} />
@@ -28,41 +30,76 @@ function FacetDropdown({ label, options, selected = [], onChange }) {
   );
 }
 
+// Compact language selector (card-name display language). Sits on the logo row.
+function LangLink({ lang, onLangChange }) {
+  return (
+    <div className="lang-link">
+      {UI_LANGUAGES.map((l) => (
+        <button
+          key={l.code}
+          className={lang === l.code ? 'on' : ''}
+          onClick={() => onLangChange(l.code)}
+        >{l.label}</button>
+      ))}
+    </div>
+  );
+}
+
 export default function FilterBar({ facets, filters, onChange, lang, onLangChange, isMobile }) {
   const t = useT();
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [openKey, setOpenKey] = useState(null); // which facet menu is open (only one)
+  const barRef = useRef(null);
+
+  // Close the open facet menu on an outside click or Escape.
+  useEffect(() => {
+    if (openKey === null) return undefined;
+    const onDown = (e) => { if (barRef.current && !barRef.current.contains(e.target)) setOpenKey(null); };
+    const onKey = (e) => { if (e.key === 'Escape') setOpenKey(null); };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey); };
+  }, [openKey]);
+
   const set = (key, value) => onChange({ ...filters, [key]: value });
   const anyActive =
     (filters.search && filters.search.length) ||
     (filters.cardText && filters.cardText.length) ||
     filters.unique ||
-    ['sets', 'types', 'alignments', 'rarities', 'races', 'subtypes', 'skills', 'keywords'].some((k) => (filters[k] || []).length);
+    ['sets', 'types', 'alignments', 'rarities', 'artists', 'races', 'subtypes', 'skills', 'keywords']
+      .some((k) => (filters[k] || []).length);
+
+  // Render a facet dropdown wired to the single-open state.
+  const facet = (key, label) => (
+    <FacetDropdown
+      label={label}
+      options={facets[key] || []}
+      selected={filters[key]}
+      onChange={(v) => set(key, v)}
+      open={openKey === key}
+      onToggle={() => setOpenKey((k) => (k === key ? null : key))}
+    />
+  );
 
   return (
-    <div className="filterbar">
+    <div className="filterbar" ref={barRef}>
       <div className="filterbar-top">
         <img className="brand-logo" src="/meccg-logo.png" alt="MECCG" />
-        <input
-          type="search"
-          placeholder={t('filter.search')}
-          value={filters.search || ''}
-          onChange={(e) => set('search', e.target.value)}
-        />
-        <input
-          type="search"
-          placeholder={t('filter.searchText')}
-          value={filters.cardText || ''}
-          onChange={(e) => set('cardText', e.target.value)}
-        />
-        <div className="lang-toggle">
-          {UI_LANGUAGES.map((l) => (
-            <button
-              key={l.code}
-              className={lang === l.code ? 'on' : ''}
-              onClick={() => onLangChange(l.code)}
-            >{l.label}</button>
-          ))}
+        <div className="search-group">
+          <input
+            type="search"
+            placeholder={t('filter.search')}
+            value={filters.search || ''}
+            onChange={(e) => set('search', e.target.value)}
+          />
+          <input
+            type="search"
+            placeholder={t('filter.searchText')}
+            value={filters.cardText || ''}
+            onChange={(e) => set('cardText', e.target.value)}
+          />
         </div>
+        <LangLink lang={lang} onLangChange={onLangChange} />
       </div>
       {isMobile && (
         <button
@@ -71,14 +108,15 @@ export default function FilterBar({ facets, filters, onChange, lang, onLangChang
         >{t('filter.filters')} {filtersOpen ? '▴' : '▾'}</button>
       )}
       <div className="filterbar-bottom" style={isMobile && !filtersOpen ? { display: 'none' } : undefined}>
-        <FacetDropdown label={t('filter.set')} options={facets.sets} selected={filters.sets} onChange={(v) => set('sets', v)} />
-        <FacetDropdown label={t('filter.type')} options={facets.types} selected={filters.types} onChange={(v) => set('types', v)} />
-        <FacetDropdown label={t('filter.alignment')} options={facets.alignments} selected={filters.alignments} onChange={(v) => set('alignments', v)} />
-        <FacetDropdown label={t('filter.rarity')} options={facets.rarities} selected={filters.rarities} onChange={(v) => set('rarities', v)} />
-        <FacetDropdown label={t('filter.race')} options={facets.races} selected={filters.races} onChange={(v) => set('races', v)} />
-        <FacetDropdown label={t('filter.subtype')} options={facets.subtypes} selected={filters.subtypes} onChange={(v) => set('subtypes', v)} />
-        <FacetDropdown label={t('filter.skills')} options={facets.skills} selected={filters.skills} onChange={(v) => set('skills', v)} />
-        <FacetDropdown label={t('filter.keywords')} options={facets.keywords} selected={filters.keywords} onChange={(v) => set('keywords', v)} />
+        {facet('sets', t('filter.set'))}
+        {facet('types', t('filter.type'))}
+        {facet('alignments', t('filter.alignment'))}
+        {facet('rarities', t('filter.rarity'))}
+        {facet('artists', t('filter.artist'))}
+        {facet('races', t('filter.race'))}
+        {facet('subtypes', t('filter.subtype'))}
+        {facet('skills', t('filter.skills'))}
+        {facet('keywords', t('filter.keywords'))}
         <button className={`chip-toggle ${filters.unique ? 'on' : ''}`} onClick={() => set('unique', !filters.unique)}>
           {t('filter.unique')}
         </button>

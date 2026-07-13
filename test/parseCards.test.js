@@ -11,8 +11,8 @@ const fixture = {
   AS: {
     imageBaseUrl: { en: 'https://cdn/en/as/', fr: 'https://cdn/fr/as/' },
     cards: {
-      'AS-1': { id: 'AS-1', type: 'Character', alignment: 'Minion', rarity: 'U2', attributes: { race: 'Troll', keywords: ['Maia'] }, image: 'Burat.jpg', text: { en: '<p>+1 <b>prowess</b> against Dwarves.</p>', fr: '<p>+1 prouesse contre les Nains.</p>', es: '' } },
-      'AS-2': { id: 'AS-2', type: 'Resource', alignment: 'Hero', rarity: 'C1', attributes: { subtype: 'Short-event' }, image: 'x.jpg' },
+      'AS-1': { id: 'AS-1', type: 'Character', alignment: 'Minion', rarity: 'U2', artist: 'Omar Rayyan', attributes: { race: 'Troll', keywords: ['Maia'] }, image: 'Burat.jpg', text: { en: '<p>+1 <b>prowess</b> against Dwarves.</p>', fr: '<p>+1 prouesse contre les Nains.</p>', es: '' } },
+      'AS-2': { id: 'AS-2', type: 'Resource', alignment: 'Hero', rarity: 'C1', artist: 'Angus McBride', attributes: { subtype: 'Short-event' }, image: 'x.jpg' },
     },
   },
   BA: {
@@ -48,6 +48,7 @@ describe('computeFacets', () => {
     expect(facets.sets).toEqual(['AS', 'BA']);
     expect(facets.types).toEqual(['Character', 'Resource', 'Site']);
     expect(facets.races).toEqual(['Troll']);
+    expect(facets.artists).toEqual(['Angus McBride', 'Omar Rayyan']);
     expect(facets.keywords).toEqual(['Maia']);
   });
 });

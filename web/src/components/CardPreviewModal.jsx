@@ -13,8 +13,10 @@ export default function CardPreviewModal({ card, qty, lang, onChangeQty, onClose
   const max = maxCopies(card);
   const name = cardName(card, lang);
   return (
+    // Clicking anywhere (the card image or the letterbox around it) closes the
+    // modal; only the quantity bar swallows the click so ＋/− don't dismiss it.
     <div className="card-modal-backdrop" onClick={onClose}>
-      <div className="card-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="card-modal">
         <div className="card-modal-imgwrap">
           <img
             src={cardImageSrc(card, lang)}
@@ -26,7 +28,7 @@ export default function CardPreviewModal({ card, qty, lang, onChangeQty, onClose
             }}
           />
         </div>
-        <div className="card-modal-bar">
+        <div className="card-modal-bar" onClick={(e) => e.stopPropagation()}>
           <button
             className="qty-btn big"
             onClick={() => onChangeQty(card.id, -1)}
