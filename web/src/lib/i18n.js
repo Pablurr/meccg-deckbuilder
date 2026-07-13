@@ -12,6 +12,7 @@ export const translations = {
     // Common
     'common.close': 'Fermer',
     'common.cancel': 'Annuler',
+    'common.done': 'Terminé',
     'common.error': 'Erreur : {msg}',
 
     // Filter bar
@@ -131,6 +132,7 @@ export const translations = {
 
     'common.close': 'Close',
     'common.cancel': 'Cancel',
+    'common.done': 'Done',
     'common.error': 'Error: {msg}',
 
     'filter.search': 'Search a name…',
