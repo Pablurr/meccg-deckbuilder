@@ -119,7 +119,7 @@ export default function App() {
   return (
     <I18nProvider lang={uiLang}>
     <div className="app">
-      <FilterBar facets={derivedFacets} filters={filters} onChange={setFilters} lang={uiLang} onLangChange={setUiLang} />
+      <FilterBar facets={derivedFacets} filters={filters} onChange={setFilters} lang={uiLang} onLangChange={setUiLang} isMobile={isMobile} />
       <div className="main-row">
         <CardBrowser cards={cards} filters={filters} quantities={quantities} lang={uiLang} onChangeQty={changeQty} onToggle={toggleCard} onSelectAll={selectAll} isMobile={isMobile} onPreview={setPreviewCard} />
         {hasSelection && !isMobile && (

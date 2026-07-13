@@ -28,6 +28,7 @@ export const translations = {
     'filter.keywords': 'Mots-clés',
     'filter.unique': 'Unique',
     'filter.reset': 'réinitialiser',
+    'filter.filters': 'Filtres',
 
     // Card browser
     'browser.count': '{n} carte(s)',
@@ -148,6 +149,7 @@ export const translations = {
     'filter.keywords': 'Keywords',
     'filter.unique': 'Unique',
     'filter.reset': 'reset',
+    'filter.filters': 'Filters',
 
     'browser.count': '{n} card(s)',
     'browser.capped': ' — showing the first {cap}, refine the filters',

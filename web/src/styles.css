@@ -491,3 +491,28 @@ code {
 }
 
 .drawer-viewdeck { display: inline-flex; align-items: center; gap: 8px; }
+
+/* ================= Mobile layout (keep in sync with MOBILE_QUERY) ============ */
+@media (max-width: 768px), (pointer: coarse) {
+  /* Filter bar: search inputs stack full-width; brand smaller. */
+  .filterbar { padding: 8px 10px; }
+  .brand-logo { height: 26px; }
+  .filterbar input[type="search"] { flex: 1 1 100%; min-width: 0; }
+  .filters-toggle { align-self: flex-start; }
+  /* Open facet menus must not spill off-screen. */
+  .facet-menu { left: 0; right: 0; min-width: 0; max-width: calc(100vw - 24px); }
+
+  /* Card grid: ~3 columns, tighter gaps/padding. */
+  .browser { padding: 8px; }
+  .grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 6px; }
+
+  /* Bottom drawer: wraps, comfortable touch targets. */
+  .drawer { gap: 8px; padding: 8px 10px; }
+  .drawer .btn { padding: 10px 12px; min-height: 44px; }
+  .drawer-viewdeck { order: -1; }
+
+  /* Modals: use more of the screen, bigger touch targets, no h-overflow. */
+  .modal { width: min(560px, 96vw); padding: 16px; }
+  .modal .btn { min-height: 44px; }
+  .import-textarea, .import-list select { width: 100%; }
+}

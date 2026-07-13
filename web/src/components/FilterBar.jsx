@@ -28,8 +28,9 @@ function FacetDropdown({ label, options, selected = [], onChange }) {
   );
 }
 
-export default function FilterBar({ facets, filters, onChange, lang, onLangChange }) {
+export default function FilterBar({ facets, filters, onChange, lang, onLangChange, isMobile }) {
   const t = useT();
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const set = (key, value) => onChange({ ...filters, [key]: value });
   const anyActive =
     (filters.search && filters.search.length) ||
@@ -63,7 +64,13 @@ export default function FilterBar({ facets, filters, onChange, lang, onLangChang
           ))}
         </div>
       </div>
-      <div className="filterbar-bottom">
+      {isMobile && (
+        <button
+          className={`chip-toggle filters-toggle ${filtersOpen ? 'on' : ''}`}
+          onClick={() => setFiltersOpen((o) => !o)}
+        >{t('filter.filters')} {filtersOpen ? '▴' : '▾'}</button>
+      )}
+      <div className="filterbar-bottom" style={isMobile && !filtersOpen ? { display: 'none' } : undefined}>
         <FacetDropdown label={t('filter.set')} options={facets.sets} selected={filters.sets} onChange={(v) => set('sets', v)} />
         <FacetDropdown label={t('filter.type')} options={facets.types} selected={filters.types} onChange={(v) => set('types', v)} />
         <FacetDropdown label={t('filter.alignment')} options={facets.alignments} selected={filters.alignments} onChange={(v) => set('alignments', v)} />
