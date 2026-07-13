@@ -482,6 +482,11 @@ code {
   animation: sheet-up .18s ease-out;
 }
 @keyframes sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+/* The sheet's resting state is translateY(0); the slide-up is a pure enhancement.
+   Disable it for users who prefer reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  .deckpanel.sheet { animation: none; }
+}
 .deckpanel-sheet-close {
   position: absolute;
   top: 8px; right: 10px;
@@ -499,6 +504,8 @@ code {
   .brand-logo { height: 26px; }
   .filterbar input[type="search"] { flex: 1 1 100%; min-width: 0; }
   .filters-toggle { align-self: flex-start; }
+  /* Comfortable touch targets for the filter controls. */
+  .filters-toggle, .facet > button, .chip-toggle { min-height: 44px; }
   /* Open facet menus must not spill off-screen. */
   .facet-menu { left: 0; right: 0; min-width: 0; max-width: calc(100vw - 24px); }
 
