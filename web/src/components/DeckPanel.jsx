@@ -25,7 +25,7 @@ function warningText(t, w) {
 // thumbnail + same −/count/+ control. Clicking the image asks for confirmation
 // before removing the card, so a stray click can't silently empty the deck.
 // Hover shows the shared full-size preview so the card stays readable at any zoom.
-function MiniCard({ card, qty, lang, thumbW, onChangeQty, onToggle, trackPointer, hidePreview }) {
+function MiniCard({ card, qty, lang, thumbW, onChangeQty, onToggle, trackPointer, hidePreview, isMobile, onPreview }) {
   const t = useT();
   const [confirming, setConfirming] = useState(false);
   const max = maxCopies(card);
@@ -36,7 +36,7 @@ function MiniCard({ card, qty, lang, thumbW, onChangeQty, onToggle, trackPointer
         src={cardThumbSrc(card, lang, thumbW)}
         alt={name}
         loading="lazy"
-        onClick={() => setConfirming(true)}
+        onClick={() => (isMobile ? onPreview(card) : setConfirming(true))}
         onMouseEnter={(e) => trackPointer(e, card)}
         onMouseMove={(e) => trackPointer(e, card)}
         onMouseLeave={hidePreview}
@@ -94,6 +94,10 @@ export default function DeckPanel({
   onZoom,
   onChangeQty,
   onToggle,
+  asSheet = false,
+  onClose,
+  isMobile = false,
+  onPreview,
 }) {
   const t = useT();
   const { previewRef, previewImgRef, trackPointer, hidePreview } = useCardPreview(lang);
@@ -150,19 +154,26 @@ export default function DeckPanel({
   }
 
   return (
-    <div className="deckpanel" style={{ flexBasis: `${width}px`, width: `${width}px` }}>
-      <div className="deckpanel-resizer" onMouseDown={startResize} aria-hidden="true" />
+    <div className={`deckpanel ${asSheet ? 'sheet' : ''}`} style={asSheet ? undefined : { flexBasis: `${width}px`, width: `${width}px` }}>
+      {!asSheet && <div className="deckpanel-resizer" onMouseDown={startResize} aria-hidden="true" />}
+      {asSheet && (
+        <button className="deckpanel-sheet-close btn secondary" onClick={onClose} aria-label={t('common.close')}>✕</button>
+      )}
       <div className="deckpanel-head">
-        <button className="deckpanel-toggle" onClick={onToggleCollapsed} aria-label={t('panel.collapse')}>
-          <span className="chevron">›</span>
-        </button>
+        {!asSheet && (
+          <button className="deckpanel-toggle" onClick={onToggleCollapsed} aria-label={t('panel.collapse')}>
+            <span className="chevron">›</span>
+          </button>
+        )}
         <b>{t('panel.title')}</b>
-        <button
-          className="deckpanel-max"
-          onClick={toggleMax}
-          aria-label={isMaxed ? t('panel.restore') : t('panel.maximize')}
-          title={isMaxed ? t('panel.restore') : t('panel.maximize')}
-        >{isMaxed ? '⇥' : '⤢'}</button>
+        {!asSheet && (
+          <button
+            className="deckpanel-max"
+            onClick={toggleMax}
+            aria-label={isMaxed ? t('panel.restore') : t('panel.maximize')}
+            title={isMaxed ? t('panel.restore') : t('panel.maximize')}
+          >{isMaxed ? '⇥' : '⤢'}</button>
+        )}
         <div className="deckpanel-counts">
           <span className="count-pill">{t('drawer.total')} <b>{counts.total}</b></span>
           <span className="count-pill">{t('drawer.playdeck')} <b>{counts.byGroup.playdeck}</b></span>
@@ -206,6 +217,8 @@ export default function DeckPanel({
                     onToggle={onToggle}
                     trackPointer={trackPointer}
                     hidePreview={hidePreview}
+                    isMobile={isMobile}
+                    onPreview={onPreview}
                   />
                 ))}
               </div>

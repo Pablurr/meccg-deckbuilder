@@ -11,6 +11,8 @@ import DeckPanel from './components/DeckPanel.jsx';
 import DeckManager from './components/DeckManager.jsx';
 import ExportDialog from './components/ExportDialog.jsx';
 import ImportDialog from './components/ImportDialog.jsx';
+import CardPreviewModal from './components/CardPreviewModal.jsx';
+import { useIsMobile } from './lib/useIsMobile.js';
 
 export default function App() {
   const [cards, setCards] = useState([]);
@@ -27,6 +29,14 @@ export default function App() {
   const [panelWidth, setPanelWidth] = useState(360); // right deck panel width in px
   const [cardZoom, setCardZoom] = useState(50); // deck-panel card size, % of original image
   const [error, setError] = useState(null);
+  const isMobile = useIsMobile();
+  const [deckSheetOpen, setDeckSheetOpen] = useState(false);
+  const [previewCard, setPreviewCard] = useState(null);
+
+  // When the deck empties the mobile sheet unmounts; reset its flag so re-adding
+  // a card doesn't pop the sheet back open unprompted.
+  const deckEmpty = Object.keys(quantities).length === 0;
+  useEffect(() => { if (deckEmpty) setDeckSheetOpen(false); }, [deckEmpty]);
 
   useEffect(() => {
     api.getCards()
@@ -114,10 +124,10 @@ export default function App() {
   return (
     <I18nProvider lang={uiLang}>
     <div className="app">
-      <FilterBar facets={derivedFacets} filters={filters} onChange={setFilters} lang={uiLang} onLangChange={setUiLang} />
+      <FilterBar facets={derivedFacets} filters={filters} onChange={setFilters} lang={uiLang} onLangChange={setUiLang} isMobile={isMobile} />
       <div className="main-row">
-        <CardBrowser cards={cards} filters={filters} quantities={quantities} lang={uiLang} onChangeQty={changeQty} onToggle={toggleCard} onSelectAll={selectAll} />
-        {hasSelection && (
+        <CardBrowser cards={cards} filters={filters} quantities={quantities} lang={uiLang} onChangeQty={changeQty} onToggle={toggleCard} onSelectAll={selectAll} isMobile={isMobile} onPreview={setPreviewCard} />
+        {hasSelection && !isMobile && (
           <DeckPanel
             cardsById={cardsById}
             quantities={quantities}
@@ -135,12 +145,32 @@ export default function App() {
           />
         )}
       </div>
+      {isMobile && deckSheetOpen && hasSelection && (
+        <DeckPanel
+          asSheet
+          isMobile
+          cardsById={cardsById}
+          quantities={quantities}
+          lang={uiLang}
+          counts={counts}
+          warnings={warnings}
+          collapsed={false}
+          zoom={cardZoom}
+          onZoom={setCardZoom}
+          onChangeQty={changeQty}
+          onToggle={toggleCard}
+          onPreview={setPreviewCard}
+          onClose={() => setDeckSheetOpen(false)}
+        />
+      )}
       <DeckDrawer
         total={counts.total}
         onManage={() => setShowManager(true)}
         onExport={() => setShowExport(true)}
         onImport={() => setShowImport(true)}
         onNew={newDeck}
+        isMobile={isMobile}
+        onViewDeck={() => setDeckSheetOpen(true)}
       />
       {showManager && (
         <DeckManager
@@ -170,6 +200,15 @@ export default function App() {
           uiLang={uiLang}
           onClose={() => setShowExport(false)}
           onBacksChange={(backAssignments) => setDeck((prev) => ({ ...prev, backAssignments }))}
+        />
+      )}
+      {previewCard && (
+        <CardPreviewModal
+          card={previewCard}
+          qty={quantities[previewCard.id] || 0}
+          lang={uiLang}
+          onChangeQty={changeQty}
+          onClose={() => setPreviewCard(null)}
         />
       )}
     </div>

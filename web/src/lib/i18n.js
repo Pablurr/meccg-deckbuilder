@@ -12,6 +12,7 @@ export const translations = {
     // Common
     'common.close': 'Fermer',
     'common.cancel': 'Annuler',
+    'common.done': 'Terminé',
     'common.error': 'Erreur : {msg}',
 
     // Filter bar
@@ -27,6 +28,7 @@ export const translations = {
     'filter.keywords': 'Mots-clés',
     'filter.unique': 'Unique',
     'filter.reset': 'réinitialiser',
+    'filter.filters': 'Filtres',
 
     // Card browser
     'browser.count': '{n} carte(s)',
@@ -43,6 +45,7 @@ export const translations = {
     'drawer.import': 'Importer',
     'drawer.myDecks': 'Mes decks',
     'drawer.export': 'Exporter',
+    'drawer.viewDeck': 'Voir le deck',
     'group.playdeck': 'play deck',
     'group.locationdeck': 'location',
     'warn.emptyDeck': 'Deck vide.',
@@ -131,6 +134,7 @@ export const translations = {
 
     'common.close': 'Close',
     'common.cancel': 'Cancel',
+    'common.done': 'Done',
     'common.error': 'Error: {msg}',
 
     'filter.search': 'Search a name…',
@@ -145,6 +149,7 @@ export const translations = {
     'filter.keywords': 'Keywords',
     'filter.unique': 'Unique',
     'filter.reset': 'reset',
+    'filter.filters': 'Filters',
 
     'browser.count': '{n} card(s)',
     'browser.capped': ' — showing the first {cap}, refine the filters',
@@ -159,6 +164,7 @@ export const translations = {
     'drawer.import': 'Import',
     'drawer.myDecks': 'My decks',
     'drawer.export': 'Export',
+    'drawer.viewDeck': 'View deck',
     'group.playdeck': 'play deck',
     'group.locationdeck': 'location',
     'warn.emptyDeck': 'Empty deck.',
