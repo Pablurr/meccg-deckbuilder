@@ -11,6 +11,8 @@ import DeckPanel from './components/DeckPanel.jsx';
 import DeckManager from './components/DeckManager.jsx';
 import ExportDialog from './components/ExportDialog.jsx';
 import ImportDialog from './components/ImportDialog.jsx';
+import CardPreviewModal from './components/CardPreviewModal.jsx';
+import { useIsMobile } from './lib/useIsMobile.js';
 
 export default function App() {
   const [cards, setCards] = useState([]);
@@ -27,6 +29,9 @@ export default function App() {
   const [panelWidth, setPanelWidth] = useState(360); // right deck panel width in px
   const [cardZoom, setCardZoom] = useState(50); // deck-panel card size, % of original image
   const [error, setError] = useState(null);
+  const isMobile = useIsMobile();
+  const [deckSheetOpen, setDeckSheetOpen] = useState(false);
+  const [previewCard, setPreviewCard] = useState(null);
 
   useEffect(() => {
     api.getCards()
@@ -116,7 +121,7 @@ export default function App() {
     <div className="app">
       <FilterBar facets={derivedFacets} filters={filters} onChange={setFilters} lang={uiLang} onLangChange={setUiLang} />
       <div className="main-row">
-        <CardBrowser cards={cards} filters={filters} quantities={quantities} lang={uiLang} onChangeQty={changeQty} onToggle={toggleCard} onSelectAll={selectAll} />
+        <CardBrowser cards={cards} filters={filters} quantities={quantities} lang={uiLang} onChangeQty={changeQty} onToggle={toggleCard} onSelectAll={selectAll} isMobile={isMobile} onPreview={setPreviewCard} />
         {hasSelection && (
           <DeckPanel
             cardsById={cardsById}
@@ -170,6 +175,15 @@ export default function App() {
           uiLang={uiLang}
           onClose={() => setShowExport(false)}
           onBacksChange={(backAssignments) => setDeck((prev) => ({ ...prev, backAssignments }))}
+        />
+      )}
+      {previewCard && (
+        <CardPreviewModal
+          card={previewCard}
+          qty={quantities[previewCard.id] || 0}
+          lang={uiLang}
+          onChangeQty={changeQty}
+          onClose={() => setPreviewCard(null)}
         />
       )}
     </div>

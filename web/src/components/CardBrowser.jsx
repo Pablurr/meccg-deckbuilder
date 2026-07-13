@@ -7,7 +7,7 @@ import { useT } from '../i18n.jsx';
 
 const CAP = 600; // safety cap on rendered cells
 
-export default function CardBrowser({ cards, filters, quantities, lang, onChangeQty, onToggle, onSelectAll }) {
+export default function CardBrowser({ cards, filters, quantities, lang, onChangeQty, onToggle, onSelectAll, isMobile, onPreview }) {
   const t = useT();
   const filtered = useMemo(() => filterCards(cards, filters), [cards, filters]);
   const shown = filtered.slice(0, CAP);
@@ -38,7 +38,7 @@ export default function CardBrowser({ cards, filters, quantities, lang, onChange
                 src={cardThumbSrc(c, lang)}
                 alt={name}
                 loading="lazy"
-                onClick={() => onToggle(c.id)}
+                onClick={() => (isMobile ? onPreview(c) : onToggle(c.id))}
                 onMouseEnter={(e) => trackPointer(e, c)}
                 onMouseMove={(e) => trackPointer(e, c)}
                 onMouseLeave={hidePreview}
