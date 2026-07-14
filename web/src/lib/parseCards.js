@@ -51,6 +51,7 @@ export function computeFacets(cards) {
     types: uniqSorted(cards.map((c) => c.type)),
     alignments: uniqSorted(cards.map((c) => c.alignment)),
     rarities: uniqSorted(cards.map((c) => c.rarity)),
+    artists: uniqSorted(cards.map((c) => c.artist)),
     races: uniqSorted(cards.map((c) => c.attributes.race)),
     subtypes: uniqSorted(cards.map((c) => c.attributes.subtype)),
     skills: uniqSorted(cards.map((c) => c.attributes.skills)),

@@ -45,7 +45,10 @@ export default function App() {
   }, []);
 
   const cardsById = useMemo(() => new Map(cards.map((c) => [c.id, c])), [cards]);
-  const t = useMemo(() => makeT(uiLang), [uiLang]);
+  // uiLang is the card-name display language (fr/en/es). UI chrome is only
+  // translated fr/en, so Spanish falls back to English text.
+  const textLang = uiLang === 'es' ? 'en' : uiLang;
+  const t = useMemo(() => makeT(textLang), [textLang]);
 
   // race/subtype/skills hold compound values; show only deduplicated base
   // options (built from the cards we already have), matching the tag filtering.
@@ -122,7 +125,7 @@ export default function App() {
   const hasSelection = counts.total > 0;
 
   return (
-    <I18nProvider lang={uiLang}>
+    <I18nProvider lang={textLang}>
     <div className="app">
       <FilterBar facets={derivedFacets} filters={filters} onChange={setFilters} lang={uiLang} onLangChange={setUiLang} isMobile={isMobile} />
       <div className="main-row">
