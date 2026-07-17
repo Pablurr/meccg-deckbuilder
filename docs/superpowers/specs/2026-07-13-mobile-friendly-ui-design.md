@@ -34,9 +34,11 @@ and JS so they never disagree:
 - **`useIsMobile()` hook** (new, `web/src/lib/useIsMobile.js`) returns a boolean
   from `window.matchMedia`, subscribing to changes (resize/orientation). Used
   only where *behavior* — not just layout — must differ.
-- The media query is `(max-width: 768px), (pointer: coarse)`: width is the
-  primary trigger, but a genuine touch device gets touch behavior even in a wide
-  window. Both the CSS and the hook use this same condition.
+- The media query is `(max-width: 768px)` — **width only**. It deliberately does
+  *not* key off `(pointer: coarse)`: a touchscreen desktop reports a coarse
+  pointer but must keep the desktop experience (hover to enlarge, click to add,
+  side deck panel, full filter row). Only a narrow viewport switches to mobile.
+  Both the CSS and the hook use this same condition.
 
 The hook and CSS both derive from a shared constant/string so the breakpoint
 lives in one place.
