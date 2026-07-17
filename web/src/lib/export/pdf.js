@@ -3,6 +3,7 @@ import { PAGE_SIZES, sheetLayout, backColumnIndex, chunk } from './sheetLayout.j
 import { backGroupForType } from './backGroups.js';
 
 const GRAY = rgb(0.533, 0.533, 0.533);
+const WHITE = rgb(1, 1, 1);
 
 // Fronts from the CDN are JPEG; backs may be PNG (shipped defaults) or JPEG
 // (normalized custom uploads). Sniff the signature instead of trusting names.
@@ -28,11 +29,29 @@ function cropMarks(page, pageH, x, y, w, h, len = 9) {
   }
 }
 
+// Hairline white lines along the interior seams between touching cards. Cards
+// are laid out edge-to-edge, so adjacent black borders merge; drawn over the
+// images (white), these thin lines split the seam into a visible cut guide.
+// Kept very thin so they barely show once printed. y flips for pdf-lib.
+function seamLines(page, pageH, layout, thickness) {
+  const { marginX, marginY, cardW, cardH, cols, rows } = layout;
+  const gridW = cols * cardW;
+  const gridH = rows * cardH;
+  for (let c = 1; c < cols; c++) {
+    const x = marginX + c * cardW;
+    page.drawLine({ start: { x, y: pageH - marginY }, end: { x, y: pageH - (marginY + gridH) }, thickness, color: WHITE });
+  }
+  for (let r = 1; r < rows; r++) {
+    const y = marginY + r * cardH;
+    page.drawLine({ start: { x: marginX, y: pageH - y }, end: { x: marginX + gridW, y: pageH - y }, thickness, color: WHITE });
+  }
+}
+
 // Browser port of the old server sheetPdf: true-size poker cards on a
 // centered grid with crop marks, optional mirrored backs pages for duplex.
 // Original image bytes are embedded directly — the PDF scales them to
 // 2.5x3.5in vectorially, so no canvas resampling is needed (or wanted).
-export async function buildSheetPdf({ cards = [], getFrontBytes, getBackBytes, includeBacks = true, format = 'letter' }) {
+export async function buildSheetPdf({ cards = [], getFrontBytes, getBackBytes, includeBacks = true, format = 'letter', seamWidth = 0.5 }) {
   const pageSize = PAGE_SIZES[format] || PAGE_SIZES.letter;
   const layout = sheetLayout({ pageW: pageSize.w, pageH: pageSize.h });
   const doc = await PDFDocument.create();
@@ -73,6 +92,7 @@ export async function buildSheetPdf({ cards = [], getFrontBytes, getBackBytes, i
   for (const pageCards of pages) {
     const front = doc.addPage([pageSize.w, pageSize.h]);
     pageCards.forEach((card, i) => drawCard(front, frontImg.get(card.id), layout.cells[i]));
+    if (seamWidth > 0) seamLines(front, pageSize.h, layout, seamWidth);
 
     if (includeBacks) {
       const back = doc.addPage([pageSize.w, pageSize.h]);
@@ -82,6 +102,7 @@ export async function buildSheetPdf({ cards = [], getFrontBytes, getBackBytes, i
         const cell = layout.cells[row * layout.cols + backColumnIndex(col, layout.cols)];
         drawCard(back, backImg.get(backGroupForType(card.type)), cell);
       });
+      if (seamWidth > 0) seamLines(back, pageSize.h, layout, seamWidth);
     }
   }
 
