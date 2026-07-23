@@ -70,7 +70,7 @@ export default function ExportDialog({ deck, cardIds, cardsById, quantities, def
           (r.failures.length ? t('export.result.failuresManifest', { n: r.failures.length }) : '')
         );
       } else if (format === 'pdf') {
-        const r = await api.exportPdf({ deckName: deck.name, cardIds, backAssignments: backs, includeBacks, format: pageFormat, lang: imageLang });
+        const r = await api.exportPdf({ deckName: deck.name, cardIds, backAssignments: backs, includeBacks, format: pageFormat, lang: imageLang, proxyMode });
         setResult(
           t('export.result.pdf', { fmt: pageFormat.toUpperCase(), pages: r.pages }) +
           (r.failures.length ? t('export.result.failures', { n: r.failures.length }) : '')

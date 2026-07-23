@@ -2,7 +2,7 @@ import { parseCards } from './lib/parseCards.js';
 import { createDeckStore } from './lib/deckStore.js';
 import { CARD_W_CUT, CARD_H_CUT } from './lib/constants.js';
 import { fetchBytes, fetchCardImageBytes, dataUrlToBytes, mapLimit } from './lib/export/images.js';
-import { toMpcPng } from './lib/export/bleedCanvas.js';
+import { toMpcPng, toStampedJpeg } from './lib/export/bleedCanvas.js';
 import { buildDeckZip } from './lib/export/zip.js';
 import { buildSheetPdf } from './lib/export/pdf.js';
 import { swatchKeyForCard } from './lib/proxy.js';
@@ -120,10 +120,16 @@ export async function exportDeck({ deckName, cardIds, backAssignments, lang = 'e
 }
 
 // Builds the print-sheet PDF in the browser and triggers the download.
-export async function exportPdf({ deckName, cardIds, backAssignments, includeBacks, format = 'letter', lang = 'en' }) {
+export async function exportPdf({ deckName, cardIds, backAssignments, includeBacks, format = 'letter', lang = 'en', proxyMode = false }) {
   const index = requireIndex();
   const cards = cardIds.map((id) => index.get(id)).filter(Boolean);
-  const getFrontBytes = await prefetchFronts(cards, lang, async (b) => b); // raw bytes, PDF scales them
+  const stampFor = await makeStampFor(cards, lang, proxyMode);
+  // Proxy off: raw CDN bytes, the PDF scales them (no resampling — unchanged).
+  // Proxy on: bake the stamp into a cut-size JPEG face instead.
+  const getFrontBytes = await prefetchFronts(cards, lang, (bytes, card) => {
+    const stamp = stampFor(card);
+    return stamp ? toStampedJpeg(bytes, stamp) : bytes;
+  });
   const { bytes, failures, pageCount } = await buildSheetPdf({
     cards,
     getFrontBytes,
