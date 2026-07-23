@@ -72,6 +72,15 @@ Tous les exports (ZIP, PDF) tournent **entièrement dans le navigateur** : les i
 sont récupérées depuis le CDN puis composées côté client (canvas pour le bleed MPC, `pdf-lib`
 pour les planches PDF, `jszip` pour l'archive), sans passer par aucun serveur.
 
+### Mode Proxy
+
+L'interrupteur **« Proxy »** (à côté du sélecteur de langues, **activé par défaut**) recouvre la
+mention « ©19xx Tolkien Enterprises » — ou le nom d'extension sur les cartes FR — par un tampon
+« Proxy » assorti à la **texture du cadre de chaque type de carte** (16 fonds : par type/camp, un
+rouge pour Nazgûl/Balrog, un par wizard). C'est une exigence de MPC pour les cartes proxy. Le
+tampon apparaît **à l'écran et dans les exports ZIP/PDF** ; désactive l'interrupteur pour
+retrouver les images d'origine. Les cartes **Région** et les **dos** ne sont jamais tamponnés.
+
 ### Langue des images (ZIP et PDF)
 
 Les exports ZIP et PDF proposent une **langue d'images** : **English, Español, Français** — les

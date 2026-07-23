@@ -19,8 +19,8 @@ export const SWATCH_KEYS = [
 // Values calibrated visually (final task) — keep both rects in sync with the
 // CSS overlay and the canvas baking, which both read them from here.
 export const PROXY_RECT = {
-  enes: { x: 0.095, y: 0.953, w: 0.375, h: 0.034 },
-  fr: { x: 0.255, y: 0.953, w: 0.325, h: 0.034 },
+  enes: { x: 0.11, y: 0.947, w: 0.35, h: 0.021 },
+  fr: { x: 0.165, y: 0.94, w: 0.275, h: 0.024 },
 };
 
 export function rectForLang(lang) {
