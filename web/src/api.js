@@ -5,7 +5,7 @@ import { fetchBytes, fetchCardImageBytes, dataUrlToBytes, mapLimit } from './lib
 import { toMpcPng, toStampedJpeg } from './lib/export/bleedCanvas.js';
 import { buildDeckZip } from './lib/export/zip.js';
 import { buildSheetPdf } from './lib/export/pdf.js';
-import { isStampable, labelColor, cloneSrcFor } from './lib/proxy.js';
+import { isStampable, labelColor, cloneSrcFor, rectFor } from './lib/proxy.js';
 
 let _index = null; // id -> card, set by getCards(); used by the export functions
 
@@ -98,7 +98,9 @@ async function prefetchFronts(cards, lang, process) {
 function makeStampFor(lang, proxyMode) {
   if (!proxyMode) return () => null;
   return (card) =>
-    isStampable(card) ? { lang, src: cloneSrcFor(card, lang), color: labelColor(card) } : null;
+    isStampable(card)
+      ? { lang, rect: rectFor(card, lang), src: cloneSrcFor(card, lang), color: labelColor(card) }
+      : null;
 }
 
 // Builds the MPC ZIP in the browser and triggers the download.

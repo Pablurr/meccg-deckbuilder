@@ -1,5 +1,5 @@
 import React from 'react';
-import { isStampable, rectForLang, cloneSrcFor, labelColor, PROXY_LABEL } from '../lib/proxy.js';
+import { isStampable, rectFor, cloneSrcFor, labelColor, PROXY_LABEL } from '../lib/proxy.js';
 
 const pct = (f) => `${f * 100}%`;
 
@@ -16,7 +16,7 @@ const pct = (f) => `${f * 100}%`;
 // from the covered rect; other cards sample the same row, so s.y/s.h == r.y/r.h.)
 export default function ProxyStamp({ card, lang, on, src }) {
   if (!on || !src || !isStampable(card)) return null;
-  const r = rectForLang(lang);
+  const r = rectFor(card, lang);
   const s = cloneSrcFor(card, lang);
   return (
     <div

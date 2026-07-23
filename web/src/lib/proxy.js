@@ -19,6 +19,17 @@ export function rectForLang(lang) {
   return lang === 'fr' ? PROXY_RECT.fr : PROXY_RECT.enes;
 }
 
+// Hero & fallen-wizard sites carry a small number box just above the copyright /
+// set-name row. The FR rect sits higher & taller than en/es and its top-left
+// clipped that box, so drop it a few px for those sites. en/es already sit below
+// the box, so they keep the base rect. (isTornSite is hoisted from below.)
+export const PROXY_RECT_SITE_FR = { x: 0.165, y: 0.947, w: 0.275, h: 0.022 };
+
+export function rectFor(card, lang) {
+  if (lang === 'fr' && isTornSite(card)) return PROXY_RECT_SITE_FR;
+  return rectForLang(lang);
+}
+
 // Clean band segment (same rail row as the covered zone) that gets sampled and
 // stretched across the zone. en/es sample just RIGHT of the copyright (clear of
 // "Remaster 20xx"); fr samples just LEFT of the set name (clear of the frame

@@ -8,8 +8,10 @@ import {
   isLightFrame,
   labelColor,
   rectForLang,
+  rectFor,
   cloneSrcFor,
   PROXY_RECT,
+  PROXY_RECT_SITE_FR,
   CLONE_SRC,
   CLONE_SRC_SITE,
   PROXY_LABEL,
@@ -119,6 +121,23 @@ describe('geometry', () => {
       expect(s).not.toEqual(CLONE_SRC_SITE);
       expect(s.y).toBe(rectForLang(lang).y);
     }
+  });
+
+  it('drops the covered rect for FR torn-edge sites to clear the number box', async () => {
+    const cards = await loadCards();
+    const byId = new Map(cards.map((c) => [c.id, c]));
+    const heroSite = byId.get('AS-137'); // Cirith Gorgor
+    const fwSite = byId.get('WH-55'); // Deep Mines
+    // FR: hero & fallen-wizard sites use the lowered rect (top below the box).
+    expect(rectFor(heroSite, 'fr')).toBe(PROXY_RECT_SITE_FR);
+    expect(rectFor(fwSite, 'fr')).toBe(PROXY_RECT_SITE_FR);
+    expect(PROXY_RECT_SITE_FR.y).toBeGreaterThan(PROXY_RECT.fr.y);
+    // en/es sites and non-sites keep the base rect for the language.
+    expect(rectFor(heroSite, 'en')).toBe(PROXY_RECT.enes);
+    expect(rectFor(heroSite, 'es')).toBe(PROXY_RECT.enes);
+    expect(rectFor(byId.get('AS-1'), 'fr')).toBe(PROXY_RECT.fr); // minion character
+    // The lowered rect still clears the clone source (source sits well above it).
+    expect(disjoint(CLONE_SRC_SITE, PROXY_RECT_SITE_FR)).toBe(true);
   });
 
   it('routes fr vs en/es correctly', () => {
