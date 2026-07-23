@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { cardImageSrc, cardImageEn } from '../lib/lang.js';
+import { swatchKeyForCard, rectForLang } from '../lib/proxy.js';
 
 // Natural source image dimensions (see README). The hover preview shows the
 // image at full size, scaled down only if it would overflow the viewport.
@@ -13,9 +14,10 @@ const PREVIEW_DELAY_MS = 600;
 // Shared full-size hover preview for card images, driven imperatively via refs
 // so moving the mouse never re-renders the (potentially hundreds of) cells that
 // use it. Consumed by both the browser grid and the deck panel.
-export function useCardPreview(lang) {
+export function useCardPreview(lang, proxyOn = false) {
   const previewRef = useRef(null);
   const previewImgRef = useRef(null);
+  const stampRef = useRef(null);
   const timerRef = useRef(null);      // pending "show after idle" timer
   const shownIdRef = useRef(null);    // id of the card currently previewed
   const posRef = useRef({ x: 0, y: 0 });
@@ -44,6 +46,23 @@ export function useCardPreview(lang) {
     const en = cardImageEn(c);
     img.onerror = () => { if (img.getAttribute('src') !== en) img.src = en; };
     img.src = cardImageSrc(c, lang);
+    // The preview box is imperative (no re-render per hover), so the stamp is
+    // positioned imperatively too; .proxy-stamp CSS handles the label scaling.
+    const stamp = stampRef.current;
+    if (stamp) {
+      const key = proxyOn ? swatchKeyForCard(c) : null;
+      if (key) {
+        const r = rectForLang(lang);
+        stamp.style.left = `${r.x * 100}%`;
+        stamp.style.top = `${r.y * 100}%`;
+        stamp.style.width = `${r.w * 100}%`;
+        stamp.style.height = `${r.h * 100}%`;
+        stamp.style.backgroundImage = `url(/proxy-swatches/${key}.png)`;
+        stamp.style.display = 'flex';
+      } else {
+        stamp.style.display = 'none';
+      }
+    }
     box.style.display = 'block';
     shownIdRef.current = c.id;
     positionPreview(posRef.current.x, posRef.current.y);
@@ -86,15 +105,18 @@ export function useCardPreview(lang) {
     };
   }, []);
 
-  return { previewRef, previewImgRef, trackPointer, hidePreview };
+  return { previewRef, previewImgRef, stampRef, trackPointer, hidePreview };
 }
 
 // The shared preview box element. Render exactly once per component that uses
 // the hook, passing the refs it returned.
-export function CardPreview({ previewRef, previewImgRef }) {
+export function CardPreview({ previewRef, previewImgRef, stampRef }) {
   return (
     <div className="card-preview" ref={previewRef} style={{ display: 'none' }} aria-hidden="true">
       <img ref={previewImgRef} alt="" />
+      <div className="proxy-stamp" ref={stampRef} style={{ display: 'none' }}>
+        <span>Proxy</span>
+      </div>
     </div>
   );
 }

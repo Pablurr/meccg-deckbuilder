@@ -103,7 +103,7 @@ export default function DeckPanel({
   proxyMode = false,
 }) {
   const t = useT();
-  const { previewRef, previewImgRef, trackPointer, hidePreview } = useCardPreview(lang);
+  const { previewRef, previewImgRef, stampRef, trackPointer, hidePreview } = useCardPreview(lang, proxyMode);
 
   // Card width driven by the zoom slider (% of the source image). min(…,100%)
   // keeps a card from overflowing when the panel is dragged narrower than it.
@@ -231,7 +231,7 @@ export default function DeckPanel({
         })}
       </div>
       {/* Shared hover preview (hidden until a card is hovered). */}
-      <CardPreview previewRef={previewRef} previewImgRef={previewImgRef} />
+      <CardPreview previewRef={previewRef} previewImgRef={previewImgRef} stampRef={stampRef} />
     </div>
   );
 }

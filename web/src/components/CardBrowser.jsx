@@ -12,7 +12,7 @@ export default function CardBrowser({ cards, filters, quantities, lang, onChange
   const t = useT();
   const filtered = useMemo(() => filterCards(cards, filters), [cards, filters]);
   const shown = filtered.slice(0, CAP);
-  const { previewRef, previewImgRef, trackPointer, hidePreview } = useCardPreview(lang);
+  const { previewRef, previewImgRef, stampRef, trackPointer, hidePreview } = useCardPreview(lang, proxyMode);
 
   return (
     <div className="browser">
@@ -65,7 +65,7 @@ export default function CardBrowser({ cards, filters, quantities, lang, onChange
         })}
       </div>
       {/* Shared hover preview (hidden until a card is hovered). */}
-      <CardPreview previewRef={previewRef} previewImgRef={previewImgRef} />
+      <CardPreview previewRef={previewRef} previewImgRef={previewImgRef} stampRef={stampRef} />
     </div>
   );
 }
