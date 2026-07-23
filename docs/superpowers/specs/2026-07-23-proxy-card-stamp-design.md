@@ -45,8 +45,11 @@ Geometry).
 - **en/es** show `©19xx Tolkien Enterprises` **left-aligned** (~x 0.10→0.46).
 - **fr** (DavRupprecht repo) has **no copyright**; the bottom-left instead shows
   the **French set name** ("Les Sorciers", "La Main Blanche", "Contre l'Ombre"…),
-  positioned **more centred** (~x 0.28→0.56), length varies by set. Frames/backgrounds
-  are otherwise identical to en/es.
+  positioned left-of-centre. Precise per-set measurement (Task 8 calibration) puts
+  the set name at **~x 0.18→0.42** across all 7 sets (widest: "La Main Blanche"),
+  with the right-hand "Remastérisé…" text starting ~x 0.47. The calibrated
+  `PROXY_RECT.fr` covers x 0.165→0.44 accordingly. Frames/backgrounds are otherwise
+  identical to en/es.
 - Data has **no `Avatar` type**; avatars are `Character` cards identified by
   `race` / name. Verified against all 1683 cards.
 - Verified per-card facts: each wizard's frame is **identical** in its Wizard
