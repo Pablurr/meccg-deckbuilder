@@ -177,6 +177,34 @@ body {
 .cardcell img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .cardcell.selected { border-color: var(--accent); }
 .cardcell img { cursor: pointer; }
+/* Proxy-mode overlay: band texture + "Proxy" over the copyright zone.
+   Positioned in % of the card box; the label scales with the box via cqh. */
+.proxy-stamp {
+  position: absolute;
+  background-size: 100% 100%;
+  container-type: size;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 2;
+}
+.proxy-stamp span {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 62cqh;
+  line-height: 1;
+  color: #cfcdc6;
+  letter-spacing: 0.04em;
+}
+/* Shrink-wrapped positioned wrapper for the modal image (img keeps its own
+   max constraints, so the wrapper box == the visible card bounds). */
+.proxy-wrap {
+  position: relative;
+  display: flex;
+  max-width: 100%;
+  max-height: 100%;
+  min-height: 0;
+}
 /* Full-size image shown on hover; positioned imperatively (see CardBrowser). */
 .card-preview {
   position: fixed;

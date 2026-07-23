@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { cardName, cardThumbSrc, cardImageEn, deckThumbWidth } from '../lib/lang.js';
 import { maxCopies } from '../lib/deck.js';
 import { useCardPreview, CardPreview } from './CardPreview.jsx';
+import ProxyStamp from './ProxyStamp.jsx';
 import { useT } from '../i18n.jsx';
 
 // Deck contents are grouped and displayed in this fixed type order.
@@ -25,7 +26,7 @@ function warningText(t, w) {
 // thumbnail + same −/count/+ control. Clicking the image asks for confirmation
 // before removing the card, so a stray click can't silently empty the deck.
 // Hover shows the shared full-size preview so the card stays readable at any zoom.
-function MiniCard({ card, qty, lang, thumbW, onChangeQty, onToggle, trackPointer, hidePreview, isMobile, onPreview }) {
+function MiniCard({ card, qty, lang, thumbW, onChangeQty, onToggle, trackPointer, hidePreview, isMobile, onPreview, proxyMode }) {
   const t = useT();
   const [confirming, setConfirming] = useState(false);
   const max = maxCopies(card);
@@ -49,6 +50,7 @@ function MiniCard({ card, qty, lang, thumbW, onChangeQty, onToggle, trackPointer
           if (next) el.src = next;
         }}
       />
+      <ProxyStamp card={card} lang={lang} on={proxyMode} />
       {confirming ? (
         <div className="deck-mini-confirm">
           <button
@@ -98,6 +100,7 @@ export default function DeckPanel({
   onClose,
   isMobile = false,
   onPreview,
+  proxyMode = false,
 }) {
   const t = useT();
   const { previewRef, previewImgRef, trackPointer, hidePreview } = useCardPreview(lang);
@@ -219,6 +222,7 @@ export default function DeckPanel({
                     hidePreview={hidePreview}
                     isMobile={isMobile}
                     onPreview={onPreview}
+                    proxyMode={proxyMode}
                   />
                 ))}
               </div>

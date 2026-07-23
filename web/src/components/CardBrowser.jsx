@@ -3,11 +3,12 @@ import { filterCards } from '../lib/filter.js';
 import { maxCopies } from '../lib/deck.js';
 import { cardName, cardImageSrc, cardThumbSrc } from '../lib/lang.js';
 import { useCardPreview, CardPreview } from './CardPreview.jsx';
+import ProxyStamp from './ProxyStamp.jsx';
 import { useT } from '../i18n.jsx';
 
 const CAP = 600; // safety cap on rendered cells
 
-export default function CardBrowser({ cards, filters, quantities, lang, onChangeQty, onToggle, onSelectAll, isMobile, onPreview }) {
+export default function CardBrowser({ cards, filters, quantities, lang, onChangeQty, onToggle, onSelectAll, isMobile, onPreview, proxyMode }) {
   const t = useT();
   const filtered = useMemo(() => filterCards(cards, filters), [cards, filters]);
   const shown = filtered.slice(0, CAP);
@@ -51,6 +52,7 @@ export default function CardBrowser({ cards, filters, quantities, lang, onChange
                   if (next) el.src = next;
                 }}
               />
+              <ProxyStamp card={c} lang={lang} on={proxyMode} />
               {qty > 0 && (
                 <div className="qty-ctrl">
                   <button className="qty-btn" onClick={() => onChangeQty(c.id, +1)} disabled={qty >= max} aria-label={t('browser.addCopy')}>+</button>
