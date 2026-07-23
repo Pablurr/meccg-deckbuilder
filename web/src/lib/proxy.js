@@ -30,10 +30,12 @@ export const CLONE_SRC = {
 
 // Hero & fallen-wizard sites have a TORN parchment bottom edge: the copyright /
 // set-name row sits right against the black card border, so sampling that same
-// row drags black into the patch. Instead sample a clean parchment strip a bit
-// higher (left of the "Art by …" plaque, clear of the number box) — same region
-// for every language, so this carries its own y/h. Used for those sites only.
-export const CLONE_SRC_SITE = { x: 0.3, y: 0.905, w: 0.12, h: 0.02 };
+// row drags black into the patch. The bottom parchment is also too pale a tint.
+// Instead sample the map-parchment strip BETWEEN the artwork and the rules-text
+// box (left of the region label, e.g. "Udûn") — its greyer mid-tone matches the
+// frame better. Same region for every language, so this carries its own y/h.
+// Used for those sites only.
+export const CLONE_SRC_SITE = { x: 0.24, y: 0.582, w: 0.22, h: 0.02 };
 
 function isTornSite(card) {
   return (
@@ -64,7 +66,7 @@ export function isStampable(card) {
 // the original fine print). Some frames are light (parchment / pale stone) and
 // need a dark-grey label to stay legible.
 export const LABEL_ON_DARK = '#cfcdc6'; // light-grey text on dark frames
-export const LABEL_ON_LIGHT = '#1a1714'; // near-black text on light frames
+export const LABEL_ON_LIGHT = '#050403'; // near-black text on light frames
 
 // Light-framed cards (need the dark label): hero characters, hero & fallen-
 // wizard sites, and the pale-stone wizards. Pallando (indigo), the Ringwraith/
