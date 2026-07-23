@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { cardImageSrc, cardImageEn } from '../lib/lang.js';
-import { isStampable, rectForLang, cloneSrcForLang, labelColor, PROXY_LABEL } from '../lib/proxy.js';
+import { isStampable, rectForLang, cloneSrcFor, labelColor, PROXY_LABEL } from '../lib/proxy.js';
 
 // Natural source image dimensions (see README). The hover preview shows the
 // image at full size, scaled down only if it would overflow the viewport.
@@ -55,15 +55,15 @@ export function useCardPreview(lang, proxyOn = false) {
     if (stamp) {
       if (proxyOn && isStampable(c) && primary) {
         const r = rectForLang(lang);
-        const s = cloneSrcForLang(lang);
+        const s = cloneSrcFor(c, lang);
         stamp.style.left = `${r.x * 100}%`;
         stamp.style.top = `${r.y * 100}%`;
         stamp.style.width = `${r.w * 100}%`;
         stamp.style.height = `${r.h * 100}%`;
         stamp.style.backgroundImage = `url(${primary})`;
         stamp.style.backgroundRepeat = 'no-repeat';
-        stamp.style.backgroundSize = `${100 / s.w}% ${100 / r.h}%`;
-        stamp.style.backgroundPosition = `${(100 * s.x) / (1 - s.w)}% ${(100 * r.y) / (1 - r.h)}%`;
+        stamp.style.backgroundSize = `${100 / s.w}% ${100 / s.h}%`;
+        stamp.style.backgroundPosition = `${(100 * s.x) / (1 - s.w)}% ${(100 * s.y) / (1 - s.h)}%`;
         const span = stamp.querySelector('span');
         if (span) span.style.color = labelColor(c);
         stamp.style.display = 'flex';

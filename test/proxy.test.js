@@ -8,9 +8,10 @@ import {
   isLightFrame,
   labelColor,
   rectForLang,
-  cloneSrcForLang,
+  cloneSrcFor,
   PROXY_RECT,
   CLONE_SRC,
+  CLONE_SRC_SITE,
   PROXY_LABEL,
   LABEL_ON_DARK,
   LABEL_ON_LIGHT,
@@ -75,24 +76,48 @@ describe('isLightFrame / labelColor', () => {
   });
 });
 
+// A source rect never shares pixels with the covered rect: either it is a clean
+// strip beside the zone (x-disjoint) or a clean row above it (y-disjoint).
+function disjoint(s, r) {
+  const xGap = s.x + s.w <= r.x || s.x >= r.x + r.w;
+  const yGap = s.y + s.h <= r.y || s.y >= r.y + r.h;
+  return xGap || yGap;
+}
+
 describe('geometry', () => {
-  it('exposes sane fractional cover rects and a matching clone source', () => {
+  it('exposes sane fractional cover rects and a matching (default) clone source', () => {
     for (const lang of ['en', 'es', 'fr']) {
       const r = rectForLang(lang);
-      const s = cloneSrcForLang(lang);
+      const s = cloneSrcFor(null, lang); // non-site → same-row strip beside the zone
       for (const k of ['x', 'y', 'w', 'h']) {
         expect(r[k]).toBeGreaterThan(0);
         expect(r[k]).toBeLessThan(1);
+        expect(s[k]).toBeGreaterThan(0);
+        expect(s[k]).toBeLessThan(1);
       }
       expect(r.x + r.w).toBeLessThan(1);
       expect(r.y + r.h).toBeLessThanOrEqual(1);
-      // Clone source is a clean strip that must not overlap the covered zone.
-      expect(s.x).toBeGreaterThan(0);
-      expect(s.w).toBeGreaterThan(0);
-      expect(s.w).toBeLessThan(1);
-      const srcRight = s.x + s.w;
-      const disjoint = srcRight <= r.x || s.x >= r.x + r.w;
-      expect(disjoint).toBe(true);
+      // Default source shares the covered row, so it must be x-disjoint.
+      expect(s.y).toBe(r.y);
+      expect(s.h).toBe(r.h);
+      expect(disjoint(s, r)).toBe(true);
+    }
+  });
+
+  it('gives torn-edge sites a clean higher strip that clears the black edge', async () => {
+    const cards = await loadCards();
+    const byId = new Map(cards.map((c) => [c.id, c]));
+    for (const lang of ['en', 'es', 'fr']) {
+      // Hero site (AS-137 Cirith Gorgor) and fallen-wizard site (WH-55 Deep Mines).
+      for (const id of ['AS-137', 'WH-55']) {
+        const s = cloneSrcFor(byId.get(id), lang);
+        expect(s).toEqual(CLONE_SRC_SITE);
+        expect(disjoint(s, rectForLang(lang))).toBe(true);
+      }
+      // A minion character keeps the same-row default (not a torn site).
+      const s = cloneSrcFor(byId.get('AS-1'), lang);
+      expect(s).not.toEqual(CLONE_SRC_SITE);
+      expect(s.y).toBe(rectForLang(lang).y);
     }
   });
 
@@ -101,8 +126,8 @@ describe('geometry', () => {
     expect(rectForLang('en')).toBe(PROXY_RECT.enes);
     expect(rectForLang('es')).toBe(PROXY_RECT.enes);
     expect(rectForLang(undefined)).toBe(PROXY_RECT.enes);
-    expect(cloneSrcForLang('fr')).toBe(CLONE_SRC.fr);
-    expect(cloneSrcForLang('en')).toBe(CLONE_SRC.enes);
+    expect(cloneSrcFor(null, 'fr').x).toBe(CLONE_SRC.fr.x);
+    expect(cloneSrcFor(null, 'en').x).toBe(CLONE_SRC.enes.x);
     expect(PROXY_LABEL).toBe('Proxy');
   });
 });

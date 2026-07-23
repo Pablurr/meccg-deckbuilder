@@ -28,8 +28,29 @@ export const CLONE_SRC = {
   fr: { x: 0.11, w: 0.05 },
 };
 
-export function cloneSrcForLang(lang) {
-  return lang === 'fr' ? CLONE_SRC.fr : CLONE_SRC.enes;
+// Hero & fallen-wizard sites have a TORN parchment bottom edge: the copyright /
+// set-name row sits right against the black card border, so sampling that same
+// row drags black into the patch. Instead sample a clean parchment strip a bit
+// higher (left of the "Art by …" plaque, clear of the number box) — same region
+// for every language, so this carries its own y/h. Used for those sites only.
+export const CLONE_SRC_SITE = { x: 0.3, y: 0.905, w: 0.12, h: 0.02 };
+
+function isTornSite(card) {
+  return (
+    !!card &&
+    card.type === 'Site' &&
+    (card.alignment === 'Hero' || card.alignment === 'Fallen-wizard')
+  );
+}
+
+// Resolve the clone source for a card+language as a full {x, y, w, h} rect (card
+// fractions). Torn-edge sites use the clean higher strip; every other card uses
+// the same-row strip beside its covered zone (y/h taken from the covered rect).
+export function cloneSrcFor(card, lang) {
+  if (isTornSite(card)) return { ...CLONE_SRC_SITE };
+  const r = rectForLang(lang);
+  const base = lang === 'fr' ? CLONE_SRC.fr : CLONE_SRC.enes;
+  return { x: base.x, y: r.y, w: base.w, h: r.h };
 }
 
 // Whether a card gets a proxy stamp. Only Regions are skipped (their bottom
@@ -43,7 +64,7 @@ export function isStampable(card) {
 // the original fine print). Some frames are light (parchment / pale stone) and
 // need a dark-grey label to stay legible.
 export const LABEL_ON_DARK = '#cfcdc6'; // light-grey text on dark frames
-export const LABEL_ON_LIGHT = '#3d3a34'; // dark-grey text on light frames
+export const LABEL_ON_LIGHT = '#1a1714'; // near-black text on light frames
 
 // Light-framed cards (need the dark label): hero characters, hero & fallen-
 // wizard sites, and the pale-stone wizards. Pallando (indigo), the Ringwraith/
