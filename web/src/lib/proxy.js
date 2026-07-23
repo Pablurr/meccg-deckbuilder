@@ -32,10 +32,12 @@ export const CLONE_SRC = {
 // set-name row sits right against the black card border, so sampling that same
 // row drags black into the patch. The bottom parchment is also too pale a tint.
 // Instead sample the map-parchment strip BETWEEN the artwork and the rules-text
-// box (left of the region label, e.g. "Udûn") — its greyer mid-tone matches the
-// frame better. Same region for every language, so this carries its own y/h.
-// Used for those sites only.
-export const CLONE_SRC_SITE = { x: 0.24, y: 0.582, w: 0.22, h: 0.02 };
+// box — its greyer mid-tone matches the frame better. The region label sits on
+// this same row, right-aligned; the longest FR region ("Goulet des Montagnes
+// Grises", 27 chars) reaches left to ~x0.35, so the right edge is capped at
+// 0.32 to never clip a letter. Language-independent, so this carries its own
+// y/h. Used for those sites only.
+export const CLONE_SRC_SITE = { x: 0.18, y: 0.582, w: 0.14, h: 0.02 };
 
 function isTornSite(card) {
   return (
