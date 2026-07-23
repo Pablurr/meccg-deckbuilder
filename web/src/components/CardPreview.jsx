@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { cardImageSrc, cardImageEn } from '../lib/lang.js';
-import { swatchKeyForCard, rectForLang } from '../lib/proxy.js';
+import { swatchKeyForCard, rectForLang, PROXY_LABEL } from '../lib/proxy.js';
 
 // Natural source image dimensions (see README). The hover preview shows the
 // image at full size, scaled down only if it would overflow the viewport.
@@ -115,7 +115,7 @@ export function CardPreview({ previewRef, previewImgRef, stampRef }) {
     <div className="card-preview" ref={previewRef} style={{ display: 'none' }} aria-hidden="true">
       <img ref={previewImgRef} alt="" />
       <div className="proxy-stamp" ref={stampRef} style={{ display: 'none' }}>
-        <span>Proxy</span>
+        <span>{PROXY_LABEL}</span>
       </div>
     </div>
   );

@@ -58,9 +58,12 @@ export function swatchKeyForCard(card) {
   // The type guard keeps the 22 Site/Balrog on their own balrog-site frame.
   if (race === 'Ringwraith' || (race === 'Balrog' && card.type === 'Character')) return 'red';
   // Each wizard's frame is identical in its Wizard and Fallen-wizard version.
+  // Wizard/Fallen-wizard avatars are keyed by wizard name (same frame in both
+  // versions). Any avatar-race card is an avatar, so it never falls through to
+  // the generic (type,alignment) frames below.
   if (race === 'Wizard' || race === 'Fallen-wizard') {
     const name = ((card.name && card.name.en) || '').toLowerCase();
-    if (WIZARD_NAMES.has(name)) return name;
+    return WIZARD_NAMES.has(name) ? name : null;
   }
   if (card.type === 'Resource' && card.alignment === 'Dual') {
     return DUAL_BY_NAME[(card.name && card.name.en) || ''] || null;

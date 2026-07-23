@@ -42,3 +42,8 @@ export async function loadSwatchBitmaps(keys) {
   }));
   return out;
 }
+
+// Free the decoded swatch bitmaps once an export has consumed them.
+export function closeSwatchBitmaps(bitmaps) {
+  for (const bmp of bitmaps.values()) if (bmp) bmp.close();
+}
