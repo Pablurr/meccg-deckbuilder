@@ -51,8 +51,9 @@ body {
   display: block;
   margin-right: 4px;
 }
-/* Language link sits at the far right of the top row. */
-.filterbar-top .lang-link { margin-left: auto; }
+/* Proxy toggle and language link sit at the far right of the top row. */
+.filterbar-top .proxy-toggle { margin-left: auto; margin-right: 10px; flex: 0 0 auto; }
+.filterbar-top .lang-link { margin-left: 0; }
 /* The two search boxes share one line and shrink together. */
 .search-group {
   display: flex;
