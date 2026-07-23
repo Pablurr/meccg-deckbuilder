@@ -162,9 +162,9 @@ its own copy of the geometry.
 - Exposed via a small React context (or lifted App state) consumed by the card
   components and the export dialog; read by `api.exportDeck` / `api.exportPdf`
   through the export call (passed as a param, not read globally in the lib layer).
-- A toggle control in the UI (app header / toolbar) flips it. OFF ⇒ no stamp
-  anywhere (screen + both exports), which is the affordance to recover original
-  cards, including FR.
+- A toggle control in the UI, placed **next to the language selector**, flips it.
+  OFF ⇒ no stamp anywhere (screen + both exports), which is the affordance to
+  recover original cards, including FR.
 
 ## Data flow
 
