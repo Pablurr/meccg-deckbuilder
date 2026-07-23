@@ -79,7 +79,7 @@ export function isStampable(card) {
 // the original fine print). Some frames are light (parchment / pale stone) and
 // need a dark-grey label to stay legible.
 export const LABEL_ON_DARK = '#cfcdc6'; // light-grey text on dark frames
-export const LABEL_ON_LIGHT = '#050403'; // near-black text on light frames
+export const LABEL_ON_LIGHT = '#161412'; // very dark grey (near-black) on light frames
 
 // Light-framed cards (need the dark label): hero characters, hero & fallen-
 // wizard sites, and the pale-stone wizards. Pallando (indigo), the Ringwraith/
