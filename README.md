@@ -72,14 +72,26 @@ Tous les exports (ZIP, PDF) tournent **entièrement dans le navigateur** : les i
 sont récupérées depuis le CDN puis composées côté client (canvas pour le bleed MPC, `pdf-lib`
 pour les planches PDF, `jszip` pour l'archive), sans passer par aucun serveur.
 
-### Mode Proxy
+### Mode Proxy (variant self-clone)
+
+> ⚠️ Branche **`proxy-card-stamp-selfclone`** — variante expérimentale du mode Proxy pour
+> comparer rendu et performance. La branche `proxy-card-stamp` implémente la même feature avec
+> une **bibliothèque de 16 swatches** ; celle-ci utilise un **auto-clonage** sans aucun asset.
 
 L'interrupteur **« Proxy »** (à côté du sélecteur de langues, **activé par défaut**) recouvre la
 mention « ©19xx Tolkien Enterprises » — ou le nom d'extension sur les cartes FR — par un tampon
-« Proxy » assorti à la **texture du cadre de chaque type de carte** (16 fonds : par type/camp, un
-rouge pour Nazgûl/Balrog, un par wizard). C'est une exigence de MPC pour les cartes proxy. Le
-tampon apparaît **à l'écran et dans les exports ZIP/PDF** ; désactive l'interrupteur pour
-retrouver les images d'origine. Les cartes **Région** et les **dos** ne sont jamais tamponnés.
+« Proxy ». La zone est remplie en **clonant une bande propre du cadre de la carte elle-même**
+(un segment adjacent, étiré sur la zone) : la couleur et la texture s'adaptent automatiquement à
+chaque carte, y compris chaque wizard, **sans aucun fichier de texture** (ni asset à charger à
+l'écran, ni fetch à l'export). C'est une exigence de MPC pour les cartes proxy. Le tampon apparaît
+**à l'écran et dans les exports ZIP/PDF** ; désactive l'interrupteur pour retrouver les images
+d'origine. Les cartes **Région** et les **dos** ne sont jamais tamponnés.
+
+À l'écran, l'overlay réutilise la **même URL d'image** que la vignette déjà chargée (pas de
+téléchargement supplémentaire) ; il l'affiche en fond, mise à l'échelle pour étirer la bande
+source sur la zone. Compromis vs les swatches : zéro asset et adaptation automatique, mais le
+rendu peut être légèrement plus « étiré » et l'overlay écran met à l'échelle l'image de la carte
+plutôt qu'un petit PNG mis en cache.
 
 ### Langue des images (ZIP et PDF)
 

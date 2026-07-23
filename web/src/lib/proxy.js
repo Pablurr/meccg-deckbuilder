@@ -1,23 +1,15 @@
-// Proxy-stamp classification & geometry. Pure data + functions, no IO.
-// Maps each card to one of 16 swatch textures (the band segment matching the
-// card frame's colour) and positions the covered copyright / set-name zone.
-// Spec: docs/superpowers/specs/2026-07-23-proxy-card-stamp-design.md
+// Proxy-stamp geometry (SELF-CLONE variant). Pure data + functions, no IO.
+// Instead of per-type swatch assets, the covered copyright / set-name zone is
+// filled by cloning a clean segment of the card's OWN bottom-rail band,
+// stretched across the zone — so the colour/texture matches every card with
+// zero assets. This module only positions the covered zone + the clone source.
+// Compare against the swatch-library branch `proxy-card-stamp`.
 
 export const PROXY_LABEL = 'Proxy';
 
-export const SWATCH_KEYS = [
-  'hero-character', 'minion-character',
-  'hero-site', 'minion-site', 'balrog-site', 'fw-site',
-  'hero-resource', 'minion-resource', 'stage-resource',
-  'hazard',
-  'red',
-  'alatar', 'gandalf', 'pallando', 'radagast', 'saruman',
-];
-
 // Covered zone, as fractions of card width/height. en/es show the left-aligned
 // "©19xx Tolkien Enterprises"; fr shows the more-centred French set name.
-// Values calibrated visually (final task) — keep both rects in sync with the
-// CSS overlay and the canvas baking, which both read them from here.
+// Calibrated visually; the CSS overlay and the canvas baking both read these.
 export const PROXY_RECT = {
   enes: { x: 0.11, y: 0.947, w: 0.35, h: 0.021 },
   fr: { x: 0.165, y: 0.94, w: 0.275, h: 0.024 },
@@ -27,47 +19,22 @@ export function rectForLang(lang) {
   return lang === 'fr' ? PROXY_RECT.fr : PROXY_RECT.enes;
 }
 
-// The four Resource/Dual cards reuse the minion/hero resource frame by name.
-const DUAL_BY_NAME = {
-  'Tidings of Death': 'minion-resource',
-  'Deadly Dart': 'minion-resource',
-  'Beasts of the Wood': 'hero-resource',
-  'Wild Hounds': 'hero-resource',
+// Clean band segment (same rail row as the covered zone) that gets sampled and
+// stretched across the zone. en/es sample just RIGHT of the copyright (clear of
+// "Remaster 20xx"); fr samples just LEFT of the set name (clear of the frame
+// corner). x/w are card-width fractions; the y/height come from PROXY_RECT.
+export const CLONE_SRC = {
+  enes: { x: 0.48, w: 0.12 },
+  fr: { x: 0.11, w: 0.05 },
 };
 
-const WIZARD_NAMES = new Set(['alatar', 'gandalf', 'pallando', 'radagast', 'saruman']);
+export function cloneSrcForLang(lang) {
+  return lang === 'fr' ? CLONE_SRC.fr : CLONE_SRC.enes;
+}
 
-const BY_TYPE_ALIGNMENT = {
-  'Character/Hero': 'hero-character',
-  'Character/Minion': 'minion-character',
-  'Site/Hero': 'hero-site',
-  'Site/Minion': 'minion-site',
-  'Site/Balrog': 'balrog-site',
-  'Site/Fallen-wizard': 'fw-site',
-  'Resource/Hero': 'hero-resource',
-  'Resource/Minion': 'minion-resource',
-  'Resource/Stage': 'stage-resource',
-};
-
-// One of the 16 swatch keys, or null for Regions / unknown combinations
-// (null = leave the card unstamped; fail-safe, never a wrong stamp).
-export function swatchKeyForCard(card) {
-  if (!card || card.type === 'Region') return null;
-  const race = (card.attributes && card.attributes.race) || '';
-  // The 9 Ringwraiths and The Balrog (BA-3) share one identical red frame.
-  // The type guard keeps the 22 Site/Balrog on their own balrog-site frame.
-  if (race === 'Ringwraith' || (race === 'Balrog' && card.type === 'Character')) return 'red';
-  // Each wizard's frame is identical in its Wizard and Fallen-wizard version.
-  // Wizard/Fallen-wizard avatars are keyed by wizard name (same frame in both
-  // versions). Any avatar-race card is an avatar, so it never falls through to
-  // the generic (type,alignment) frames below.
-  if (race === 'Wizard' || race === 'Fallen-wizard') {
-    const name = ((card.name && card.name.en) || '').toLowerCase();
-    return WIZARD_NAMES.has(name) ? name : null;
-  }
-  if (card.type === 'Resource' && card.alignment === 'Dual') {
-    return DUAL_BY_NAME[(card.name && card.name.en) || ''] || null;
-  }
-  if (card.type === 'Hazard') return 'hazard';
-  return BY_TYPE_ALIGNMENT[`${card.type}/${card.alignment}`] || null;
+// Whether a card gets a proxy stamp. Only Regions are skipped (their bottom
+// strip carries no copyright and no set name). Everything else is cloned
+// uniformly — no per-type classification needed in this variant.
+export function isStampable(card) {
+  return !!card && card.type !== 'Region';
 }

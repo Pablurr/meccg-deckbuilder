@@ -1,49 +1,24 @@
-import { rectForLang, PROXY_LABEL } from '../proxy.js';
+import { rectForLang, cloneSrcForLang, PROXY_LABEL } from '../proxy.js';
 
-// Bake the proxy stamp into a cut-size face: swatch texture stretched over the
-// covered rect, "Proxy" centred on top. Browser-only (canvas 2d ctx).
-// If the swatch bitmap is missing, fill with the average of the pixels already
-// under the rect — proxy mode must never leave the notice visible.
-export function drawProxyOnFace(ctx, w, h, swatchBmp, lang) {
+// Bake the proxy stamp into a cut-size face (SELF-CLONE variant): sample a clean
+// band segment of the face itself and stretch it over the covered zone, then
+// draw "Proxy" centred. Browser-only (canvas 2d ctx). No assets, no fetch — the
+// cover colour/texture comes from the card's own frame.
+export function drawProxyOnFace(ctx, w, h, lang) {
   const r = rectForLang(lang);
-  const x = Math.round(r.x * w);
-  const y = Math.round(r.y * h);
-  const rw = Math.round(r.w * w);
-  const rh = Math.round(r.h * h);
-  if (swatchBmp) {
-    ctx.drawImage(swatchBmp, x, y, rw, rh);
-  } else {
-    const data = ctx.getImageData(x, y, rw, rh).data;
-    let R = 0, G = 0, B = 0;
-    const n = data.length / 4;
-    for (let i = 0; i < data.length; i += 4) { R += data[i]; G += data[i + 1]; B += data[i + 2]; }
-    ctx.fillStyle = `rgb(${Math.round(R / n)},${Math.round(G / n)},${Math.round(B / n)})`;
-    ctx.fillRect(x, y, rw, rh);
-  }
+  const s = cloneSrcForLang(lang);
+  const dx = Math.round(r.x * w);
+  const dy = Math.round(r.y * h);
+  const dw = Math.round(r.w * w);
+  const dh = Math.round(r.h * h);
+  const sx = Math.round(s.x * w);
+  const sw = Math.round(s.w * w);
+  // Source and dest never overlap (source is a clean band strip beside the
+  // zone), so drawing the canvas onto itself is safe.
+  ctx.drawImage(ctx.canvas, sx, dy, sw, dh, dx, dy, dw, dh);
   ctx.fillStyle = '#cfcdc6';
-  ctx.font = `${Math.round(rh * 0.62)}px Arial, Helvetica, sans-serif`;
+  ctx.font = `${Math.round(dh * 0.62)}px Arial, Helvetica, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(PROXY_LABEL, x + rw / 2, y + rh / 2 + 1);
-}
-
-// Fetch + decode the swatch PNGs once per export. A failed swatch maps to
-// null so drawProxyOnFace falls back to the averaged fill.
-export async function loadSwatchBitmaps(keys) {
-  const out = new Map();
-  await Promise.all([...keys].map(async (key) => {
-    try {
-      const res = await fetch(`/proxy-swatches/${key}.png`);
-      if (!res.ok) throw new Error(String(res.status));
-      out.set(key, await createImageBitmap(await res.blob()));
-    } catch {
-      out.set(key, null);
-    }
-  }));
-  return out;
-}
-
-// Free the decoded swatch bitmaps once an export has consumed them.
-export function closeSwatchBitmaps(bitmaps) {
-  for (const bmp of bitmaps.values()) if (bmp) bmp.close();
+  ctx.fillText(PROXY_LABEL, dx + dw / 2, dy + dh / 2 + 1);
 }

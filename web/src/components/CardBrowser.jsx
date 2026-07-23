@@ -52,7 +52,7 @@ export default function CardBrowser({ cards, filters, quantities, lang, onChange
                   if (next) el.src = next;
                 }}
               />
-              <ProxyStamp card={c} lang={lang} on={proxyMode} />
+              <ProxyStamp card={c} lang={lang} on={proxyMode} src={cardThumbSrc(c, lang)} />
               {qty > 0 && (
                 <div className="qty-ctrl">
                   <button className="qty-btn" onClick={() => onChangeQty(c.id, +1)} disabled={qty >= max} aria-label={t('browser.addCopy')}>+</button>
