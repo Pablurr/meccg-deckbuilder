@@ -16,7 +16,7 @@ export async function renderCutFace(bytes, stamp = null) {
   fctx.imageSmoothingQuality = 'high';
   fctx.drawImage(bmp, 0, 0, CARD_W_CUT, CARD_H_CUT);
   bmp.close();
-  if (stamp) drawProxyOnFace(fctx, CARD_W_CUT, CARD_H_CUT, stamp.lang);
+  if (stamp) drawProxyOnFace(fctx, CARD_W_CUT, CARD_H_CUT, stamp.lang, stamp.color);
   return face;
 }
 

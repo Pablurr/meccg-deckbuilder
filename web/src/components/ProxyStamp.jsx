@@ -1,5 +1,5 @@
 import React from 'react';
-import { isStampable, rectForLang, cloneSrcForLang, PROXY_LABEL } from '../lib/proxy.js';
+import { isStampable, rectForLang, cloneSrcForLang, labelColor, PROXY_LABEL } from '../lib/proxy.js';
 
 const pct = (f) => `${f * 100}%`;
 
@@ -31,7 +31,7 @@ export default function ProxyStamp({ card, lang, on, src }) {
         backgroundPosition: `${(100 * s.x) / (1 - s.w)}% ${(100 * r.y) / (1 - r.h)}%`,
       }}
     >
-      <span>{PROXY_LABEL}</span>
+      <span style={{ color: labelColor(card) }}>{PROXY_LABEL}</span>
     </div>
   );
 }

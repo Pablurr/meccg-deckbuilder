@@ -38,3 +38,30 @@ export function cloneSrcForLang(lang) {
 export function isStampable(card) {
   return !!card && card.type !== 'Region';
 }
+
+// "Proxy" label colour. Most frames are dark, so the label is light grey (like
+// the original fine print). Some frames are light (parchment / pale stone) and
+// need a dark-grey label to stay legible.
+export const LABEL_ON_DARK = '#cfcdc6'; // light-grey text on dark frames
+export const LABEL_ON_LIGHT = '#3d3a34'; // dark-grey text on light frames
+
+// Light-framed cards (need the dark label): hero characters, hero & fallen-
+// wizard sites, and the pale-stone wizards. Pallando (indigo), the Ringwraith/
+// Balrog reds, minions, hazards and resources stay on the dark frames.
+const LIGHT_WIZARDS = new Set(['alatar', 'gandalf', 'saruman', 'radagast']);
+
+export function isLightFrame(card) {
+  if (!card) return false;
+  const race = (card.attributes && card.attributes.race) || '';
+  if (race === 'Wizard' || race === 'Fallen-wizard') {
+    return LIGHT_WIZARDS.has(((card.name && card.name.en) || '').toLowerCase());
+  }
+  if (race === 'Ringwraith' || race === 'Balrog') return false;
+  if (card.type === 'Character' && card.alignment === 'Hero') return true;
+  if (card.type === 'Site' && (card.alignment === 'Hero' || card.alignment === 'Fallen-wizard')) return true;
+  return false;
+}
+
+export function labelColor(card) {
+  return isLightFrame(card) ? LABEL_ON_LIGHT : LABEL_ON_DARK;
+}

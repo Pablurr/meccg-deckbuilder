@@ -192,8 +192,9 @@ body {
 .proxy-stamp span {
   font-family: Arial, Helvetica, sans-serif;
   font-size: 62cqh;
+  font-weight: 700;
   line-height: 1;
-  color: #cfcdc6;
+  color: #cfcdc6; /* fallback; ProxyStamp sets the per-card colour inline */
   letter-spacing: 0.04em;
 }
 /* Shrink-wrapped positioned wrapper for the modal image (img keeps its own

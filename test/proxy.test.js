@@ -5,11 +5,15 @@ import { fileURLToPath } from 'node:url';
 import { flattenCards } from '../web/src/lib/parseCards.js';
 import {
   isStampable,
+  isLightFrame,
+  labelColor,
   rectForLang,
   cloneSrcForLang,
   PROXY_RECT,
   CLONE_SRC,
   PROXY_LABEL,
+  LABEL_ON_DARK,
+  LABEL_ON_LIGHT,
 } from '../web/src/lib/proxy.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -35,6 +39,39 @@ describe('isStampable', () => {
     expect(isStampable(undefined)).toBe(false);
     expect(isStampable({ type: 'Character' })).toBe(true);
     expect(isStampable({ type: 'Region' })).toBe(false);
+  });
+});
+
+describe('isLightFrame / labelColor', () => {
+  it('marks the light-framed categories, and only those', async () => {
+    const cards = await loadCards();
+    const byId = new Map(cards.map((c) => [c.id, c]));
+    const light = (id) => isLightFrame(byId.get(id));
+    // hero characters, hero sites, fallen-wizard sites → light
+    expect(light('BA-1')).toBe(true); // Strider (hero character)
+    const heroSite = cards.find((c) => c.type === 'Site' && c.alignment === 'Hero');
+    expect(isLightFrame(heroSite)).toBe(true);
+    expect(light('WH-55')).toBe(true); // Deep Mines (fallen-wizard site)
+    // the pale-stone wizards (both Wizard and Fallen-wizard versions) → light
+    for (const id of ['TW-117', 'TW-156', 'TW-178', 'TW-181', 'WH-1', 'WH-4', 'WH-8', 'WH-9']) {
+      expect(light(id)).toBe(true); // alatar/gandalf/radagast/saruman
+    }
+    // Pallando (indigo), reds, minions, hazards, resources → NOT light
+    expect(light('TW-175')).toBe(false); // Pallando
+    expect(light('WH-7')).toBe(false); // Pallando (fallen)
+    expect(light('LE-50')).toBe(false); // a Ringwraith
+    expect(light('BA-3')).toBe(false); // The Balrog
+    expect(light('AS-1')).toBe(false); // Bûrat (minion character)
+    const balrogSite = cards.find((c) => c.type === 'Site' && c.alignment === 'Balrog');
+    expect(isLightFrame(balrogSite)).toBe(false);
+    const hazard = cards.find((c) => c.type === 'Hazard');
+    expect(isLightFrame(hazard)).toBe(false);
+  });
+
+  it('labelColor picks the dark label on light frames', () => {
+    expect(labelColor({ type: 'Character', alignment: 'Hero' })).toBe(LABEL_ON_LIGHT);
+    expect(labelColor({ type: 'Character', alignment: 'Minion' })).toBe(LABEL_ON_DARK);
+    expect(labelColor(null)).toBe(LABEL_ON_DARK);
   });
 });
 
