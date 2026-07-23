@@ -45,7 +45,19 @@ function LangLink({ lang, onLangChange }) {
   );
 }
 
-export default function FilterBar({ facets, filters, onChange, lang, onLangChange, isMobile }) {
+// Proxy-mode switch: stamps "Proxy" over the copyright on every card shown and
+// exported. Sits beside the language selector on the logo row.
+function ProxyToggle({ on, onChange }) {
+  const t = useT();
+  return (
+    <label className={`chip-toggle proxy-toggle ${on ? 'on' : ''}`} title={t('proxy.tooltip')} style={{ cursor: 'pointer' }}>
+      <input type="checkbox" checked={on} onChange={(e) => onChange(e.target.checked)} />
+      {' '}{t('proxy.label')}
+    </label>
+  );
+}
+
+export default function FilterBar({ facets, filters, onChange, lang, onLangChange, isMobile, proxyMode, onProxyChange }) {
   const t = useT();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [openKey, setOpenKey] = useState(null); // which facet menu is open (only one)
@@ -99,6 +111,7 @@ export default function FilterBar({ facets, filters, onChange, lang, onLangChang
             onChange={(e) => set('cardText', e.target.value)}
           />
         </div>
+        <ProxyToggle on={proxyMode} onChange={onProxyChange} />
         <LangLink lang={lang} onLangChange={onLangChange} />
       </div>
       {isMobile && (

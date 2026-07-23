@@ -32,6 +32,14 @@ export default function App() {
   const isMobile = useIsMobile();
   const [deckSheetOpen, setDeckSheetOpen] = useState(false);
   const [previewCard, setPreviewCard] = useState(null);
+  // Proxy mode: cover the copyright/set-name with a "Proxy" stamp everywhere
+  // (screen + exports). ON by default; persisted so the choice sticks.
+  const [proxyMode, setProxyMode] = useState(() => {
+    try { return localStorage.getItem('meccg.proxyMode') !== '0'; } catch { return true; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('meccg.proxyMode', proxyMode ? '1' : '0'); } catch { /* storage unavailable */ }
+  }, [proxyMode]);
 
   // When the deck empties the mobile sheet unmounts; reset its flag so re-adding
   // a card doesn't pop the sheet back open unprompted.
@@ -127,9 +135,9 @@ export default function App() {
   return (
     <I18nProvider lang={textLang}>
     <div className="app">
-      <FilterBar facets={derivedFacets} filters={filters} onChange={setFilters} lang={uiLang} onLangChange={setUiLang} isMobile={isMobile} />
+      <FilterBar facets={derivedFacets} filters={filters} onChange={setFilters} lang={uiLang} onLangChange={setUiLang} isMobile={isMobile} proxyMode={proxyMode} onProxyChange={setProxyMode} />
       <div className="main-row">
-        <CardBrowser cards={cards} filters={filters} quantities={quantities} lang={uiLang} onChangeQty={changeQty} onToggle={toggleCard} onSelectAll={selectAll} isMobile={isMobile} onPreview={setPreviewCard} />
+        <CardBrowser cards={cards} filters={filters} quantities={quantities} lang={uiLang} onChangeQty={changeQty} onToggle={toggleCard} onSelectAll={selectAll} isMobile={isMobile} onPreview={setPreviewCard} proxyMode={proxyMode} />
         {hasSelection && !isMobile && (
           <DeckPanel
             cardsById={cardsById}
@@ -145,6 +153,7 @@ export default function App() {
             onZoom={setCardZoom}
             onChangeQty={changeQty}
             onToggle={toggleCard}
+            proxyMode={proxyMode}
           />
         )}
       </div>
@@ -164,6 +173,7 @@ export default function App() {
           onToggle={toggleCard}
           onPreview={setPreviewCard}
           onClose={() => setDeckSheetOpen(false)}
+          proxyMode={proxyMode}
         />
       )}
       <DeckDrawer
@@ -203,6 +213,7 @@ export default function App() {
           uiLang={uiLang}
           onClose={() => setShowExport(false)}
           onBacksChange={(backAssignments) => setDeck((prev) => ({ ...prev, backAssignments }))}
+          proxyMode={proxyMode}
         />
       )}
       {previewCard && (
@@ -212,6 +223,7 @@ export default function App() {
           lang={uiLang}
           onChangeQty={changeQty}
           onClose={() => setPreviewCard(null)}
+          proxyMode={proxyMode}
         />
       )}
     </div>

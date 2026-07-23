@@ -31,6 +31,10 @@ export const translations = {
     'filter.reset': 'réinitialiser',
     'filter.filters': 'Filtres',
 
+    // Proxy mode
+    'proxy.label': 'Proxy',
+    'proxy.tooltip': 'Mode Proxy : recouvre le copyright par « Proxy » (requis pour MPC)',
+
     // Card browser
     'browser.count': '{n} carte(s)',
     'browser.capped': ' — affichage des {cap} premières, affinez les filtres',
@@ -152,6 +156,10 @@ export const translations = {
     'filter.unique': 'Unique',
     'filter.reset': 'reset',
     'filter.filters': 'Filters',
+
+    // Proxy mode
+    'proxy.label': 'Proxy',
+    'proxy.tooltip': 'Proxy mode: covers the copyright with "Proxy" (required by MPC)',
 
     'browser.count': '{n} card(s)',
     'browser.capped': ' — showing the first {cap}, refine the filters',

@@ -23,7 +23,7 @@ function downloadText(text, filename) {
   URL.revokeObjectURL(url);
 }
 
-export default function ExportDialog({ deck, cardIds, cardsById, quantities, defaultBacks = {}, uiLang = 'fr', onClose, onBacksChange }) {
+export default function ExportDialog({ deck, cardIds, cardsById, quantities, defaultBacks = {}, uiLang = 'fr', onClose, onBacksChange, proxyMode = false }) {
   const t = useT();
   const [backs, setBacks] = useState(deck.backAssignments || {});
   const [format, setFormat] = useState('mpc'); // 'mpc' | 'pdf' | 'list'
@@ -64,13 +64,13 @@ export default function ExportDialog({ deck, cardIds, cardsById, quantities, def
     setResult(null);
     try {
       if (format === 'mpc') {
-        const r = await api.exportDeck({ deckName: deck.name, cardIds, backAssignments: backs, lang: imageLang });
+        const r = await api.exportDeck({ deckName: deck.name, cardIds, backAssignments: backs, lang: imageLang, proxyMode });
         setResult(
           t('export.result.zip', { playdeck: r.counts.playdeck, locationdeck: r.counts.locationdeck }) +
           (r.failures.length ? t('export.result.failuresManifest', { n: r.failures.length }) : '')
         );
       } else if (format === 'pdf') {
-        const r = await api.exportPdf({ deckName: deck.name, cardIds, backAssignments: backs, includeBacks, format: pageFormat, lang: imageLang });
+        const r = await api.exportPdf({ deckName: deck.name, cardIds, backAssignments: backs, includeBacks, format: pageFormat, lang: imageLang, proxyMode });
         setResult(
           t('export.result.pdf', { fmt: pageFormat.toUpperCase(), pages: r.pages }) +
           (r.failures.length ? t('export.result.failures', { n: r.failures.length }) : '')
