@@ -1,23 +1,15 @@
-// Proxy-stamp classification & geometry. Pure data + functions, no IO.
-// Maps each card to one of 16 swatch textures (the band segment matching the
-// card frame's colour) and positions the covered copyright / set-name zone.
-// Spec: docs/superpowers/specs/2026-07-23-proxy-card-stamp-design.md
+// Proxy-stamp geometry (SELF-CLONE variant). Pure data + functions, no IO.
+// Instead of per-type swatch assets, the covered copyright / set-name zone is
+// filled by cloning a clean segment of the card's OWN bottom-rail band,
+// stretched across the zone — so the colour/texture matches every card with
+// zero assets. This module only positions the covered zone + the clone source.
+// Compare against the swatch-library branch `proxy-card-stamp`.
 
 export const PROXY_LABEL = 'Proxy';
 
-export const SWATCH_KEYS = [
-  'hero-character', 'minion-character',
-  'hero-site', 'minion-site', 'balrog-site', 'fw-site',
-  'hero-resource', 'minion-resource', 'stage-resource',
-  'hazard',
-  'red',
-  'alatar', 'gandalf', 'pallando', 'radagast', 'saruman',
-];
-
 // Covered zone, as fractions of card width/height. en/es show the left-aligned
 // "©19xx Tolkien Enterprises"; fr shows the more-centred French set name.
-// Values calibrated visually (final task) — keep both rects in sync with the
-// CSS overlay and the canvas baking, which both read them from here.
+// Calibrated visually; the CSS overlay and the canvas baking both read these.
 export const PROXY_RECT = {
   enes: { x: 0.11, y: 0.947, w: 0.35, h: 0.021 },
   fr: { x: 0.165, y: 0.94, w: 0.275, h: 0.024 },
@@ -27,47 +19,96 @@ export function rectForLang(lang) {
   return lang === 'fr' ? PROXY_RECT.fr : PROXY_RECT.enes;
 }
 
-// The four Resource/Dual cards reuse the minion/hero resource frame by name.
-const DUAL_BY_NAME = {
-  'Tidings of Death': 'minion-resource',
-  'Deadly Dart': 'minion-resource',
-  'Beasts of the Wood': 'hero-resource',
-  'Wild Hounds': 'hero-resource',
+// Hero & fallen-wizard sites carry a small number box just above the copyright /
+// set-name row. The FR rect sits higher & taller than en/es and its top-left
+// clipped that box, so drop it a few px for those sites. en/es already sit below
+// the box, so they keep the base rect. (isTornSite is hoisted from below.)
+export const PROXY_RECT_SITE_FR = { x: 0.165, y: 0.947, w: 0.275, h: 0.022 };
+
+export function rectFor(card, lang) {
+  if (lang === 'fr' && isTornSite(card)) return PROXY_RECT_SITE_FR;
+  return rectForLang(lang);
+}
+
+// Clean band segment (same rail row as the covered zone) that gets sampled and
+// stretched across the zone. en/es sample just RIGHT of the copyright (clear of
+// "Remaster 20xx"); fr samples just LEFT of the set name (clear of the frame
+// corner). x/w are card-width fractions; the y/height come from PROXY_RECT.
+export const CLONE_SRC = {
+  enes: { x: 0.48, w: 0.12 },
+  fr: { x: 0.11, w: 0.05 },
 };
 
-const WIZARD_NAMES = new Set(['alatar', 'gandalf', 'pallando', 'radagast', 'saruman']);
+// Hero & fallen-wizard sites have a TORN parchment bottom edge: the copyright /
+// set-name row sits right against the black card border, so sampling that same
+// row drags black into the patch. The bottom parchment is also too pale a tint.
+// Instead sample the map-parchment strip BETWEEN the artwork and the rules-text
+// box — its greyer mid-tone matches the frame better. The region label sits on
+// this same row, right-aligned; the longest FR region ("Goulet des Montagnes
+// Grises", 27 chars) reaches left to ~x0.35, so the right edge is capped at
+// 0.32 to never clip a letter. Language-independent, so this carries its own
+// y/h. Used for those sites only.
+export const CLONE_SRC_SITE = { x: 0.18, y: 0.582, w: 0.14, h: 0.02 };
 
-const BY_TYPE_ALIGNMENT = {
-  'Character/Hero': 'hero-character',
-  'Character/Minion': 'minion-character',
-  'Site/Hero': 'hero-site',
-  'Site/Minion': 'minion-site',
-  'Site/Balrog': 'balrog-site',
-  'Site/Fallen-wizard': 'fw-site',
-  'Resource/Hero': 'hero-resource',
-  'Resource/Minion': 'minion-resource',
-  'Resource/Stage': 'stage-resource',
-};
+function isTornSite(card) {
+  return (
+    !!card &&
+    card.type === 'Site' &&
+    (card.alignment === 'Hero' || card.alignment === 'Fallen-wizard')
+  );
+}
 
-// One of the 16 swatch keys, or null for Regions / unknown combinations
-// (null = leave the card unstamped; fail-safe, never a wrong stamp).
-export function swatchKeyForCard(card) {
-  if (!card || card.type === 'Region') return null;
+// Resolve the clone source for a card+language as a full {x, y, w, h} rect (card
+// fractions). Torn-edge sites use the clean higher strip; every other card uses
+// the same-row strip beside its covered zone (y/h taken from the covered rect).
+export function cloneSrcFor(card, lang) {
+  if (isTornSite(card)) return { ...CLONE_SRC_SITE };
+  const r = rectForLang(lang);
+  const base = lang === 'fr' ? CLONE_SRC.fr : CLONE_SRC.enes;
+  return { x: base.x, y: r.y, w: base.w, h: r.h };
+}
+
+// Whether a card gets a proxy stamp. Only Regions are skipped (their bottom
+// strip carries no copyright and no set name). Everything else is cloned
+// uniformly — no per-type classification needed in this variant.
+export function isStampable(card) {
+  return !!card && card.type !== 'Region';
+}
+
+// "Proxy" label colour. Most frames are dark, so the label is light grey (like
+// the original fine print). Some frames are light (parchment / pale stone) and
+// need a dark-grey label to stay legible.
+export const LABEL_ON_DARK = '#cfcdc6'; // light-grey text on dark frames
+export const LABEL_ON_LIGHT = '#161412'; // very dark grey (near-black) on light frames
+
+// Light-framed cards (need the dark label): hero characters, hero & fallen-
+// wizard sites, and the pale-stone wizards. Pallando (indigo), the Ringwraith/
+// Balrog reds, minions, hazards and resources stay on the dark frames.
+const LIGHT_WIZARDS = new Set(['alatar', 'gandalf', 'saruman', 'radagast']);
+
+export function isLightFrame(card) {
+  if (!card) return false;
   const race = (card.attributes && card.attributes.race) || '';
-  // The 9 Ringwraiths and The Balrog (BA-3) share one identical red frame.
-  // The type guard keeps the 22 Site/Balrog on their own balrog-site frame.
-  if (race === 'Ringwraith' || (race === 'Balrog' && card.type === 'Character')) return 'red';
-  // Each wizard's frame is identical in its Wizard and Fallen-wizard version.
-  // Wizard/Fallen-wizard avatars are keyed by wizard name (same frame in both
-  // versions). Any avatar-race card is an avatar, so it never falls through to
-  // the generic (type,alignment) frames below.
   if (race === 'Wizard' || race === 'Fallen-wizard') {
-    const name = ((card.name && card.name.en) || '').toLowerCase();
-    return WIZARD_NAMES.has(name) ? name : null;
+    return LIGHT_WIZARDS.has(((card.name && card.name.en) || '').toLowerCase());
   }
-  if (card.type === 'Resource' && card.alignment === 'Dual') {
-    return DUAL_BY_NAME[(card.name && card.name.en) || ''] || null;
-  }
-  if (card.type === 'Hazard') return 'hazard';
-  return BY_TYPE_ALIGNMENT[`${card.type}/${card.alignment}`] || null;
+  if (race === 'Ringwraith' || race === 'Balrog') return false;
+  if (card.type === 'Character' && card.alignment === 'Hero') return true;
+  if (card.type === 'Site' && (card.alignment === 'Hero' || card.alignment === 'Fallen-wizard')) return true;
+  return false;
+}
+
+export function labelColor(card) {
+  return isLightFrame(card) ? LABEL_ON_LIGHT : LABEL_ON_DARK;
+}
+
+// Preferred over the category guess above: pick the label colour from the ACTUAL
+// mean luminance [0..255] of the frame behind the label (sampled from the clone
+// patch — see frameLuminance.js for on-screen, the export canvas for ZIP/PDF).
+// The two label greys sit at luminance ~205 (pale) and ~20 (dark); their midpoint
+// ~113 is the contrast-optimal switch point: lighter patch -> dark label.
+export const LABEL_LUM_THRESHOLD = 113;
+
+export function labelColorForLum(lum) {
+  return lum >= LABEL_LUM_THRESHOLD ? LABEL_ON_LIGHT : LABEL_ON_DARK;
 }

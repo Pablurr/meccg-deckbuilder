@@ -29,7 +29,7 @@ export default function CardPreviewModal({ card, qty, lang, onChangeQty, onClose
                 if (en && el.getAttribute('src') !== en) el.src = en;
               }}
             />
-            <ProxyStamp card={card} lang={lang} on={proxyMode} />
+            <ProxyStamp card={card} lang={lang} on={proxyMode} src={cardImageSrc(card, lang)} sample />
           </div>
         </div>
         <div className="card-modal-bar" onClick={(e) => e.stopPropagation()}>

@@ -3,7 +3,23 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { flattenCards } from '../web/src/lib/parseCards.js';
-import { swatchKeyForCard, rectForLang, PROXY_RECT, PROXY_LABEL, SWATCH_KEYS } from '../web/src/lib/proxy.js';
+import {
+  isStampable,
+  isLightFrame,
+  labelColor,
+  labelColorForLum,
+  LABEL_LUM_THRESHOLD,
+  rectForLang,
+  rectFor,
+  cloneSrcFor,
+  PROXY_RECT,
+  PROXY_RECT_SITE_FR,
+  CLONE_SRC,
+  CLONE_SRC_SITE,
+  PROXY_LABEL,
+  LABEL_ON_DARK,
+  LABEL_ON_LIGHT,
+} from '../web/src/lib/proxy.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CARDS_JSON = path.join(__dirname, '..', 'web', 'public', 'cards.json');
@@ -12,73 +28,140 @@ async function loadCards() {
   return flattenCards(JSON.parse(await readFile(CARDS_JSON, 'utf-8')));
 }
 
-describe('swatchKeyForCard', () => {
-  it('classifies every card as a valid key or null, never throws', async () => {
+describe('isStampable', () => {
+  it('stamps every non-Region card and skips Regions, across all 1683 cards', async () => {
     const cards = await loadCards();
     expect(cards.length).toBe(1683);
-    const valid = new Set(SWATCH_KEYS);
     for (const c of cards) {
-      const key = swatchKeyForCard(c);
-      if (c.type === 'Region') expect(key).toBeNull();
-      else expect(key === null || valid.has(key)).toBe(true);
+      expect(isStampable(c)).toBe(c.type !== 'Region');
     }
-    // every non-Region card must get a stamp (no silent null gaps)
-    const unstamped = cards.filter((c) => c.type !== 'Region' && swatchKeyForCard(c) === null);
-    expect(unstamped.map((c) => c.id)).toEqual([]);
+    // 52 Region cards are the only ones skipped.
+    expect(cards.filter((c) => !isStampable(c)).length).toBe(52);
   });
 
-  it('classifies the verified reference cards', async () => {
-    const cards = await loadCards();
-    const byId = new Map(cards.map((c) => [c.id, c]));
-    const key = (id) => swatchKeyForCard(byId.get(id));
-    // wizards: TW frame == WH (fallen) frame
-    expect(key('TW-156')).toBe('gandalf');
-    expect(key('WH-4')).toBe('gandalf');
-    expect(key('TW-181')).toBe('saruman');
-    expect(key('WH-9')).toBe('saruman');
-    expect(key('TW-117')).toBe('alatar');
-    expect(key('TW-175')).toBe('pallando');
-    expect(key('TW-178')).toBe('radagast');
-    // ringwraiths + the Balrog character share one red frame
-    expect(key('LE-50')).toBe('red');
-    expect(key('LE-58')).toBe('red');
-    expect(key('BA-3')).toBe('red');
-    // sites: the 22 Site/Balrog must NOT be red
-    const balrogSite = cards.find((c) => c.type === 'Site' && c.alignment === 'Balrog');
-    expect(swatchKeyForCard(balrogSite)).toBe('balrog-site');
-    expect(key('WH-55')).toBe('fw-site');
-    // dual resources are mapped by name
-    expect(key('LE-245')).toBe('minion-resource'); // Tidings of Death
-    expect(key('LE-419')).toBe('minion-resource'); // Deadly Dart
-    expect(key('WH-38')).toBe('hero-resource');    // Beasts of the Wood
-    expect(key('WH-40')).toBe('hero-resource');    // Wild Hounds
-    // the 10 plain type keys
-    expect(key('AS-1')).toBe('minion-character');  // Bûrat
-    expect(key('BA-1')).toBe('hero-character');    // Strider
-    const stage = cards.find((c) => c.type === 'Resource' && c.alignment === 'Stage');
-    expect(swatchKeyForCard(stage)).toBe('stage-resource');
-    const hazard = cards.find((c) => c.type === 'Hazard');
-    expect(swatchKeyForCard(hazard)).toBe('hazard');
-    const region = cards.find((c) => c.type === 'Region');
-    expect(swatchKeyForCard(region)).toBeNull();
+  it('is null-safe', () => {
+    expect(isStampable(null)).toBe(false);
+    expect(isStampable(undefined)).toBe(false);
+    expect(isStampable({ type: 'Character' })).toBe(true);
+    expect(isStampable({ type: 'Region' })).toBe(false);
   });
 });
 
+describe('isLightFrame / labelColor', () => {
+  it('marks the light-framed categories, and only those', async () => {
+    const cards = await loadCards();
+    const byId = new Map(cards.map((c) => [c.id, c]));
+    const light = (id) => isLightFrame(byId.get(id));
+    // hero characters, hero sites, fallen-wizard sites → light
+    expect(light('BA-1')).toBe(true); // Strider (hero character)
+    const heroSite = cards.find((c) => c.type === 'Site' && c.alignment === 'Hero');
+    expect(isLightFrame(heroSite)).toBe(true);
+    expect(light('WH-55')).toBe(true); // Deep Mines (fallen-wizard site)
+    // the pale-stone wizards (both Wizard and Fallen-wizard versions) → light
+    for (const id of ['TW-117', 'TW-156', 'TW-178', 'TW-181', 'WH-1', 'WH-4', 'WH-8', 'WH-9']) {
+      expect(light(id)).toBe(true); // alatar/gandalf/radagast/saruman
+    }
+    // Pallando (indigo), reds, minions, hazards, resources → NOT light
+    expect(light('TW-175')).toBe(false); // Pallando
+    expect(light('WH-7')).toBe(false); // Pallando (fallen)
+    expect(light('LE-50')).toBe(false); // a Ringwraith
+    expect(light('BA-3')).toBe(false); // The Balrog
+    expect(light('AS-1')).toBe(false); // Bûrat (minion character)
+    const balrogSite = cards.find((c) => c.type === 'Site' && c.alignment === 'Balrog');
+    expect(isLightFrame(balrogSite)).toBe(false);
+    const hazard = cards.find((c) => c.type === 'Hazard');
+    expect(isLightFrame(hazard)).toBe(false);
+  });
+
+  it('labelColor picks the dark label on light frames', () => {
+    expect(labelColor({ type: 'Character', alignment: 'Hero' })).toBe(LABEL_ON_LIGHT);
+    expect(labelColor({ type: 'Character', alignment: 'Minion' })).toBe(LABEL_ON_DARK);
+    expect(labelColor(null)).toBe(LABEL_ON_DARK);
+  });
+
+  it('labelColorForLum switches at the contrast-optimal midpoint', () => {
+    expect(LABEL_LUM_THRESHOLD).toBeGreaterThan(90);
+    expect(LABEL_LUM_THRESHOLD).toBeLessThan(140);
+    expect(labelColorForLum(255)).toBe(LABEL_ON_LIGHT); // white patch -> dark label
+    expect(labelColorForLum(0)).toBe(LABEL_ON_DARK); // black patch -> pale label
+    expect(labelColorForLum(LABEL_LUM_THRESHOLD)).toBe(LABEL_ON_LIGHT);
+    expect(labelColorForLum(LABEL_LUM_THRESHOLD - 1)).toBe(LABEL_ON_DARK);
+    // measured samples: hero site ~200 & hero char ~152 -> dark; Barad-dûr ~68 -> pale
+    expect(labelColorForLum(200)).toBe(LABEL_ON_LIGHT);
+    expect(labelColorForLum(152)).toBe(LABEL_ON_LIGHT);
+    expect(labelColorForLum(68)).toBe(LABEL_ON_DARK);
+  });
+});
+
+// A source rect never shares pixels with the covered rect: either it is a clean
+// strip beside the zone (x-disjoint) or a clean row above it (y-disjoint).
+function disjoint(s, r) {
+  const xGap = s.x + s.w <= r.x || s.x >= r.x + r.w;
+  const yGap = s.y + s.h <= r.y || s.y >= r.y + r.h;
+  return xGap || yGap;
+}
+
 describe('geometry', () => {
-  it('exposes sane fractional rects and label', () => {
-    for (const r of [PROXY_RECT.enes, PROXY_RECT.fr]) {
+  it('exposes sane fractional cover rects and a matching (default) clone source', () => {
+    for (const lang of ['en', 'es', 'fr']) {
+      const r = rectForLang(lang);
+      const s = cloneSrcFor(null, lang); // non-site → same-row strip beside the zone
       for (const k of ['x', 'y', 'w', 'h']) {
         expect(r[k]).toBeGreaterThan(0);
         expect(r[k]).toBeLessThan(1);
+        expect(s[k]).toBeGreaterThan(0);
+        expect(s[k]).toBeLessThan(1);
       }
       expect(r.x + r.w).toBeLessThan(1);
       expect(r.y + r.h).toBeLessThanOrEqual(1);
+      // Default source shares the covered row, so it must be x-disjoint.
+      expect(s.y).toBe(r.y);
+      expect(s.h).toBe(r.h);
+      expect(disjoint(s, r)).toBe(true);
     }
+  });
+
+  it('gives torn-edge sites a clean higher strip that clears the black edge', async () => {
+    const cards = await loadCards();
+    const byId = new Map(cards.map((c) => [c.id, c]));
+    for (const lang of ['en', 'es', 'fr']) {
+      // Hero site (AS-137 Cirith Gorgor) and fallen-wizard site (WH-55 Deep Mines).
+      for (const id of ['AS-137', 'WH-55']) {
+        const s = cloneSrcFor(byId.get(id), lang);
+        expect(s).toEqual(CLONE_SRC_SITE);
+        expect(disjoint(s, rectForLang(lang))).toBe(true);
+      }
+      // A minion character keeps the same-row default (not a torn site).
+      const s = cloneSrcFor(byId.get('AS-1'), lang);
+      expect(s).not.toEqual(CLONE_SRC_SITE);
+      expect(s.y).toBe(rectForLang(lang).y);
+    }
+  });
+
+  it('drops the covered rect for FR torn-edge sites to clear the number box', async () => {
+    const cards = await loadCards();
+    const byId = new Map(cards.map((c) => [c.id, c]));
+    const heroSite = byId.get('AS-137'); // Cirith Gorgor
+    const fwSite = byId.get('WH-55'); // Deep Mines
+    // FR: hero & fallen-wizard sites use the lowered rect (top below the box).
+    expect(rectFor(heroSite, 'fr')).toBe(PROXY_RECT_SITE_FR);
+    expect(rectFor(fwSite, 'fr')).toBe(PROXY_RECT_SITE_FR);
+    expect(PROXY_RECT_SITE_FR.y).toBeGreaterThan(PROXY_RECT.fr.y);
+    // en/es sites and non-sites keep the base rect for the language.
+    expect(rectFor(heroSite, 'en')).toBe(PROXY_RECT.enes);
+    expect(rectFor(heroSite, 'es')).toBe(PROXY_RECT.enes);
+    expect(rectFor(byId.get('AS-1'), 'fr')).toBe(PROXY_RECT.fr); // minion character
+    // The lowered rect still clears the clone source (source sits well above it).
+    expect(disjoint(CLONE_SRC_SITE, PROXY_RECT_SITE_FR)).toBe(true);
+  });
+
+  it('routes fr vs en/es correctly', () => {
     expect(rectForLang('fr')).toBe(PROXY_RECT.fr);
     expect(rectForLang('en')).toBe(PROXY_RECT.enes);
     expect(rectForLang('es')).toBe(PROXY_RECT.enes);
     expect(rectForLang(undefined)).toBe(PROXY_RECT.enes);
+    expect(cloneSrcFor(null, 'fr').x).toBe(CLONE_SRC.fr.x);
+    expect(cloneSrcFor(null, 'en').x).toBe(CLONE_SRC.enes.x);
     expect(PROXY_LABEL).toBe('Proxy');
-    expect(SWATCH_KEYS).toHaveLength(16);
   });
 });

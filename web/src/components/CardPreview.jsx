@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react';
-import { cardImageSrc, cardImageEn } from '../lib/lang.js';
-import { swatchKeyForCard, rectForLang, PROXY_LABEL } from '../lib/proxy.js';
+import { cardImageSrc, cardImageEn, cardThumbSrc } from '../lib/lang.js';
+import { isStampable, rectFor, cloneSrcFor, labelColor, PROXY_LABEL } from '../lib/proxy.js';
+import { cachedLabelColor, ensureLabelColor } from '../lib/frameLuminance.js';
 
 // Natural source image dimensions (see README). The hover preview shows the
 // image at full size, scaled down only if it would overflow the viewport.
@@ -44,20 +45,35 @@ export function useCardPreview(lang, proxyOn = false) {
     const img = previewImgRef.current;
     if (!box || !img) return;
     const en = cardImageEn(c);
+    const primary = cardImageSrc(c, lang);
     img.onerror = () => { if (img.getAttribute('src') !== en) img.src = en; };
-    img.src = cardImageSrc(c, lang);
+    img.src = primary;
     // The preview box is imperative (no re-render per hover), so the stamp is
-    // positioned imperatively too; .proxy-stamp CSS handles the label scaling.
+    // positioned imperatively too. Self-clone: the background is the same
+    // preview image, scaled/positioned to stretch a clean band strip over the
+    // zone (see ProxyStamp for the math). .proxy-stamp CSS scales the label.
     const stamp = stampRef.current;
     if (stamp) {
-      const key = proxyOn ? swatchKeyForCard(c) : null;
-      if (key) {
-        const r = rectForLang(lang);
+      if (proxyOn && isStampable(c) && primary) {
+        const r = rectFor(c, lang);
+        const s = cloneSrcFor(c, lang);
         stamp.style.left = `${r.x * 100}%`;
         stamp.style.top = `${r.y * 100}%`;
         stamp.style.width = `${r.w * 100}%`;
         stamp.style.height = `${r.h * 100}%`;
-        stamp.style.backgroundImage = `url(/proxy-swatches/${key}.png)`;
+        stamp.style.backgroundImage = `url(${primary})`;
+        stamp.style.backgroundRepeat = 'no-repeat';
+        stamp.style.backgroundSize = `${100 / s.w}% ${100 / s.h}%`;
+        stamp.style.backgroundPosition = `${(100 * s.x) / (1 - s.w)}% ${(100 * s.y) / (1 - s.h)}%`;
+        const span = stamp.querySelector('span');
+        if (span) {
+          // Category colour immediately, then refine from the real frame
+          // luminance; ignore the async result if a different card is now shown.
+          span.style.color = cachedLabelColor(c) || labelColor(c);
+          ensureLabelColor(c, lang, cardThumbSrc(c, lang)).then((col) => {
+            if (span && shownIdRef.current === c.id) span.style.color = col;
+          });
+        }
         stamp.style.display = 'flex';
       } else {
         stamp.style.display = 'none';
