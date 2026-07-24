@@ -101,3 +101,14 @@ export function isLightFrame(card) {
 export function labelColor(card) {
   return isLightFrame(card) ? LABEL_ON_LIGHT : LABEL_ON_DARK;
 }
+
+// Preferred over the category guess above: pick the label colour from the ACTUAL
+// mean luminance [0..255] of the frame behind the label (sampled from the clone
+// patch — see frameLuminance.js for on-screen, the export canvas for ZIP/PDF).
+// The two label greys sit at luminance ~205 (pale) and ~20 (dark); their midpoint
+// ~113 is the contrast-optimal switch point: lighter patch -> dark label.
+export const LABEL_LUM_THRESHOLD = 113;
+
+export function labelColorForLum(lum) {
+  return lum >= LABEL_LUM_THRESHOLD ? LABEL_ON_LIGHT : LABEL_ON_DARK;
+}

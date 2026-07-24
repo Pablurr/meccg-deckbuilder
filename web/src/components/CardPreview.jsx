@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react';
-import { cardImageSrc, cardImageEn } from '../lib/lang.js';
+import { cardImageSrc, cardImageEn, cardThumbSrc } from '../lib/lang.js';
 import { isStampable, rectFor, cloneSrcFor, labelColor, PROXY_LABEL } from '../lib/proxy.js';
+import { cachedLabelColor, ensureLabelColor } from '../lib/frameLuminance.js';
 
 // Natural source image dimensions (see README). The hover preview shows the
 // image at full size, scaled down only if it would overflow the viewport.
@@ -65,7 +66,14 @@ export function useCardPreview(lang, proxyOn = false) {
         stamp.style.backgroundSize = `${100 / s.w}% ${100 / s.h}%`;
         stamp.style.backgroundPosition = `${(100 * s.x) / (1 - s.w)}% ${(100 * s.y) / (1 - s.h)}%`;
         const span = stamp.querySelector('span');
-        if (span) span.style.color = labelColor(c);
+        if (span) {
+          // Category colour immediately, then refine from the real frame
+          // luminance; ignore the async result if a different card is now shown.
+          span.style.color = cachedLabelColor(c) || labelColor(c);
+          ensureLabelColor(c, lang, cardThumbSrc(c, lang)).then((col) => {
+            if (span && shownIdRef.current === c.id) span.style.color = col;
+          });
+        }
         stamp.style.display = 'flex';
       } else {
         stamp.style.display = 'none';

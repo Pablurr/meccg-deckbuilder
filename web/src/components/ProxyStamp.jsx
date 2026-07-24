@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { isStampable, rectFor, cloneSrcFor, labelColor, PROXY_LABEL } from '../lib/proxy.js';
+import { cachedLabelColor, ensureLabelColor } from '../lib/frameLuminance.js';
+import { cardThumbSrc } from '../lib/lang.js';
 
 const pct = (f) => `${f * 100}%`;
 
@@ -14,8 +16,20 @@ const pct = (f) => `${f * 100}%`;
 // (1/s.h) box-heights; background-position aligns the strip's top-left to the
 // box. (Torn-edge sites sample a clean row above the zone, so s.y/s.h differ
 // from the covered rect; other cards sample the same row, so s.y/s.h == r.y/r.h.)
-export default function ProxyStamp({ card, lang, on, src }) {
-  if (!on || !src || !isStampable(card)) return null;
+export default function ProxyStamp({ card, lang, on, src, sample = false }) {
+  const active = !!(on && src && isStampable(card));
+  // Category colour immediately; when `sample` is set (large, readable views like
+  // the modal), refine it from the card's real frame luminance once sampled.
+  const [color, setColor] = useState(() => (card && cachedLabelColor(card)) || labelColor(card));
+  useEffect(() => {
+    if (!active || !sample) return undefined;
+    let alive = true;
+    ensureLabelColor(card, lang, cardThumbSrc(card, lang)).then((c) => alive && setColor(c));
+    return () => {
+      alive = false;
+    };
+  }, [active, sample, card && card.id, lang]);
+  if (!active) return null;
   const r = rectFor(card, lang);
   const s = cloneSrcFor(card, lang);
   return (
@@ -33,7 +47,7 @@ export default function ProxyStamp({ card, lang, on, src }) {
         backgroundPosition: `${(100 * s.x) / (1 - s.w)}% ${(100 * s.y) / (1 - s.h)}%`,
       }}
     >
-      <span style={{ color: labelColor(card) }}>{PROXY_LABEL}</span>
+      <span style={{ color }}>{PROXY_LABEL}</span>
     </div>
   );
 }

@@ -7,6 +7,8 @@ import {
   isStampable,
   isLightFrame,
   labelColor,
+  labelColorForLum,
+  LABEL_LUM_THRESHOLD,
   rectForLang,
   rectFor,
   cloneSrcFor,
@@ -75,6 +77,19 @@ describe('isLightFrame / labelColor', () => {
     expect(labelColor({ type: 'Character', alignment: 'Hero' })).toBe(LABEL_ON_LIGHT);
     expect(labelColor({ type: 'Character', alignment: 'Minion' })).toBe(LABEL_ON_DARK);
     expect(labelColor(null)).toBe(LABEL_ON_DARK);
+  });
+
+  it('labelColorForLum switches at the contrast-optimal midpoint', () => {
+    expect(LABEL_LUM_THRESHOLD).toBeGreaterThan(90);
+    expect(LABEL_LUM_THRESHOLD).toBeLessThan(140);
+    expect(labelColorForLum(255)).toBe(LABEL_ON_LIGHT); // white patch -> dark label
+    expect(labelColorForLum(0)).toBe(LABEL_ON_DARK); // black patch -> pale label
+    expect(labelColorForLum(LABEL_LUM_THRESHOLD)).toBe(LABEL_ON_LIGHT);
+    expect(labelColorForLum(LABEL_LUM_THRESHOLD - 1)).toBe(LABEL_ON_DARK);
+    // measured samples: hero site ~200 & hero char ~152 -> dark; Barad-dûr ~68 -> pale
+    expect(labelColorForLum(200)).toBe(LABEL_ON_LIGHT);
+    expect(labelColorForLum(152)).toBe(LABEL_ON_LIGHT);
+    expect(labelColorForLum(68)).toBe(LABEL_ON_DARK);
   });
 });
 

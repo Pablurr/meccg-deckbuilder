@@ -1,0 +1,356 @@
+[
+ {
+  "cat": "Character/Minion",
+  "id": "AS-1",
+  "name": "Bûrat",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/as/Burat.jpg"
+ },
+ {
+  "cat": "Character/Minion",
+  "id": "AS-2",
+  "name": "Mauhúr",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/as/Mauhur.jpg"
+ },
+ {
+  "cat": "Character/Minion",
+  "id": "AS-3",
+  "name": "Mîonid",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/as/Mionid.jpg"
+ },
+ {
+  "cat": "Character/Minion",
+  "id": "AS-4",
+  "name": "Perchen",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/as/Perchen.jpg"
+ },
+ {
+  "cat": "Character/Minion",
+  "id": "AS-5",
+  "name": "Tûma",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/as/Tuma.jpg"
+ },
+ {
+  "cat": "Hazard/Neutral",
+  "id": "AS-7",
+  "name": "Alatar the Hunter",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/as/AlatartheHunter.jpg"
+ },
+ {
+  "cat": "Hazard/Neutral",
+  "id": "AS-8",
+  "name": "Durin’s Folk",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/as/DurinsFolk.jpg"
+ },
+ {
+  "cat": "Hazard/Neutral",
+  "id": "AS-9",
+  "name": "Dwarven Travelers",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/as/DwarvenTravelers.jpg"
+ },
+ {
+  "cat": "Hazard/Neutral",
+  "id": "AS-10",
+  "name": "Galadhrim",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/as/Galadhrim.jpg"
+ },
+ {
+  "cat": "Hazard/Neutral",
+  "id": "AS-11",
+  "name": "Gandalf the White Rider",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/as/GandalftheWhiteRider.jpg"
+ },
+ {
+  "cat": "Resource/Hero",
+  "id": "AS-44",
+  "name": "All the Bells Ringing",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/as/AlltheBellsRinging.jpg"
+ },
+ {
+  "cat": "Resource/Hero",
+  "id": "AS-45",
+  "name": "Alliance of Free Peoples",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/as/AllianceofFreePeoples.jpg"
+ },
+ {
+  "cat": "Resource/Hero",
+  "id": "AS-46",
+  "name": "Biter and Beater!",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/as/BiterandBeater.jpg"
+ },
+ {
+  "cat": "Resource/Hero",
+  "id": "AS-47",
+  "name": "Drughu",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/as/Drughu.jpg"
+ },
+ {
+  "cat": "Resource/Hero",
+  "id": "AS-48",
+  "name": "Farmer Maggot",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/as/FarmerMaggot.jpg"
+ },
+ {
+  "cat": "Resource/Minion",
+  "id": "AS-62",
+  "name": "Angmarim",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/as/Angmarim2.jpg"
+ },
+ {
+  "cat": "Resource/Minion",
+  "id": "AS-63",
+  "name": "Haradrim",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/as/Haradrim2.jpg"
+ },
+ {
+  "cat": "Resource/Minion",
+  "id": "AS-65",
+  "name": "Petty-dwarves",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/as/Pettydwarves2.jpg"
+ },
+ {
+  "cat": "Resource/Minion",
+  "id": "AS-66",
+  "name": "Wain-easterlings",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/as/Waineasterlings2.jpg"
+ },
+ {
+  "cat": "Resource/Minion",
+  "id": "AS-71",
+  "name": "The Balrog",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/as/TheBalrog.jpg"
+ },
+ {
+  "cat": "Site/Hero",
+  "id": "AS-137",
+  "name": "Cirith Gorgor",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/as/CirithGorgor.jpg"
+ },
+ {
+  "cat": "Site/Hero",
+  "id": "AS-138",
+  "name": "Geann a-Lisch",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/as/GeannaLisch.jpg"
+ },
+ {
+  "cat": "Site/Hero",
+  "id": "AS-139",
+  "name": "Gobel Mírlond",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/as/GobelMirlond.jpg"
+ },
+ {
+  "cat": "Site/Hero",
+  "id": "AS-140",
+  "name": "Nûrniag Camp",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/as/NurniagCamp.jpg"
+ },
+ {
+  "cat": "Site/Hero",
+  "id": "AS-141",
+  "name": "Raider-hold",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/as/Raiderhold.jpg"
+ },
+ {
+  "cat": "Site/Minion",
+  "id": "AS-143",
+  "name": "Dancing Spire",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/as/DancingSpire.jpg"
+ },
+ {
+  "cat": "Site/Minion",
+  "id": "AS-144",
+  "name": "Eagles’ Eyrie",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/as/EaglesEyrie.jpg"
+ },
+ {
+  "cat": "Site/Minion",
+  "id": "AS-145",
+  "name": "Edhellond",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/as/Edhellond.jpg"
+ },
+ {
+  "cat": "Site/Minion",
+  "id": "AS-146",
+  "name": "Framsburg",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/as/Framsburg.jpg"
+ },
+ {
+  "cat": "Site/Minion",
+  "id": "AS-147",
+  "name": "The Gem-deeps",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/as/TheGemdeeps.jpg"
+ },
+ {
+  "cat": "Character/Hero",
+  "id": "BA-1",
+  "name": "Strider",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/ba/Strider.jpg"
+ },
+ {
+  "cat": "Character/Hero",
+  "id": "DM-180",
+  "name": "Folco Boffin",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/dm/FolcoBoffin.jpg"
+ },
+ {
+  "cat": "Character/Hero",
+  "id": "TD-90",
+  "name": "Brand",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/td/Brand.jpg"
+ },
+ {
+  "cat": "Character/Hero",
+  "id": "TD-91",
+  "name": "Fram Framson",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/td/FramFramson.jpg"
+ },
+ {
+  "cat": "Character/Hero",
+  "id": "TD-92",
+  "name": "Galdor",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/td/Galdor.jpg"
+ },
+ {
+  "cat": "Character/Balrog",
+  "id": "BA-3",
+  "name": "The Balrog",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/ba/TheBalrog.jpg"
+ },
+ {
+  "cat": "Site/Balrog",
+  "id": "BA-83",
+  "name": "Ancient Deep-hold",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/ba/AncientDeephold.jpg"
+ },
+ {
+  "cat": "Site/Balrog",
+  "id": "BA-84",
+  "name": "Barad-dûr",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/ba/Baraddur.jpg"
+ },
+ {
+  "cat": "Site/Balrog",
+  "id": "BA-85",
+  "name": "Carn Dûm",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/ba/CarnDum.jpg"
+ },
+ {
+  "cat": "Site/Balrog",
+  "id": "BA-86",
+  "name": "Cirith Gorgor",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/ba/CirithGorgor.jpg"
+ },
+ {
+  "cat": "Site/Balrog",
+  "id": "BA-87",
+  "name": "Cirith Ungol",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/ba/CirithUngol.jpg"
+ },
+ {
+  "cat": "Resource/Dual",
+  "id": "LE-245",
+  "name": "Tidings of Death",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/le/TidingsofDeath.jpg"
+ },
+ {
+  "cat": "Resource/Dual",
+  "id": "LE-419",
+  "name": "Deadly Dart",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/le/DeadlyDart.jpg"
+ },
+ {
+  "cat": "Resource/Dual",
+  "id": "WH-38",
+  "name": "Beasts of the Wood",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/wh/BeastsoftheWood.jpg"
+ },
+ {
+  "cat": "Resource/Dual",
+  "id": "WH-40",
+  "name": "Wild Hounds",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/wh/WildHounds.jpg"
+ },
+ {
+  "cat": "Character/Fallen-wizard",
+  "id": "WH-1",
+  "name": "Alatar",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/wh/Alatar.jpg"
+ },
+ {
+  "cat": "Character/Fallen-wizard",
+  "id": "WH-4",
+  "name": "Gandalf",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/wh/Gandalf.jpg"
+ },
+ {
+  "cat": "Character/Fallen-wizard",
+  "id": "WH-7",
+  "name": "Pallando",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/wh/Pallando.jpg"
+ },
+ {
+  "cat": "Character/Fallen-wizard",
+  "id": "WH-8",
+  "name": "Radagast",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/wh/Radagast.jpg"
+ },
+ {
+  "cat": "Character/Fallen-wizard",
+  "id": "WH-9",
+  "name": "Saruman",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/wh/Saruman.jpg"
+ },
+ {
+  "cat": "Site/Fallen-wizard",
+  "id": "WH-55",
+  "name": "Deep Mines",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/wh/DeepMines.jpg"
+ },
+ {
+  "cat": "Site/Fallen-wizard",
+  "id": "WH-56",
+  "name": "Isengard",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/wh/Isengard.jpg"
+ },
+ {
+  "cat": "Site/Fallen-wizard",
+  "id": "WH-57",
+  "name": "Rhosgobel",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/wh/Rhosgobel.jpg"
+ },
+ {
+  "cat": "Site/Fallen-wizard",
+  "id": "WH-58",
+  "name": "The White Towers",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/wh/TheWhiteTowers.jpg"
+ },
+ {
+  "cat": "Resource/Stage",
+  "id": "WH-59",
+  "name": "A Merrier World",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/wh/AMerrierWorld.jpg"
+ },
+ {
+  "cat": "Resource/Stage",
+  "id": "WH-60",
+  "name": "A New Ringlord",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/wh/ANewRinglord.jpg"
+ },
+ {
+  "cat": "Resource/Stage",
+  "id": "WH-61",
+  "name": "A Strident Spawn",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/wh/AStridentSpawn.jpg"
+ },
+ {
+  "cat": "Resource/Stage",
+  "id": "WH-62",
+  "name": "An Untimely Brood",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/wh/AnUntimelyBrood.jpg"
+ },
+ {
+  "cat": "Resource/Stage",
+  "id": "WH-63",
+  "name": "Bad Company",
+  "url": "https://cdn.jsdelivr.net/gh/council-of-rivendell/meccg-remaster/en-remaster/wh/BadCompany.jpg"
+ }
+]
