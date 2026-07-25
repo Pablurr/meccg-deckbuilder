@@ -228,7 +228,7 @@ describe('copy limits are data, not clamps', () => {
 
 - [ ] **Step 2: Run test**
 
-Run: `npx vitest run test/deckModel.test.js` — Expected: PASS already (maxCopies untouched). This test pins the reference values so the App change can't "fix" them away.
+Run: `npx vitest run test/deckModel.test.js` — Expected: PASS immediately. **This is a characterization test, not a TDD RED step**: `maxCopies` keeps its current behaviour on purpose, and the test pins those values so Step 3's App change cannot quietly delete them. The behavioural change in this task is in `App.jsx` and is verified manually (the counter must pass the old caps) — there is no unit test for it because the clamp lived in a React event handler, not in a pure module.
 
 - [ ] **Step 3: Unclamp the App**
 
@@ -827,6 +827,14 @@ export function isRuleEnabled(ruleId, ruleOverrides = {}) {
 
 const toInt = (v) => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : null; };
 
+// resolveBanned walks all 1683 cards; validateDeck runs on every deck edit, so
+// cache the resolution against the card index identity (a Map built once in App).
+let _banned = { key: null, value: null };
+function bannedFor(cardsById, side) {
+  if (_banned.key !== cardsById) _banned = { key: cardsById, value: resolveBanned([...cardsById.values()]) };
+  return _banned.value.bySide[side] || new Set();
+}
+
 export function validateDeck({ side, length, tournament, ruleOverrides = {}, quantities = {}, zones = {}, cardsById }) {
   const profile = SIDES[side];
   if (!profile) return [];
@@ -863,8 +871,7 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
   const avatarName = avatars.length === 1 ? name(avatars[0].card) : null;
 
   // --- per-card checks ---
-  const { bySide: bannedBySide } = resolveBanned([...cardsById.values()]);
-  const bannedSet = bannedBySide[side] || new Set();
+  const bannedSet = bannedFor(cardsById, side);
   for (const e of entries) {
     const c = e.card; const a = c.attributes || {};
     const balrogExempt = profile.specificMode === 'balrog-exempt' && a.specific === 'Balrog';
@@ -910,7 +917,7 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
   if (profile.playDeck && (playCount < profile.playDeck.min || playCount > profile.playDeck.max)) {
     emit('DECKSIZE-PLAY', { count: playCount, min: profile.playDeck.min, max: profile.playDeck.max, side });
   }
-  emitLocation: if (locationCount === 0 && playCount > 0) emit('DECKSIZE-LOCATION', { count: locationCount, min: 1 });
+  if (locationCount === 0 && playCount > 0) emit('DECKSIZE-LOCATION', { count: locationCount, min: 1 });
 
   // --- sideboard ---
   const sbCount = Object.entries(sb).reduce((s, [id, n]) => s + (cardsById.get(id) ? n : 0), 0);
@@ -1280,7 +1287,7 @@ it('reordering swaps order values and a rename does not change position', async 
 });
 ```
 
-- [ ] **Step 2:** Run — PASS already at store level (pins behavior); the UI work follows.
+- [ ] **Step 2:** Run — PASS immediately. **Characterization test, not TDD RED**: the `order` sort landed in Task 1, so this pins the reorder/rename semantics the UI in Step 3 depends on. The UI work itself is verified manually.
 
 - [ ] **Step 3: Implement in DeckManager**
 
