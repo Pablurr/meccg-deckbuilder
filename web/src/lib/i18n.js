@@ -12,8 +12,29 @@ export const translations = {
     // Common
     'common.close': 'Fermer',
     'common.cancel': 'Annuler',
+    'common.ok': 'OK',
     'common.done': 'Terminé',
     'common.error': 'Erreur : {msg}',
+
+    // Deck setup dialog
+    'setup.title': 'Mode du deck',
+    'setup.mode.freeform': 'Impression libre',
+    'setup.mode.freeform.hint': 'Toutes cartes, sans limite — aucune règle',
+    'setup.mode.deckbuilding': 'Construction de deck',
+    'setup.mode.deckbuilding.hint': 'Assistée, avertissements de règles',
+    'setup.side': 'Camp',
+    'setup.length': 'Longueur de partie',
+    'setup.tournament': 'Tournoi (sévérité stricte)',
+    'side.wizard': 'Sorcier',
+    'side.ringwraith': "Spectre de l'Anneau",
+    'side.fallen-wizard': 'Sorcier déchu',
+    'side.balrog': 'Balrog',
+    'side.freeform': 'Libre',
+    'length.starter': 'Starter',
+    'length.standard': 'Standard',
+    'length.long': 'Longue',
+    'length.campaign': 'Campagne',
+    'drawer.settings': 'Réglages',
 
     // Filter bar
     'filter.search': 'Chercher par titre',
@@ -138,8 +159,29 @@ export const translations = {
 
     'common.close': 'Close',
     'common.cancel': 'Cancel',
+    'common.ok': 'OK',
     'common.done': 'Done',
     'common.error': 'Error: {msg}',
+
+    // Deck setup dialog
+    'setup.title': 'Deck mode',
+    'setup.mode.freeform': 'Freeform printing',
+    'setup.mode.freeform.hint': 'Any card, any count — no rules',
+    'setup.mode.deckbuilding': 'Deckbuilding',
+    'setup.mode.deckbuilding.hint': 'Assisted, rule warnings',
+    'setup.side': 'Side',
+    'setup.length': 'Game length',
+    'setup.tournament': 'Tournament (strict severities)',
+    'side.wizard': 'Wizard',
+    'side.ringwraith': 'Ringwraith',
+    'side.fallen-wizard': 'Fallen-wizard',
+    'side.balrog': 'Balrog',
+    'side.freeform': 'Freeform',
+    'length.starter': 'Starter',
+    'length.standard': 'Standard',
+    'length.long': 'Long',
+    'length.campaign': 'Campaign',
+    'drawer.settings': 'Settings',
 
     'filter.search': 'Search by title',
     'filter.searchText': 'Search in text',
@@ -260,8 +302,28 @@ export const translations = {
 
     'common.close': 'Cerrar',
     'common.cancel': 'Cancelar',
+    'common.ok': 'OK',
     'common.done': 'Hecho',
     'common.error': 'Error: {msg}',
+
+    // Deck setup dialog
+    'setup.title': 'Modo del mazo',
+    'setup.mode.freeform': 'Impresión libre',
+    'setup.mode.freeform.hint': 'Cualquier carta, sin límite — sin reglas',
+    'setup.mode.deckbuilding': 'Construcción de mazo',
+    'setup.mode.deckbuilding.hint': 'Asistida, avisos de reglas',
+    'setup.side': 'Bando',
+    'setup.length': 'Duración de partida',
+    'setup.tournament': 'Torneo (severidad estricta)',
+    'side.wizard': 'Mago',
+    'side.ringwraith': 'Espectro del Anillo',
+    'side.fallen-wizard': 'Mago caído',
+    'side.balrog': 'Balrog',
+    'side.freeform': 'Libre',
+    'length.starter': 'Starter',
+    'length.standard': 'Estándar',
+    'length.long': 'Larga',
+    'length.campaign': 'Campaña',
 
     // Proxy mode
     'proxy.label': 'Proxy',

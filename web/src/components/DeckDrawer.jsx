@@ -3,7 +3,7 @@ import { useT } from '../i18n.jsx';
 
 // Bottom action bar. On mobile it also surfaces the deck count and a button to
 // open the deck sheet (the right-hand DeckPanel is hidden on mobile).
-export default function DeckDrawer({ total, onManage, onExport, onImport, onNew, isMobile, onViewDeck }) {
+export default function DeckDrawer({ total, onManage, onExport, onImport, onNew, onSettings, isMobile, onViewDeck }) {
   const t = useT();
   return (
     <div className="drawer">
@@ -13,6 +13,7 @@ export default function DeckDrawer({ total, onManage, onExport, onImport, onNew,
         </button>
       )}
       <div className="spacer" />
+      <button className="btn secondary" onClick={onSettings} title={t('setup.title')}>{t('drawer.settings')}</button>
       <button className="btn secondary" onClick={onNew}>{t('drawer.new')}</button>
       <button className="btn secondary" onClick={onImport}>{t('drawer.import')}</button>
       <button className="btn secondary" onClick={onManage}>{t('drawer.myDecks')}</button>

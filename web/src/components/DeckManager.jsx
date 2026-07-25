@@ -19,7 +19,10 @@ export default function DeckManager({ deck, cardIds, quantities, onClose, onLoad
     setBusy(true);
     setError(null);
     try {
-      const payload = { name, cardIds, quantities, backAssignments: deck.backAssignments || {} };
+      const payload = {
+        name, cardIds, quantities, backAssignments: deck.backAssignments || {},
+        mode: deck.mode, ruleset: deck.ruleset, zones: deck.zones, notes: deck.notes, order: deck.order,
+      };
       const saved = deck.id ? await api.updateDeck(deck.id, payload) : await api.createDeck(payload);
       onSaved(saved);
       await refresh();

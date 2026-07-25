@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import * as api from './api.js';
-import { expandQuantities, countOccurrences, deckCounts, deckWarnings } from './lib/deck.js';
+import { expandQuantities, countOccurrences, deckCounts, deckWarnings, normalizeDeck } from './lib/deck.js';
 import { baseOptions } from './lib/tags.js';
 import { I18nProvider } from './i18n.jsx';
 import { makeT } from './lib/i18n.js';
@@ -9,6 +9,7 @@ import CardBrowser from './components/CardBrowser.jsx';
 import DeckDrawer from './components/DeckDrawer.jsx';
 import DeckPanel from './components/DeckPanel.jsx';
 import DeckManager from './components/DeckManager.jsx';
+import DeckSetupDialog from './components/DeckSetupDialog.jsx';
 import ExportDialog from './components/ExportDialog.jsx';
 import ImportDialog from './components/ImportDialog.jsx';
 import CardPreviewModal from './components/CardPreviewModal.jsx';
@@ -21,8 +22,9 @@ export default function App() {
   const [filters, setFilters] = useState({});
   const [uiLang, setUiLang] = useState('fr'); // display language for card names
   const [quantities, setQuantities] = useState({}); // id -> copy count
-  const [deck, setDeck] = useState({ id: null, name: 'Nouveau deck', backAssignments: {} });
+  const [deck, setDeck] = useState(() => normalizeDeck({ id: null, name: 'Nouveau deck', backAssignments: {} }));
   const [showManager, setShowManager] = useState(false);
+  const [showSetup, setShowSetup] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
@@ -112,15 +114,24 @@ export default function App() {
   }
 
   function loadDeckIntoState(d) {
-    setDeck({ id: d.id, name: d.name, backAssignments: d.backAssignments || {} });
+    setDeck(normalizeDeck(d));
     setQuantities(d.quantities || countOccurrences(d.cardIds || []));
     setShowManager(false);
   }
 
+  // "New" resets quantities/zones/notes first so the setup dialog (and the
+  // deck it produces) never inherits the previous deck's cards.
   function newDeck() {
-    setDeck({ id: null, name: t('app.newDeck'), backAssignments: {} });
+    setDeck(normalizeDeck({ id: null, name: t('app.newDeck'), backAssignments: {} }));
     setQuantities({});
     setShowManager(false);
+    setShowSetup(true);
+  }
+
+  // Called by DeckSetupDialog.onConfirm with { mode, ruleset }.
+  function applySetup(partial) {
+    setDeck((prev) => normalizeDeck({ ...prev, id: prev.id, ...partial }));
+    setShowSetup(false);
   }
 
   if (error) return <div style={{ padding: 24 }}>{t('app.loadError', { error })}</div>;
@@ -181,9 +192,17 @@ export default function App() {
         onExport={() => setShowExport(true)}
         onImport={() => setShowImport(true)}
         onNew={newDeck}
+        onSettings={() => setShowSetup(true)}
         isMobile={isMobile}
         onViewDeck={() => setDeckSheetOpen(true)}
       />
+      {showSetup && (
+        <DeckSetupDialog
+          initial={deck}
+          onConfirm={applySetup}
+          onClose={() => setShowSetup(false)}
+        />
+      )}
       {showManager && (
         <DeckManager
           deck={deck}
@@ -191,7 +210,7 @@ export default function App() {
           quantities={quantities}
           onClose={() => setShowManager(false)}
           onLoad={loadDeckIntoState}
-          onSaved={(d) => setDeck((prev) => ({ ...prev, id: d.id, name: d.name }))}
+          onSaved={(d) => setDeck((prev) => normalizeDeck({ ...prev, ...d }))}
         />
       )}
       {showImport && (

@@ -415,6 +415,17 @@ body {
   padding: 8px 10px;
   border-radius: var(--radius);
 }
+.setup-modes { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
+.setup-mode {
+  display: flex; align-items: baseline; gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  cursor: pointer;
+}
+.setup-mode.on { border-color: var(--accent); background: var(--panel-2); }
+.setup-mode input[type="radio"] { margin: 0; }
+
 .deck-list { list-style: none; padding: 0; margin: 8px 0; }
 .deck-list li {
   display: flex; align-items: center; gap: 8px;
