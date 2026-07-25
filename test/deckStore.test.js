@@ -17,7 +17,7 @@ describe('localStorage deck store', () => {
     expect(deck.id).toMatch(/^d_/);
     expect(deck.createdAt).toBeTruthy();
     const list = await store.list();
-    expect(list).toEqual([{ id: deck.id, name: 'Test', count: 2, updatedAt: deck.updatedAt }]);
+    expect(list).toEqual([{ id: deck.id, name: 'Test', count: 2, updatedAt: deck.updatedAt, order: null, mode: undefined, side: undefined }]);
   });
 
   it('gets, updates (preserving createdAt) and removes decks', async () => {

@@ -30,9 +30,18 @@ export function createDeckStore(storage = globalThis.localStorage) {
 
   return {
     async list() {
-      return Object.values(readAll())
-        .map((d) => ({ id: d.id, name: d.name, count: (d.cardIds || []).length, updatedAt: d.updatedAt }))
-        .sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
+      const rows = Object.values(readAll()).map((d) => ({
+        id: d.id, name: d.name, count: Object.values(d.quantities || {}).reduce((s, n) => s + n, 0) || (d.cardIds || []).length,
+        updatedAt: d.updatedAt, order: typeof d.order === 'number' ? d.order : null,
+        mode: d.mode, side: d.ruleset && d.ruleset.side,
+      }));
+      return rows.sort((a, b) => {
+        if (a.order != null && b.order != null && a.order !== b.order) return a.order - b.order;
+        if (a.order != null && b.order == null) return -1;
+        if (a.order == null && b.order != null) return 1;
+        const t = String(b.updatedAt || '').localeCompare(String(a.updatedAt || ''));
+        return t !== 0 ? t : String(a.id).localeCompare(String(b.id));
+      });
     },
 
     async get(id) {
@@ -41,9 +50,9 @@ export function createDeckStore(storage = globalThis.localStorage) {
       return d;
     },
 
-    async create({ name, cardIds = [], quantities = {}, backAssignments = {} } = {}) {
+    async create({ name, cardIds = [], quantities = {}, backAssignments = {}, mode, ruleset, zones, notes, order } = {}) {
       const now = new Date().toISOString();
-      const deck = { id: newId(), name: name || 'Untitled', cardIds, quantities, backAssignments, createdAt: now, updatedAt: now };
+      const deck = { id: newId(), name: name || 'Untitled', cardIds, quantities, backAssignments, mode, ruleset, zones, notes, order, createdAt: now, updatedAt: now };
       const all = readAll();
       all[deck.id] = deck;
       writeAll(all);

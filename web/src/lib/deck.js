@@ -1,3 +1,5 @@
+import { SIDE_IDS, LENGTH_IDS } from './constants.js';
+
 // Back-group mapping, duplicated from src/exporter.js (tiny, stable map;
 // kept here so the browser bundle needs no server import).
 export const BACK_GROUPS = {
@@ -74,4 +76,28 @@ export function deckWarnings(cardsById, cardIds, backAssignments = {}, defaultBa
   const missingImg = cardIds.map((id) => cardsById.get(id)).filter((c) => c && !c.image);
   if (missingImg.length) warnings.push({ code: 'missingImage', count: missingImg.length });
   return warnings;
+}
+
+export const EMPTY_NOTES = { starting: '', resourceStrategy: '', hazardStrategy: '', other: '' };
+
+// Fill mode/ruleset/zones/notes with safe defaults. A record without `mode`
+// (every pre-existing deck) reads as freeform; a deckbuilding record whose
+// side or length is unknown falls back to freeform rather than throwing.
+export function normalizeDeck(d = {}) {
+  const zones = {
+    sideboard: { ...((d.zones && d.zones.sideboard) || {}) },
+    pool: { ...((d.zones && d.zones.pool) || {}) },
+  };
+  const notes = { ...EMPTY_NOTES, ...(d.notes || {}) };
+  let mode = d.mode === 'deckbuilding' ? 'deckbuilding' : 'freeform';
+  let ruleset = null;
+  if (mode === 'deckbuilding') {
+    const r = d.ruleset || {};
+    if (SIDE_IDS.includes(r.side) && LENGTH_IDS.includes(r.length)) {
+      ruleset = { side: r.side, length: r.length, tournament: !!r.tournament, ruleOverrides: { ...(r.ruleOverrides || {}) } };
+    } else {
+      mode = 'freeform';
+    }
+  }
+  return { ...d, mode, ruleset, zones, notes, order: typeof d.order === 'number' ? d.order : null };
 }

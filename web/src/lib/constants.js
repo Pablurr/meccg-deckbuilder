@@ -11,3 +11,6 @@ export const CARD_H_BLEED = 1122; // 3.74in @ 300 DPI
 
 export const CARD_W_CUT = CARD_W_BLEED - 2 * BLEED_PX; // 750
 export const CARD_H_CUT = CARD_H_BLEED - 2 * BLEED_PX; // 1050
+
+export const SIDE_IDS = ['wizard', 'ringwraith', 'fallen-wizard', 'balrog'];
+export const LENGTH_IDS = ['starter', 'standard', 'long', 'campaign'];
