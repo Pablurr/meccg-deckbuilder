@@ -134,6 +134,7 @@ The deck record gains three optional fields:
   ruleset: { side, length, tournament, ruleOverrides: { [ruleId]: boolean } },
   zones: { sideboard: { [id]: n }, pool: { [id]: n } },
   notes: { starting, resourceStrategy, hazardStrategy, other },  // plain text
+  order: n,                                                      // manual list position
 }
 ```
 
@@ -347,9 +348,10 @@ correct back whatever its neighbours are.
 It gains the section level: `## Section` / `### Subtype (n)`, keeping the existing
 `Nx Card name` lines untouched so the list stays **re-importable**.
 
-Notes are appended as a final `## Notes` section with one `###` per non-empty
-field. *(Judgment call: notes were not listed in the export order, but a Markdown
-deck list is their natural home. Easily dropped if unwanted.)*
+Layout: the deck name stays the `# title` (already the case), then a `## Notes`
+section with one `###` per non-empty field, then the card sections. Notes come
+**first** — the list reads as a deck primer, where the plan belongs before the
+card dump.
 
 **Round-trip fidelity matters here**: [importDeck.js](web/src/lib/importDeck.js) must
 ignore heading lines and, when they match known section names, **restore the zone**
@@ -360,6 +362,33 @@ silently collapses its pool and sideboard into the main deck.
 
 The MPC ZIP is for professional printing and keeps its current behaviour and
 naming exactly.
+
+## Component 8 — Deck management
+
+Three additions to [DeckManager.jsx](web/src/components/DeckManager.jsx), where the
+saved-deck list lives. Today it can only rename the **currently loaded** deck (via
+the name field), sorts by `updatedAt` descending with no manual control, and
+`deckStore.list()` projects only `{ id, name, count, updatedAt }`.
+
+**Rename in place** — clicking a deck's name in the list turns it into an input;
+Enter commits, Escape cancels. Renaming touches the name only, and must not
+reshuffle the list under the user's cursor.
+
+**Manual ordering** — a new `order` field on the deck record. `list()` sorts by
+`order` ascending, falling back to `updatedAt` descending for records that predate
+the field, so existing decks keep their current arrangement until first moved.
+Reordering is **drag-and-drop** on desktop, with **up/down buttons** on mobile
+(`useIsMobile` already exists) — dragging a row in a modal list is unreliable on
+touch, and this list is short enough that buttons are no worse.
+
+**Side badge** — a small pill next to each deck name showing its side (Wizard,
+Ringwraith, Fallen-wizard, Balrog) or *Freeform* for freeform decks. This requires
+adding `mode` and `ruleset.side` to the `list()` projection.
+
+The pill is **colour-coded and always labelled**, never colour alone: the label is
+what carries the meaning. Two reasons — a per-side colour cannot be relied on
+(a user browser extension may invert page colours), and a coloured dot alone is
+unreadable for anyone with a colour-vision deficiency.
 
 ## Data flow
 
@@ -396,6 +425,14 @@ deck.mode ─ freeform ────────> maxCopies = Infinity, no valida
   an error; rule ids may be retired as rules are corrected.
 - **Card missing from `cardsById`** — skipped in validation, as `deckCounts`
   already does.
+- **Notes swallowed by the importer** — the import parser is deliberately lenient
+  about `Nx name` lines, so free prose sitting *above* the card sections is
+  dangerous: a note reading "3x Gandalf is the plan" would import as three copies
+  of Gandalf. The parser must therefore treat everything between `## Notes` and
+  the next `##` heading as **prose, never card lines**.
+- **Deck list `order` collisions** — duplicated or missing values (hand-edited
+  storage, decks created before the field) sort deterministically by falling back
+  to `updatedAt`, then id; never throw, never drop a deck from the list.
 
 ## Testing
 
@@ -422,7 +459,11 @@ Vitest, extending the existing ~59-test suite:
   Sideboard with the right subsection order, and the PDF card array follows it
   with no gaps or padding.
 - **Text round-trip**: exporting a deckbuilding deck with a pool, a sideboard and
-  notes, then re-importing it, restores the same zones and quantities.
+  notes, then re-importing it, restores the same zones and quantities. Notes
+  render above the card sections and never parse as cards on the way back in.
+- **Deck list ordering**: decks with an `order` sort by it; decks without one keep
+  the `updatedAt` fallback; a reorder persists across a reload; a rename does not
+  change position.
 - **Severity mapping**: the same deck yields `error`s in tournament and softened
   severities in casual.
 - **Freeform non-regression**: no copy cap, including Sites and uniques; existing
@@ -442,7 +483,9 @@ Vitest, extending the existing ~59-test suite:
   [DeckPanel.jsx](web/src/components/DeckPanel.jsx) (zone tabs, drop targets,
   notes tab), [CardBrowser.jsx](web/src/components/CardBrowser.jsx) (zone counters,
   legality filter), [DeckManager.jsx](web/src/components/DeckManager.jsx) (persist
-  mode, ruleset, notes), [deckStore.js](web/src/lib/deckStore.js) (new fields),
+  mode, ruleset and notes; inline rename, reordering, side badge),
+  [deckStore.js](web/src/lib/deckStore.js) (new fields, `order` sort, richer
+  `list()` projection),
   [deckList.js](web/src/lib/deckList.js) (sections + subsections + notes),
   [importDeck.js](web/src/lib/importDeck.js) (skip headings, restore zones),
   [ExportDialog.jsx](web/src/components/ExportDialog.jsx) (ordered card list,
