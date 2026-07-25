@@ -40,7 +40,22 @@ export default function DeckManager({ deck, cardIds, quantities, onClose, onLoad
 
   async function duplicate(id) {
     const d = await api.getDeck(id);
-    await api.createDeck({ name: `${d.name} ${t('decks.copySuffix')}`, cardIds: d.cardIds, quantities: d.quantities, backAssignments: d.backAssignments });
+    await api.createDeck({
+      name: `${d.name} ${t('decks.copySuffix')}`,
+      cardIds: d.cardIds,
+      quantities: d.quantities,
+      backAssignments: d.backAssignments,
+      mode: d.mode,
+      ruleset: d.ruleset,
+      zones: d.zones,
+      notes: d.notes,
+      // `order` is intentionally omitted: it's the deck's manual position in
+      // the saved-deck list, and copying it verbatim would collide with the
+      // original's position. Leaving it unset makes the copy behave like any
+      // other newly created deck — it sorts after ordered decks, by
+      // updatedAt descending, so it lands near the top of the unordered
+      // group instead of fighting the original for the same slot.
+    });
     await refresh();
   }
 

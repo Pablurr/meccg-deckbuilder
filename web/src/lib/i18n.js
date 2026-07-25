@@ -324,6 +324,7 @@ export const translations = {
     'length.standard': 'Estándar',
     'length.long': 'Larga',
     'length.campaign': 'Campaña',
+    'drawer.settings': 'Ajustes',
 
     // Proxy mode
     'proxy.label': 'Proxy',
