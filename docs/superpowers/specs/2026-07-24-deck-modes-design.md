@@ -65,6 +65,14 @@ Verified against the repo and `cards/remastered-all/cards.json` (1683 cards):
   `marshallingPoints`, `haven`, `homeSite`, `siteType`, `underDeeps`, and
   **`playableAsStartingMinorItem`** — which identifies exactly the resources
   eligible for the starting pool.
+- **`attributes.specific`** carves out the side-specific card pools, and is the
+  only way several rules become implementable. Verified counts: **46 BA cards**
+  with `specific: "Balrog"` (e.g. `BA-2` Azog) — precisely the "Balrog specific"
+  cards the rules name as *exceptions* to the Orc/Troll and mind restrictions —
+  and **33 WH cards** naming a single fallen wizard (`Alatar` 6, `Gandalf` 7,
+  `Pallando` 6, `Radagast` 8, `Saruman` 6). The latter is a **per-avatar**
+  constraint finer than the side: a Saruman deck cannot play Gandalf-specific
+  cards.
 - Decks are stored **client-side** in `localStorage` under `meccg.decks.v1`
   ([deckStore.js](web/src/lib/deckStore.js)). Adding fields to a deck record is
   backward compatible.
@@ -125,6 +133,7 @@ The deck record gains three optional fields:
   mode: 'freeform' | 'deckbuilding',
   ruleset: { side, length, tournament, ruleOverrides: { [ruleId]: boolean } },
   zones: { sideboard: { [id]: n }, pool: { [id]: n } },
+  notes: { starting, resourceStrategy, hazardStrategy, other },  // plain text
 }
 ```
 
@@ -136,6 +145,8 @@ The deck record gains three optional fields:
   no 3-max, no 1-per-unique, no 1-per-Site. `changeQty` clamps only at 0.
 - `ruleOverrides` is **per deck**: two decks can be validated differently, and the
   settings travel with the deck.
+- `notes` holds four free-text fields (see *Notes*). They are **not** validated
+  and exist in freeform mode too.
 
 ## Component 2 — Rules data (`web/src/lib/rules/`)
 
@@ -143,7 +154,10 @@ Declarative, hand-curated data — no logic:
 
 - **`sides.js`** — one profile per side: allowed alignments, copy limits (per
   alignment where they differ), avatar identification, starting-pool constraints,
-  site rules.
+  site rules, and how `attributes.specific` is read — as an **exemption** for
+  Balrog (`specific: "Balrog"` cards escape the Orc/Troll and mind restrictions)
+  and as a **restriction** for Fallen-wizard (a card naming a fallen wizard is
+  legal only in that wizard's deck).
 - **`formats.js`** — game lengths → numeric thresholds (sideboard 30/30/35/40,
   the +10 Fallen-wizard allowance, deck size ranges).
 - **`banned.js`** — banned lists per side, expressed by English card name and
@@ -197,7 +211,10 @@ Checks covered: avatar present, unique, and matching the side · per-card alignm
 legality · banned list · copy limits (per side and alignment, uniques, sites) ·
 play and location deck sizes · sideboard size for the length (plus the +10
 Fallen-wizard allowance) · starting pool (character count, mind, minor items) ·
-one copy per site except the side's unlimited havens.
+one copy per site except the side's unlimited havens · **`specific` handling** —
+Balrog-specific cards exempted from the Orc/Troll and mind limits, and
+wizard-specific cards rejected when they name a different fallen wizard than the
+deck's avatar.
 
 ### Warning message quality bar
 
@@ -236,10 +253,11 @@ way stays addable but carries a visible marker.
 
 ### Deck panel
 
-**Zone tabs** become the navigation axis — Play deck / Location / Sideboard /
-Pool — each showing its count against its threshold, turning red on breach
-(`Sideboard 32 / 30`), so an overflow is visible without opening the tab. The
-existing grouping **by type** is preserved inside each tab.
+**Zone tabs** become the navigation axis, in this order — **Play deck / Pool /
+Sideboard / Location / Notes** — each zone tab showing its count against its
+threshold, turning red on breach (`Sideboard 32 / 30`), so an overflow is visible
+without opening the tab. The existing grouping **by type** is preserved inside
+each tab. The Notes tab carries no count.
 
 **Drag and drop**: since zones live in separate tabs, the drop target is the
 **tab itself**. This works even when the destination zone is empty, and avoids
@@ -249,6 +267,19 @@ the tactile drag-between-visible-sections problem on mobile.
 and drag-and-drop would push it well past a workable size. `MiniCard` is
 extracted to its own file — housekeeping directly motivated by this work, not
 opportunistic refactoring.
+
+### Notes (`DeckNotes.jsx`)
+
+The last tab holds four free-text areas, labelled in the UI language:
+
+1. **Starting notes** — opening hand, starting company, mulligan plan.
+2. **Resource strategy**
+3. **Hazard strategy**
+4. **Other notes**
+
+Plain text, no formatting toolbar. Saved with the deck (debounced) into
+`deck.notes`, and available in **both modes** — a freeform printing deck can
+carry notes just as well. Empty fields are omitted from exports.
 
 ## Component 5 — Documentation page (`RulesDoc.jsx`)
 
@@ -280,6 +311,58 @@ chrome as well as the new deckbuilding and documentation strings, and
 
 Warning descriptors carry `params` (card names, numbers), and card names inside a
 warning follow the selected display language.
+
+## Component 7 — Exports
+
+A single ordering helper, `deckSections({ quantities, zones, cardsById })`, returns
+the canonical section list and is the **only** source of export order, so the PDF
+and the text list can never disagree:
+
+| Section | Subsections, in order |
+|---|---|
+| **Pool** | Characters, Resources |
+| **Play deck** | Avatar(s), Characters, Resources, Hazards |
+| **Locations** | Sites, Regions |
+| **Sideboard** | Characters, Resources, Hazards |
+
+Within a subsection, cards keep the current alphabetical sort by display name.
+
+### PDF — sheets in that order
+
+`buildSheetPdf` already consumes a pre-ordered array
+([pdf.js](web/src/lib/export/pdf.js:54)), so ordering is applied by the caller; the
+PDF engine is untouched.
+
+**One forced page break, and only one kind**: wherever the **back group changes**
+(`backGroupForType`). The duplex path prints a mirrored backs page per sheet, so a
+page straddling the play → location boundary would need two different backs on one
+sheet and could not be printed duplex. No other section starts a new page —
+breaking on every section would waste paper for no printing benefit.
+
+*Consequence of the requested order*: Locations sit between Play deck and
+Sideboard, which both use the play-deck back, so the back group changes **twice**
+and up to two sheets end partially filled. This is a deliberate trade of a little
+paper for the requested reading order.
+
+### Text — the same structure in Markdown
+
+[deckList.js](web/src/lib/deckList.js) currently emits one flat `## Type (n)` level.
+It gains the section level: `## Section` / `### Subtype (n)`, keeping the existing
+`Nx Card name` lines untouched so the list stays **re-importable**.
+
+Notes are appended as a final `## Notes` section with one `###` per non-empty
+field. *(Judgment call: notes were not listed in the export order, but a Markdown
+deck list is their natural home. Easily dropped if unwanted.)*
+
+**Round-trip fidelity matters here**: [importDeck.js](web/src/lib/importDeck.js) must
+ignore heading lines and, when they match known section names, **restore the zone**
+a card belongs to — otherwise exporting and re-importing a deckbuilding deck
+silently collapses its pool and sideboard into the main deck.
+
+### ZIP — unchanged
+
+The MPC ZIP is for professional printing and keeps its current behaviour and
+naming exactly.
 
 ## Data flow
 
@@ -335,6 +418,14 @@ Vitest, extending the existing ~59-test suite:
   Fallen-wizard 2 copies but 3 for Stage Resources; Ringwraith cards illegal for
   Balrog; a Ringwraith pool rejecting a Ringwraith or an agent; sideboard
   thresholds per length and the +10 Fallen-wizard allowance.
+- **`specific` handling**: a `specific: "Balrog"` card escapes the Orc/Troll and
+  mind limits; a `specific: "Gandalf"` card is rejected in a Saruman deck and
+  accepted in a Gandalf one.
+- **Export ordering**: `deckSections` yields Pool → Play deck → Locations →
+  Sideboard with the right subsection order; the PDF page-break rule fires
+  exactly at back-group changes and nowhere else.
+- **Text round-trip**: exporting a deckbuilding deck with a pool, a sideboard and
+  notes, then re-importing it, restores the same zones and quantities.
 - **Severity mapping**: the same deck yields `error`s in tournament and softened
   severities in casual.
 - **Freeform non-regression**: no copy cap, including Sites and uniques; existing
@@ -345,13 +436,19 @@ Vitest, extending the existing ~59-test suite:
 ## Files
 
 - **New**: `web/src/lib/rules/{sides,formats,banned,zones,validate}.js`,
-  `web/src/components/DeckSetupDialog.jsx`, `web/src/components/RulesDoc.jsx`,
-  `web/src/components/MiniCard.jsx` (extracted), `test/rules.test.js`.
+  `web/src/lib/export/deckSections.js`, `web/src/components/DeckSetupDialog.jsx`,
+  `web/src/components/RulesDoc.jsx`, `web/src/components/DeckNotes.jsx`,
+  `web/src/components/MiniCard.jsx` (extracted), `test/rules.test.js`,
+  `test/deckSections.test.js`.
 - **Edited**: [deck.js](web/src/lib/deck.js) (`maxCopies` mode-aware),
   [App.jsx](web/src/App.jsx) (mode state, `textLang` = `uiLang`, zone actions),
-  [DeckPanel.jsx](web/src/components/DeckPanel.jsx) (zone tabs, drop targets),
-  [CardBrowser.jsx](web/src/components/CardBrowser.jsx) (zone counters, legality
-  filter), [DeckManager.jsx](web/src/components/DeckManager.jsx) (persist mode and
-  ruleset), [deckStore.js](web/src/lib/deckStore.js) (new fields),
-  [i18n.js](web/src/lib/i18n.js) (full `es` dictionary + new keys),
-  [FilterBar.jsx](web/src/components/FilterBar.jsx) (docs link), `styles.css`.
+  [DeckPanel.jsx](web/src/components/DeckPanel.jsx) (zone tabs, drop targets,
+  notes tab), [CardBrowser.jsx](web/src/components/CardBrowser.jsx) (zone counters,
+  legality filter), [DeckManager.jsx](web/src/components/DeckManager.jsx) (persist
+  mode, ruleset, notes), [deckStore.js](web/src/lib/deckStore.js) (new fields),
+  [deckList.js](web/src/lib/deckList.js) (sections + subsections + notes),
+  [importDeck.js](web/src/lib/importDeck.js) (skip headings, restore zones),
+  [ExportDialog.jsx](web/src/components/ExportDialog.jsx) (ordered card list,
+  page-break rule), [i18n.js](web/src/lib/i18n.js) (full `es` dictionary + new
+  keys), [FilterBar.jsx](web/src/components/FilterBar.jsx) (docs link),
+  `styles.css`.
