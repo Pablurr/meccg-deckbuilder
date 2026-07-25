@@ -101,7 +101,6 @@ export const translations = {
     'import.summaryNotFound': ', {n} introuvable(s)',
     'import.notFound': '✗ {qty}× {name} — introuvable',
     'import.ambiguous': '⚠ {qty}× {name} — plusieurs cartes, choisis :',
-    'import.capped': ' — limité à {n}',
     'import.submit': 'Importer ({n} cartes)',
 
     // Export dialog
@@ -222,7 +221,6 @@ export const translations = {
     'import.summaryNotFound': ', {n} not found',
     'import.notFound': '✗ {qty}× {name} — not found',
     'import.ambiguous': '⚠ {qty}× {name} — several cards, choose:',
-    'import.capped': ' — capped at {n}',
     'import.submit': 'Import ({n} cards)',
 
     'export.title': 'Export',
@@ -251,6 +249,24 @@ export const translations = {
     'export.run.pdf': 'Generate PDF',
     'export.run.list': 'Download list',
   },
+
+  // Groundwork only — partial by design. Missing keys resolve through the
+  // `en` fallback in makeT() below. Task 20 (trilingual phase) completes
+  // this dictionary and adds it to the strict fr/en parity test.
+  es: {
+    'app.loading': 'Cargando cartas…',
+    'app.loadError': 'No se pudieron cargar las cartas ({error}). Comprueba tu conexión a internet e inténtalo de nuevo.',
+    'app.newDeck': 'Nuevo mazo',
+
+    'common.close': 'Cerrar',
+    'common.cancel': 'Cancelar',
+    'common.done': 'Hecho',
+    'common.error': 'Error: {msg}',
+
+    // Proxy mode
+    'proxy.label': 'Proxy',
+    'proxy.tooltip': 'Modo Proxy: cubre el copyright con «Proxy» (requerido por MPC)',
+  },
 };
 
 function interpolate(str, params) {
@@ -259,8 +275,9 @@ function interpolate(str, params) {
 }
 
 // makeT('en') -> t('key', { param: value })
+// Resolution order per key: the requested language, then `en` (the most
+// complete dictionary alongside `fr`), then the raw key itself.
 export function makeT(lang) {
-  const dict = translations[lang] || translations.fr;
-  const fallback = translations.fr;
-  return (key, params) => interpolate(dict[key] ?? fallback[key] ?? key, params);
+  const dict = translations[lang] || {};
+  return (key, params) => interpolate(dict[key] ?? translations.en[key] ?? key, params);
 }
