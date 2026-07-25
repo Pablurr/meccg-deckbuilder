@@ -10,24 +10,39 @@ Split the app into **two deck modes**, chosen per deck and stored with it:
 - **Freeform card printing** — today's behaviour, with the copy limits **removed**.
   A pure proxy-printing tool: any card, any number of copies.
 - **Deckbuilding** — assists the user in building a **legal** deck. Asks for the
-  faction (Wizard / Ringwraith / Fallen-wizard / Balrog), the game length
+  side (Wizard / Ringwraith / Fallen-wizard / Balrog), the game length
   (Starter / Standard / Long / Campaign) and the severity (tournament / casual),
   then continuously reports **warnings** for anything that does not comply with
   the official rules ([meccg.com](https://meccg.com/rules/),
   [councilofelrond.org](https://councilofelrond.org/)): banned cards, illegal
   alignments, copy limits, deck and sideboard sizes, starting pool.
 
+Every rule is **individually switchable** from the documentation page, so the user
+decides exactly what is strictly enforced.
+
 A **documentation page** explains both modes and the rules applied, and the whole
 UI becomes genuinely trilingual **EN + FR + ES**.
+
+## Terminology
+
+**"Side"** denotes the four player camps: Wizard, Ringwraith, Fallen-wizard,
+Balrog. Code uses `side`; the UI says *Camp* (FR), *Side* (EN), *Bando* (ES).
+
+The word **"faction" is reserved** for the game's own concept — the Faction card
+category (Orc, Troll, Dragon, Wolf, Animal factions) and its marshalling-point
+category. It must never be used for a side, in code, UI or warnings.
+
+**"Alignment"** stays the card attribute (Hero, Minion, Neutral, Balrog,
+Fallen-wizard, Dual, Stage). A side allows several alignments.
 
 ## Non-goals (YAGNI)
 
 - **No hard blocking, ever.** Even in tournament mode nothing prevents adding a
   card. The app advises; the user decides.
 - **No runtime fetching of rules.** The app is a static CDN-first SPA and must
-  work offline. Rules are sourced once, committed as data, and versioned.
-- **No guessing at unknown rules.** A rule that cannot be sourced emits no
-  warning and is listed as unverified (see *Handling rule gaps*).
+  work offline. Rules are committed as data and versioned.
+- **No guessing at unknown rules.** A rule that is not sourced ships disabled and
+  emits no warning (see *Rule status and enforcement*).
 - **No in-game rules** (hazard limit, corruption checks, MP scoring at the
   council). This is deck *construction* only.
 - **No deck-strength advice or suggestions.** Legality only, not strategy.
@@ -43,7 +58,7 @@ Verified against the repo and `cards/remastered-all/cards.json` (1683 cards):
 - **Types present**: `Resource` 767, `Hazard` 450, `Site` 220, `Character` 194,
   `Region` 52.
 - **20 avatars** carry `attributes.avatar === true`, and they map cleanly onto the
-  four factions: 5 Istari (TW, Hero), the 9 Nazgûl — 8 named Ringwraiths plus The
+  four sides: 5 Istari (TW, Hero), the 9 Nazgûl — 8 named Ringwraiths plus The
   Witch-king (LE, Minion) —, 5 fallen wizards (WH, Fallen-wizard), and The Balrog
   (BA, Balrog).
 - Useful existing attributes: `unique`, `mind`, `race`, `subtype`, `keywords`,
@@ -70,13 +85,16 @@ Verified against the repo and `cards/remastered-all/cards.json` (1683 cards):
   text (`textLang` in [App.jsx](web/src/App.jsx:58)), while card *names* do render
   in Spanish.
 
-## Prerequisite — rules sourcing pass
+## Rules data — stubs first, real values later
 
-The local `meccg-rules` skill is treated as a **lead, not an authority**. Before
-implementation, the rules are sourced from **councilofelrond.org** (and
-meccg.com), and every rule entry records its source URL.
+The rules engine is built and tested against **stub rule data**: the full shape,
+real rule ids, plausible placeholder values, and an explicit `status`. The user
+supplies authoritative sources afterwards, and filling them in is **data editing,
+not code**. Nothing in the engine, the UI or the documentation page waits on the
+sourcing pass.
 
-What the local knowledge base already suggests, to be confirmed:
+The local `meccg-rules` skill is a **lead, not an authority**. What it suggests,
+to be confirmed against councilofelrond.org:
 
 | | Wizard | Ringwraith | Fallen-wizard | Balrog |
 |---|---|---|---|---|
@@ -87,19 +105,16 @@ What the local knowledge base already suggests, to be confirmed:
 | Banned list | — | — | ~17 cards | ~27 cards (incl. all Ringwraith cards) |
 | Sideboard by length | 30 / 30 / 35 / 40, +10 vs a Fallen-wizard opponent | | | |
 
-**Open questions the sourcing pass must resolve** (deliberately not guessed):
+**Known unknowns**, shipped as `unverified` (hence disabled) until sourced:
 
 1. Is `mind ≤ 20` (Ringwraith/Balrog pool) a **total across the company** or a
    **per-character cap**? Is Fallen-wizard `mind ≤ 5` per character? The two
    readings validate very differently.
-2. The rule on **unique cards** in deck construction (the local base is silent).
+2. The rule on **unique cards** in deck construction.
 3. **Play deck size** for Fallen-wizard and Balrog (only Wizard's 25–50 is known),
    and **location deck size** for Wizard.
-4. Whether `Dual` (4 cards) and `Stage` alignments are legal per faction.
+4. Whether `Dual` (4 cards) and `Stage` alignments are legal per side.
 5. Exact, spelling-accurate banned lists for Fallen-wizard and Balrog.
-
-Anything still unresolved after the pass ships as `unverified` and emits no
-warning.
 
 ## Component 1 — Deck record and modes
 
@@ -108,7 +123,7 @@ The deck record gains three optional fields:
 ```js
 {
   mode: 'freeform' | 'deckbuilding',
-  ruleset: { faction, length, tournament },   // deckbuilding only
+  ruleset: { side, length, tournament, ruleOverrides: { [ruleId]: boolean } },
   zones: { sideboard: { [id]: n }, pool: { [id]: n } },
 }
 ```
@@ -119,17 +134,19 @@ The deck record gains three optional fields:
   `zones.pool` are **additional** copies, so a card can sit in both.
 - **Freeform** removes the clamp: `maxCopies()` returns `Infinity` in that mode —
   no 3-max, no 1-per-unique, no 1-per-Site. `changeQty` clamps only at 0.
+- `ruleOverrides` is **per deck**: two decks can be validated differently, and the
+  settings travel with the deck.
 
 ## Component 2 — Rules data (`web/src/lib/rules/`)
 
-Declarative, hand-curated, sourced data — no logic:
+Declarative, hand-curated data — no logic:
 
-- **`factions.js`** — one profile per faction: allowed alignments, copy limits
-  (per alignment where they differ), avatar identification, starting-pool
-  constraints, site rules.
+- **`sides.js`** — one profile per side: allowed alignments, copy limits (per
+  alignment where they differ), avatar identification, starting-pool constraints,
+  site rules.
 - **`formats.js`** — game lengths → numeric thresholds (sideboard 30/30/35/40,
   the +10 Fallen-wizard allowance, deck size ranges).
-- **`banned.js`** — banned lists per faction, expressed by English card name and
+- **`banned.js`** — banned lists per side, expressed by English card name and
   **resolved to ids at load time**.
 - **`zones.js`** — which zones a card may occupy, from its type:
 
@@ -140,25 +157,28 @@ Declarative, hand-curated, sourced data — no logic:
   | Resource / Hazard | **Deck** | Sideboard |
   | Resource with `playableAsStartingMinorItem` | **Deck** | Sideboard + Pool |
 
-**Every rule entry carries `{ id, status, source }`** where `status` is
-`verified` | `unverified` | `disputed` and `source` is the CoE URL. The stable
-`id` is what the documentation page displays and what a community report refers
-to, so correcting a rule is a one-line data edit plus a test — never a code
-change.
+### Rule status and enforcement
 
-### Handling rule gaps
+**Every rule entry carries `{ id, status, source, defaultEnabled }`** where
+`status` is `verified` | `unverified` | `disputed` and `source` is the reference
+URL. The stable `id` is what the documentation page displays, what a per-rule
+checkbox targets, and what a community report refers to.
 
-A rule that cannot be sourced is recorded with `status: 'unverified'` and
-**emits no warning**. It is listed explicitly on the documentation page under
-"what is not checked". A validator that invents a threshold is worse than one
-that admits a gap: it would fail legal decks.
+Enforcement resolves as: `ruleOverrides[id] ?? defaultEnabled`, where
+`defaultEnabled` is true only for `verified` rules. **A disabled rule is not
+evaluated and emits nothing.**
+
+This is a single mechanism serving two purposes: unsourced rules simply start
+disabled, and the user can enable them if they know the real rule — or disable a
+verified one they disagree with. Correcting a rule stays a one-line data edit
+plus a test, never a code change.
 
 ## Component 3 — Validator (`web/src/lib/rules/validate.js`)
 
 One pure function, no React dependency:
 
 ```js
-validateDeck({ faction, length, tournament, quantities, zones, cardsById })
+validateDeck({ side, length, tournament, ruleOverrides, quantities, zones, cardsById })
   → [{ ruleId, code, severity, params }]
 ```
 
@@ -166,18 +186,18 @@ It returns **translatable descriptors**, never sentences — extending the exist
 `deckWarnings` convention. Severities:
 
 - **`error`** — outright illegality: banned card, alignment not allowed for the
-  faction, copy limit exceeded, missing or duplicate avatar.
+  side, copy limit exceeded, missing or duplicate avatar.
 - **`warning`** — out of bounds: play deck, location deck, sideboard or pool size.
-- **`info`** — a known but `unverified` rule, or advice.
+- **`info`** — advice, or a rule the user enabled that is still `unverified`.
 
 **Tournament** surfaces `error`s prominently; **casual** downgrades everything one
 notch so nothing reads as fatal. Neither ever blocks an action.
 
-Checks covered: avatar present, unique, and matching the faction · per-card
-alignment legality · banned list · copy limits (per faction and alignment,
-uniques, sites) · play and location deck sizes · sideboard size for the length
-(plus the +10 Fallen-wizard allowance) · starting pool (character count, mind,
-minor items) · one copy per site except the faction's unlimited havens.
+Checks covered: avatar present, unique, and matching the side · per-card alignment
+legality · banned list · copy limits (per side and alignment, uniques, sites) ·
+play and location deck sizes · sideboard size for the length (plus the +10
+Fallen-wizard allowance) · starting pool (character count, mind, minor items) ·
+one copy per site except the side's unlimited havens.
 
 ### Warning message quality bar
 
@@ -188,13 +208,16 @@ threshold**, 4. **the corrective action**.
 
 > **Too many copies — *Orc-warband* ×3.** A Fallen-wizard deck allows 2 copies of
 > a non-unique card (3 for Stage Resources). Remove 1 copy.
-> `FW-COPIES-2` · *report this rule*
+> `FW-COPIES-2` · *disable this rule* · *report this rule*
+
+*Disable this rule* flips the same per-deck checkbox exposed on the documentation
+page, so a rule can be silenced where it is met rather than hunted down.
 
 ## Component 4 — UI
 
 ### Deck setup (`DeckSetupDialog.jsx`)
 
-On deck creation: mode choice; if deckbuilding, faction + length + tournament
+On deck creation: mode choice; if deckbuilding, side + length + tournament
 toggle. Editable afterwards from the deck settings.
 
 ### Card browser
@@ -208,8 +231,8 @@ stacking three control bars on every catalogue card costs more than it returns,
 and breaks the mobile grid.
 
 **Legality filter** is on by default in deckbuilding: only cards legal for the
-faction are listed, with a *show all* toggle to override. An illegal card shown
-this way stays addable but carries a visible marker.
+side are listed, with a *show all* toggle to override. An illegal card shown this
+way stays addable but carries a visible marker.
 
 ### Deck panel
 
@@ -234,13 +257,19 @@ Reachable from the header, rendered in the current UI language. Content is
 
 - **Hand-written, hand-translated prose** — what each mode is for, what a
   sideboard and a starting pool are, how to read a warning.
-- **Generated tables** — rules, thresholds, banned lists and each rule's
-  `status` and `source`, rendered from `web/src/lib/rules/`.
+- **Generated tables** — rules, thresholds, banned lists and each rule's `status`
+  and `source`, rendered from `web/src/lib/rules/`.
 
 The generated half means the documentation **cannot drift** from the validator:
-changing a limit in the data changes the page with it. Each rule is shown with
-its stable id and a *report this rule* link that pre-fills a GitHub issue,
-which is the community-feedback loop.
+changing a limit in the data changes the page with it.
+
+**Each rule row carries a checkbox** toggling strict enforcement of that rule for
+the current deck, alongside its id, status and source link, plus a *report this
+rule* link that pre-fills a GitHub issue. Unverified rules render unchecked, and
+visibly so — the page doubles as the honest list of what is and is not enforced.
+
+The page is reachable with **no deck open**, in which case the checkboxes render
+read-only, showing defaults.
 
 ## Component 6 — Trilingual UI (EN + FR + ES)
 
@@ -258,14 +287,15 @@ warning follow the selected display language.
 deck.mode ─ freeform ────────> maxCopies = Infinity, no validation
           └ deckbuilding ──> zonesFor(card) ──> browser counters + deck tabs
                                   │
-              quantities + zones ─┴─> validateDeck(faction, length, tournament)
-                                          │
+      quantities + zones ─────────┴─> validateDeck(side, length, tournament,
+                                                   ruleOverrides)
+                                          │  skips disabled rules
                                           ▼
                        [{ ruleId, code, severity, params }]
                                           │
                             t(code, params) ──> warnings UI (en|fr|es)
                                           │
-                       rules data ────────┴──> RulesDoc generated tables
+                 rules data ──────────────┴──> RulesDoc tables + checkboxes
 ```
 
 ## Error handling / edge cases
@@ -276,12 +306,14 @@ deck.mode ─ freeform ────────> maxCopies = Infinity, no valida
 - **Mode switched on an existing deck** — freeform → deckbuilding keeps every
   card and simply starts reporting warnings (possibly many). Nothing is
   auto-removed. Copies above a limit are reported, not truncated.
-- **Deckbuilding → freeform** — validation stops; `zones` are retained so
-  switching back is lossless.
+- **Deckbuilding → freeform** — validation stops; `zones` and `ruleOverrides` are
+  retained so switching back is lossless.
 - **No avatar chosen yet** — reported as a `warning`, not an `error`, on an
   otherwise empty deck; an empty deck should not read as broken.
-- **Unknown faction/length in a stored deck** (hand-edited storage) — falls back
-  to freeform rather than throwing.
+- **Unknown side/length in a stored deck** (hand-edited storage) — falls back to
+  freeform rather than throwing.
+- **`ruleOverrides` referencing a rule id that no longer exists** — ignored, not
+  an error; rule ids may be retired as rules are corrected.
 - **Card missing from `cardsById`** — skipped in validation, as `deckCounts`
   already does.
 
@@ -291,22 +323,28 @@ Vitest, extending the existing ~59-test suite:
 
 - **Translation key parity across three languages** (extends the current fr/en
   parity test).
+- **Rule metadata completeness**: every rule has an `id`, a `status`, and a
+  message key in all three languages; ids are unique.
 - **Banned-name resolution**: every entry in `banned.js` resolves to ≥1 real card.
 - **Zone eligibility**: `zonesFor` over all 1683 cards never throws and always
   returns at least one zone; sites yield exactly `location`.
-- **Per-faction validation cases**, including the traps: Fallen-wizard 2 copies
-  but 3 for Stage Resources; Ringwraith cards illegal for Balrog; a Ringwraith
-  pool rejecting a Ringwraith or an agent; sideboard thresholds per length and
-  the +10 Fallen-wizard allowance.
+- **Enforcement toggles**: a disabled rule emits nothing; an `unverified` rule is
+  silent by default and fires once enabled via `ruleOverrides`; an unknown rule id
+  in `ruleOverrides` is ignored.
+- **Per-side validation cases** against the stub data, including the traps:
+  Fallen-wizard 2 copies but 3 for Stage Resources; Ringwraith cards illegal for
+  Balrog; a Ringwraith pool rejecting a Ringwraith or an agent; sideboard
+  thresholds per length and the +10 Fallen-wizard allowance.
 - **Severity mapping**: the same deck yields `error`s in tournament and softened
   severities in casual.
 - **Freeform non-regression**: no copy cap, including Sites and uniques; existing
   export/import/proxy tests keep passing.
 - **Backward compatibility**: a stored deck without `mode` loads as freeform.
+- **Terminology guard**: no user-facing string uses "faction" for a side.
 
 ## Files
 
-- **New**: `web/src/lib/rules/{factions,formats,banned,zones,validate}.js`,
+- **New**: `web/src/lib/rules/{sides,formats,banned,zones,validate}.js`,
   `web/src/components/DeckSetupDialog.jsx`, `web/src/components/RulesDoc.jsx`,
   `web/src/components/MiniCard.jsx` (extracted), `test/rules.test.js`.
 - **Edited**: [deck.js](web/src/lib/deck.js) (`maxCopies` mode-aware),
