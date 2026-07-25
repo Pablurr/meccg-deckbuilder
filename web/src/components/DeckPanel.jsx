@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { cardName, cardThumbSrc, cardImageEn, deckThumbWidth } from '../lib/lang.js';
-import { maxCopies } from '../lib/deck.js';
 import { useCardPreview, CardPreview } from './CardPreview.jsx';
 import ProxyStamp from './ProxyStamp.jsx';
 import { useT } from '../i18n.jsx';
@@ -29,7 +28,6 @@ function warningText(t, w) {
 function MiniCard({ card, qty, lang, thumbW, onChangeQty, onToggle, trackPointer, hidePreview, isMobile, onPreview, proxyMode }) {
   const t = useT();
   const [confirming, setConfirming] = useState(false);
-  const max = maxCopies(card);
   const name = cardName(card, lang);
   return (
     <div className="cardcell deck-mini selected" title={name}>
@@ -67,7 +65,6 @@ function MiniCard({ card, qty, lang, thumbW, onChangeQty, onToggle, trackPointer
           <button
             className="qty-btn"
             onClick={() => onChangeQty(card.id, +1)}
-            disabled={qty >= max}
             aria-label={t('browser.addCopy')}
           >+</button>
           <span className="qty-count">{qty}</span>

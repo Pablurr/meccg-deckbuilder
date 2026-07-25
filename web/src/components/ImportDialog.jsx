@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { parseDeckList, buildNameIndex, resolveDeckList, preferredMatchId } from '../lib/importDeck.js';
-import { maxCopies } from '../lib/deck.js';
 import { cardName } from '../lib/lang.js';
 import { useT } from '../i18n.jsx';
 
@@ -52,7 +51,7 @@ export default function ImportDialog({ cards, lang = 'fr', onClose, onImport }) 
     setChoice(next);
   }, [resolved, alignPref]);
 
-  // Build the final { id: count } map from resolved+chosen lines (capped).
+  // Build the final { id: count } map from resolved+chosen lines (floored at 1).
   const importable = useMemo(() => {
     if (!resolved) return {};
     const q = {};
@@ -60,9 +59,8 @@ export default function ImportDialog({ cards, lang = 'fr', onClose, onImport }) 
       if (line.status === 'notfound') return;
       const id = choice[i] || (line.matches[0] && line.matches[0].id);
       if (!id) return;
-      const card = line.matches.find((c) => c.id === id) || line.matches[0];
-      const capped = Math.max(1, Math.min(maxCopies(card), line.qty));
-      q[id] = (q[id] || 0) + capped;
+      const count = Math.max(1, line.qty);
+      q[id] = (q[id] || 0) + count;
     });
     return q;
   }, [resolved, choice]);
@@ -128,11 +126,9 @@ export default function ImportDialog({ cards, lang = 'fr', onClose, onImport }) 
                   );
                 }
                 const c = line.matches[0];
-                const capped = Math.min(maxCopies(c), line.qty);
                 return (
                   <li key={i} className="imp-ok">
-                    ✓ {capped}× <b>{cardName(c, lang)}</b> <span className="muted">({c.id})</span>
-                    {capped < line.qty && <span className="muted">{t('import.capped', { n: capped })}</span>}
+                    ✓ {line.qty}× <b>{cardName(c, lang)}</b> <span className="muted">({c.id})</span>
                   </li>
                 );
               })}

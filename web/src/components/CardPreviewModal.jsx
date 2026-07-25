@@ -1,6 +1,5 @@
 import React from 'react';
 import { cardName, cardImageSrc, cardImageEn } from '../lib/lang.js';
-import { maxCopies } from '../lib/deck.js';
 import ProxyStamp from './ProxyStamp.jsx';
 import { useT } from '../i18n.jsx';
 
@@ -11,7 +10,6 @@ import { useT } from '../i18n.jsx';
 export default function CardPreviewModal({ card, qty, lang, onChangeQty, onClose, proxyMode }) {
   const t = useT();
   if (!card) return null;
-  const max = maxCopies(card);
   const name = cardName(card, lang);
   return (
     // Clicking anywhere (the card image or the letterbox around it) closes the
@@ -43,7 +41,6 @@ export default function CardPreviewModal({ card, qty, lang, onChangeQty, onClose
           <button
             className="qty-btn big"
             onClick={() => onChangeQty(card.id, +1)}
-            disabled={qty >= max}
             aria-label={t('browser.addCopy')}
           >+</button>
           <button className="btn" onClick={onClose}>{t('common.done')}</button>

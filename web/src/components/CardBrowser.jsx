@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
 import { filterCards } from '../lib/filter.js';
-import { maxCopies } from '../lib/deck.js';
 import { cardName, cardImageSrc, cardThumbSrc } from '../lib/lang.js';
 import { useCardPreview, CardPreview } from './CardPreview.jsx';
 import ProxyStamp from './ProxyStamp.jsx';
@@ -29,7 +28,6 @@ export default function CardBrowser({ cards, filters, quantities, lang, onChange
       <div className="grid">
         {shown.map((c) => {
           const qty = quantities[c.id] || 0;
-          const max = maxCopies(c);
           const name = cardName(c, lang);
           return (
             <div key={c.id} className={`cardcell ${qty > 0 ? 'selected' : ''}`}>
@@ -55,7 +53,7 @@ export default function CardBrowser({ cards, filters, quantities, lang, onChange
               <ProxyStamp card={c} lang={lang} on={proxyMode} src={cardThumbSrc(c, lang)} />
               {qty > 0 && (
                 <div className="qty-ctrl">
-                  <button className="qty-btn" onClick={() => onChangeQty(c.id, +1)} disabled={qty >= max} aria-label={t('browser.addCopy')}>+</button>
+                  <button className="qty-btn" onClick={() => onChangeQty(c.id, +1)} aria-label={t('browser.addCopy')}>+</button>
                   <span className="qty-count">{qty}</span>
                   <button className="qty-btn" onClick={() => onChangeQty(c.id, -1)} aria-label={t('browser.removeCopy')}>−</button>
                 </div>
