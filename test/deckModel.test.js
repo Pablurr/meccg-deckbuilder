@@ -48,3 +48,14 @@ describe('deckStore ordering & projection', () => {
     expect(rows[0].name).toBe('Ordered');
   });
 });
+
+import { maxCopies } from '../web/src/lib/deck.js';
+
+describe('copy limits are data, not clamps', () => {
+  it('maxCopies still reports the classic limits (validator reference)', () => {
+    expect(maxCopies({ type: 'Site', attributes: {} })).toBe(1);
+    expect(maxCopies({ type: 'Resource', attributes: { unique: true } })).toBe(1);
+    expect(maxCopies({ type: 'Resource', attributes: {} })).toBe(3);
+    expect(maxCopies({ type: 'Character', attributes: { avatar: true } })).toBe(3);
+  });
+});

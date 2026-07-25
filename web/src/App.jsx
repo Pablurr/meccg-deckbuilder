@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import * as api from './api.js';
-import { maxCopies, expandQuantities, countOccurrences, deckCounts, deckWarnings } from './lib/deck.js';
+import { expandQuantities, countOccurrences, deckCounts, deckWarnings } from './lib/deck.js';
 import { baseOptions } from './lib/tags.js';
 import { I18nProvider } from './i18n.jsx';
 import { makeT } from './lib/i18n.js';
@@ -70,11 +70,11 @@ export default function App() {
     };
   }, [facets, cards]);
 
-  // delta is +1 / -1; clamps to [0, maxCopies(card)].
+  // delta is +1 / -1; only the floor is clamped. Copy limits are reported by
+  // the deckbuilding validator, never enforced by the counter.
   function changeQty(id, delta) {
     setQuantities((prev) => {
-      const max = maxCopies(cardsById.get(id));
-      const next = Math.max(0, Math.min(max, (prev[id] || 0) + delta));
+      const next = Math.max(0, (prev[id] || 0) + delta);
       const out = { ...prev };
       if (next <= 0) delete out[id];
       else out[id] = next;
@@ -101,12 +101,11 @@ export default function App() {
     });
   }
 
-  // Replace the current selection with an imported { id: count } map (clamped).
+  // Replace the current selection with an imported { id: count } map (floored at 1).
   function importQuantities(imported) {
     const clamped = {};
     for (const [id, count] of Object.entries(imported)) {
-      const max = maxCopies(cardsById.get(id));
-      clamped[id] = Math.max(1, Math.min(max, count));
+      clamped[id] = Math.max(1, count);
     }
     setQuantities(clamped);
     setShowImport(false);
