@@ -333,16 +333,13 @@ Within a subsection, cards keep the current alphabetical sort by display name.
 ([pdf.js](web/src/lib/export/pdf.js:54)), so ordering is applied by the caller; the
 PDF engine is untouched.
 
-**One forced page break, and only one kind**: wherever the **back group changes**
-(`backGroupForType`). The duplex path prints a mirrored backs page per sheet, so a
-page straddling the play → location boundary would need two different backs on one
-sheet and could not be printed duplex. No other section starts a new page —
-breaking on every section would waste paper for no printing benefit.
-
-*Consequence of the requested order*: Locations sit between Play deck and
-Sideboard, which both use the play-deck back, so the back group changes **twice**
-and up to two sheets end partially filled. This is a deliberate trade of a little
-paper for the requested reading order.
+**No forced page breaks.** Sections simply flow one after another, sheets stay
+full, and no paper is wasted. Mixing back groups on one sheet is already handled:
+the duplex backs page is composed **per card**, each back drawn into the
+column-mirrored cell of its own front
+([pdf.js](web/src/lib/export/pdf.js:99), `backColumnIndex` in
+[sheetLayout.js](web/src/lib/export/sheetLayout.js:42)), so every card gets its
+correct back whatever its neighbours are.
 
 ### Text — the same structure in Markdown
 
@@ -422,8 +419,8 @@ Vitest, extending the existing ~59-test suite:
   mind limits; a `specific: "Gandalf"` card is rejected in a Saruman deck and
   accepted in a Gandalf one.
 - **Export ordering**: `deckSections` yields Pool → Play deck → Locations →
-  Sideboard with the right subsection order; the PDF page-break rule fires
-  exactly at back-group changes and nowhere else.
+  Sideboard with the right subsection order, and the PDF card array follows it
+  with no gaps or padding.
 - **Text round-trip**: exporting a deckbuilding deck with a pool, a sideboard and
   notes, then re-importing it, restores the same zones and quantities.
 - **Severity mapping**: the same deck yields `error`s in tournament and softened
