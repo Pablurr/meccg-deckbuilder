@@ -5,6 +5,7 @@ import { zonesFor } from '../web/src/lib/rules/zones.js';
 import { SIDES, isLegalForSide } from '../web/src/lib/rules/sides.js';
 import { LENGTHS } from '../web/src/lib/rules/formats.js';
 import { BANNED, resolveBanned } from '../web/src/lib/rules/banned.js';
+import { RULES, validateDeck, isRuleEnabled } from '../web/src/lib/rules/validate.js';
 
 const { cards, index } = parseCards(raw);
 
@@ -195,5 +196,133 @@ describe('banned lists', () => {
     // The genuinely different name must not appear in any banned set (negative control)
     expect(bySide.balrog.has('test-different-name')).toBe(false);
     expect(bySide['fallen-wizard'].has('test-different-name')).toBe(false);
+  });
+});
+
+const byId = (list, ruleId) => list.filter((w) => w.ruleId === ruleId);
+const cardsById = index;
+function firstWhere(pred) { const c = cards.find(pred); expect(c).toBeTruthy(); return c; }
+
+describe('validateDeck', () => {
+  const wizardAvatar = firstWhere((c) => c.attributes.avatar && c.alignment === 'Hero');
+  const base = { side: 'wizard', length: 'standard', tournament: true, ruleOverrides: {}, zones: { sideboard: {}, pool: {} }, cardsById };
+
+  it('flags a missing avatar as a warning, never an error', () => {
+    const out = validateDeck({ ...base, quantities: {} });
+    expect(byId(out, 'AVATAR-PRESENT')).toHaveLength(1);
+    expect(byId(out, 'AVATAR-PRESENT')[0].severity).toBe('warning');
+  });
+  it('flags illegal alignment for the side', () => {
+    const minionRes = firstWhere((c) => c.alignment === 'Minion' && c.type === 'Resource');
+    const out = validateDeck({ ...base, quantities: { [wizardAvatar.id]: 1, [minionRes.id]: 1 } });
+    expect(byId(out, 'ALIGN-LEGAL')).toHaveLength(1);
+    expect(byId(out, 'ALIGN-LEGAL')[0].params.name).toBeTruthy();
+  });
+  it('fallen-wizard: 2 copies max but 3 for Stage resources', () => {
+    const fwAvatar = firstWhere((c) => c.attributes.avatar && c.alignment === 'Fallen-wizard');
+    const stage = firstWhere((c) => c.alignment === 'Stage' && !c.attributes.unique);
+    const hero = firstWhere((c) => c.alignment === 'Hero' && c.type === 'Resource' && !c.attributes.unique);
+    const out = validateDeck({ ...base, side: 'fallen-wizard', quantities: { [fwAvatar.id]: 1, [hero.id]: 3, [stage.id]: 3 } });
+    const copies = byId(out, 'COPIES-LIMIT');
+    expect(copies.some((w) => w.params.id === hero.id)).toBe(true);   // 3 > 2
+    expect(copies.some((w) => w.params.id === stage.id)).toBe(false); // 3 <= 3
+  });
+  it('counts copies across deck + sideboard + pool', () => {
+    const hz = firstWhere((c) => c.type === 'Hazard' && !c.attributes.unique && c.alignment === 'Neutral');
+    const out = validateDeck({ ...base, quantities: { [hz.id]: 3 }, zones: { sideboard: { [hz.id]: 1 }, pool: {} } });
+    expect(byId(out, 'COPIES-LIMIT').some((w) => w.params.id === hz.id)).toBe(true);
+  });
+  it('wizard-specific cards must match the avatar', () => {
+    const gandalfSpecific = firstWhere((c) => c.attributes.specific === 'Gandalf');
+    const saruman = firstWhere((c) => c.attributes.avatar && c.alignment === 'Fallen-wizard' && (c.name.en || '').includes('Saruman'));
+    const out = validateDeck({ ...base, side: 'fallen-wizard', quantities: { [saruman.id]: 1, [gandalfSpecific.id]: 1 } });
+    expect(byId(out, 'SPECIFIC-AVATAR')).toHaveLength(1);
+  });
+  it('BANNED is disabled by default (unverified) and emits nothing without an override', () => {
+    // "Old Road" (TW-294) is in BANNED['fallen-wizard'] and is Hero-alignment,
+    // so it is otherwise perfectly legal for a fallen-wizard deck.
+    const bannedCard = firstWhere((c) => (c.name.en || '') === 'Old Road');
+    const out = validateDeck({ ...base, side: 'fallen-wizard', quantities: { [bannedCard.id]: 1 } });
+    expect(byId(out, 'BANNED')).toHaveLength(0);
+  });
+  it('banned cards are errors once BANNED is enabled via ruleOverrides', () => {
+    const bannedCard = firstWhere((c) => (c.name.en || '') === 'Old Road');
+    const out = validateDeck({
+      ...base,
+      side: 'fallen-wizard',
+      ruleOverrides: { BANNED: true },
+      quantities: { [bannedCard.id]: 1 },
+    });
+    expect(byId(out, 'BANNED')).toHaveLength(1);
+    expect(byId(out, 'BANNED')[0].severity).toBe('error');
+    expect(byId(out, 'BANNED')[0].params.id).toBe(bannedCard.id);
+  });
+  it('sideboard size follows the length', () => {
+    const hz = firstWhere((c) => c.type === 'Hazard' && !c.attributes.unique);
+    const out = validateDeck({ ...base, length: 'long', quantities: { [wizardAvatar.id]: 1 }, zones: { sideboard: { [hz.id]: 36 }, pool: {} } });
+    expect(byId(out, 'SIDEBOARD-MAX')).toHaveLength(1);
+    expect(byId(out, 'SIDEBOARD-MAX')[0].params.max).toBe(35);
+  });
+  it('casual downgrades severities one notch and never below info', () => {
+    const minionRes = firstWhere((c) => c.alignment === 'Minion' && c.type === 'Resource');
+    const strict = validateDeck({ ...base, quantities: { [minionRes.id]: 1 } });
+    const casual = validateDeck({ ...base, tournament: false, quantities: { [minionRes.id]: 1 } });
+    expect(byId(strict, 'ALIGN-LEGAL')[0].severity).toBe('error');
+    expect(byId(casual, 'ALIGN-LEGAL')[0].severity).toBe('warning');
+  });
+  it('POOL-MIND: per-character mind limit over the cap uses the .char code', () => {
+    // BA-1 (Strider), Hero alignment, mind 8 > fallen-wizard's mindPerCharacter (5).
+    const bigMindChar = firstWhere((c) => c.id === 'BA-1');
+    const fwAvatar = firstWhere((c) => c.attributes.avatar && c.alignment === 'Fallen-wizard');
+    const disabled = validateDeck({
+      ...base, side: 'fallen-wizard',
+      quantities: { [fwAvatar.id]: 1 },
+      zones: { sideboard: {}, pool: { [bigMindChar.id]: 1 } },
+    });
+    expect(byId(disabled, 'POOL-MIND')).toHaveLength(0); // unverified rule, off by default
+
+    const enabled = validateDeck({
+      ...base, side: 'fallen-wizard', ruleOverrides: { 'POOL-MIND': true },
+      quantities: { [fwAvatar.id]: 1 },
+      zones: { sideboard: {}, pool: { [bigMindChar.id]: 1 } },
+    });
+    const poolMind = byId(enabled, 'POOL-MIND');
+    expect(poolMind).toHaveLength(1);
+    expect(poolMind[0].code).toBe('POOL-MIND.char');
+  });
+  it('POOL-MIND: pool total over the cap uses the .total code', () => {
+    // ringwraith mindCap = 20; four Minion/Neutral characters (mind 7+7+5+5=24) exceed it,
+    // but ringwraith has no per-character mind cap, so only the .total code should fire.
+    const rwAvatar = firstWhere((c) => c.attributes.avatar && c.alignment === 'Minion');
+    const azog = firstWhere((c) => c.id === 'BA-2');
+    const bolg = firstWhere((c) => c.id === 'BA-4');
+    const mauhur = firstWhere((c) => c.id === 'AS-2');
+    const perchen = firstWhere((c) => c.id === 'AS-4');
+    const out = validateDeck({
+      ...base, side: 'ringwraith', ruleOverrides: { 'POOL-MIND': true },
+      quantities: { [rwAvatar.id]: 1 },
+      zones: { sideboard: {}, pool: { [azog.id]: 1, [bolg.id]: 1, [mauhur.id]: 1, [perchen.id]: 1 } },
+    });
+    const poolMind = byId(out, 'POOL-MIND');
+    expect(poolMind.some((w) => w.code === 'POOL-MIND.total')).toBe(true);
+    expect(poolMind.some((w) => w.code === 'POOL-MIND.char')).toBe(false);
+  });
+  it('disabled and unverified rules emit nothing; overrides can enable them', () => {
+    const unverified = RULES.find((r) => r.status === 'unverified');
+    expect(unverified.defaultEnabled).toBe(false);
+    expect(isRuleEnabled(unverified.id, {})).toBe(false);
+    expect(isRuleEnabled(unverified.id, { [unverified.id]: true })).toBe(true);
+    expect(isRuleEnabled('ALIGN-LEGAL', { 'ALIGN-LEGAL': false })).toBe(false);
+    expect(isRuleEnabled('NO-SUCH-RULE', { 'NO-SUCH-RULE': true })).toBe(false); // unknown ids ignored
+  });
+  it('every rule has unique id and required metadata', () => {
+    const ids = RULES.map((r) => r.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const r of RULES) {
+      expect(['error', 'warning', 'info']).toContain(r.severity);
+      expect(['verified', 'unverified', 'disputed']).toContain(r.status);
+      expect(typeof r.source).toBe('string');
+      expect(r.defaultEnabled).toBe(r.status === 'verified');
+    }
   });
 });
