@@ -23,6 +23,36 @@ describe('normalizeDeck', () => {
     expect(normalizeDeck({ mode: 'deckbuilding', ruleset: { side: 'sauron', length: 'standard' } }).mode).toBe('freeform');
     expect(normalizeDeck({ mode: 'deckbuilding', ruleset: { side: 'wizard', length: 'epic' } }).mode).toBe('freeform');
   });
+
+  // Finding #7 (final review): a deckbuilding deck's per-rule "ignore" choices
+  // (ruleset.ruleOverrides) used to be destroyed the moment the deck flipped
+  // to freeform, since normalizeDeck nulls `ruleset` there and DeckSetupDialog
+  // read overrides only from ruleset.ruleOverrides. They're now mirrored into
+  // the top-level `savedRuleOverrides` field on every normalizeDeck call, so
+  // they outlive a null ruleset and DeckSetupDialog.confirm can fall back to
+  // them (see DeckSetupDialog.jsx) when re-entering deckbuilding.
+  it('preserves ruleOverrides across a deckbuilding -> freeform -> deckbuilding round-trip', () => {
+    const deckbuilding = normalizeDeck({
+      mode: 'deckbuilding',
+      ruleset: { side: 'balrog', length: 'long', tournament: true, ruleOverrides: { 'BALROG-MIND': false } },
+    });
+    expect(deckbuilding.savedRuleOverrides).toEqual({ 'BALROG-MIND': false });
+
+    // App.applySetup's freeform branch: normalizeDeck({ ...prev, mode: 'freeform', ruleset: null }).
+    const freeform = normalizeDeck({ ...deckbuilding, mode: 'freeform', ruleset: null });
+    expect(freeform.ruleset).toBeNull();
+    expect(freeform.savedRuleOverrides).toEqual({ 'BALROG-MIND': false }); // survives the null ruleset
+
+    // DeckSetupDialog.confirm falls back to initial.savedRuleOverrides once
+    // ruleset.ruleOverrides no longer exists.
+    const restoredOverrides = (freeform.ruleset && freeform.ruleset.ruleOverrides) || freeform.savedRuleOverrides || {};
+    const backToDeckbuilding = normalizeDeck({
+      ...freeform,
+      mode: 'deckbuilding',
+      ruleset: { side: 'balrog', length: 'long', tournament: true, ruleOverrides: restoredOverrides },
+    });
+    expect(backToDeckbuilding.ruleset.ruleOverrides).toEqual({ 'BALROG-MIND': false });
+  });
 });
 
 describe('deckStore ordering & projection', () => {
@@ -62,16 +92,5 @@ describe('deckStore ordering & projection', () => {
     await store.update(b.id, { name: 'Second renamed' });
     rows = await store.list();
     expect(rows[0].name).toBe('Second renamed'); // still first
-  });
-});
-
-import { maxCopies } from '../web/src/lib/deck.js';
-
-describe('copy limits are data, not clamps', () => {
-  it('maxCopies still reports the classic limits (validator reference)', () => {
-    expect(maxCopies({ type: 'Site', attributes: {} })).toBe(1);
-    expect(maxCopies({ type: 'Resource', attributes: { unique: true } })).toBe(1);
-    expect(maxCopies({ type: 'Resource', attributes: {} })).toBe(3);
-    expect(maxCopies({ type: 'Character', attributes: { avatar: true } })).toBe(3);
   });
 });

@@ -8,7 +8,12 @@ export const SIDES = {
     id: 'wizard', avatarAlignment: 'Hero',
     alignments: ['Hero', 'Neutral'],
     copies: { default: 3, byAlignment: {} },
-    pool: { maxCharacters: 10, maxMinorItems: 2, mindCap: null, mindPerCharacter: null, forbidRaces: [], requireRaces: null },
+    // mindPerCharacterMax: general per-character pool cap (POOL-MIND.char, "≤ n").
+    // balrogMindPerCharacterLimit: Balrog-only stricter cap (BALROG-MIND, "< n").
+    // Two fields (not one) so each rule can be sourced independently — see
+    // task-7 finding #2: they used to share one field despite different
+    // comparators (> vs >=) and different doc wording (≤ vs <).
+    pool: { maxCharacters: 10, maxMinorItems: 2, mindCap: null, mindPerCharacterMax: null, balrogMindPerCharacterLimit: null, forbidRaces: [], requireRaces: null },
     playDeck: { min: 25, max: 50 },
     specificMode: null,
   },
@@ -16,7 +21,7 @@ export const SIDES = {
     id: 'ringwraith', avatarAlignment: 'Minion',
     alignments: ['Minion', 'Neutral'],
     copies: { default: 3, byAlignment: {} },
-    pool: { maxCharacters: 6, maxMinorItems: 2, mindCap: 20, mindPerCharacter: null, forbidRaces: ['Ringwraith', 'Agent'], requireRaces: null },
+    pool: { maxCharacters: 6, maxMinorItems: 2, mindCap: 20, mindPerCharacterMax: null, balrogMindPerCharacterLimit: null, forbidRaces: ['Ringwraith', 'Agent'], requireRaces: null },
     playDeck: null, // unverified
     specificMode: null,
   },
@@ -24,7 +29,7 @@ export const SIDES = {
     id: 'fallen-wizard', avatarAlignment: 'Fallen-wizard',
     alignments: ['Hero', 'Minion', 'Neutral', 'Stage', 'Fallen-wizard'],
     copies: { default: 2, byAlignment: { Stage: 3 } },
-    pool: { maxCharacters: 5, maxMinorItems: 2, mindCap: null, mindPerCharacter: 5, forbidRaces: [], requireRaces: null },
+    pool: { maxCharacters: 5, maxMinorItems: 2, mindCap: null, mindPerCharacterMax: 5, balrogMindPerCharacterLimit: null, forbidRaces: [], requireRaces: null },
     playDeck: null, // unverified
     specificMode: 'avatar-match',
   },
@@ -32,7 +37,7 @@ export const SIDES = {
     id: 'balrog', avatarAlignment: 'Balrog',
     alignments: ['Minion', 'Neutral', 'Balrog'],
     copies: { default: 3, byAlignment: {} },
-    pool: { maxCharacters: 6, maxMinorItems: 2, mindCap: null, mindPerCharacter: 9, forbidRaces: [], requireRaces: ['Orc', 'Troll'] },
+    pool: { maxCharacters: 6, maxMinorItems: 2, mindCap: null, mindPerCharacterMax: 9, balrogMindPerCharacterLimit: 9, forbidRaces: [], requireRaces: ['Orc', 'Troll'] },
     playDeck: null, // unverified
     specificMode: 'balrog-exempt',
   },

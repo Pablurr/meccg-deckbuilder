@@ -13,9 +13,13 @@ const ALIGN_OPTIONS = [
   { value: 'fallenWizard', key: 'import.alignPref.fallenWizard' },
 ];
 
+// "Excellance" (not "Excellence") matches the remastered card data's own
+// spelling — see the comment in banned.js:11-12. Using the misspelled-looking
+// form here on purpose so this placeholder actually imports, rather than
+// silently failing to match any card.
 const PLACEHOLDER = `1x Bûrat
 2x Beautiful Gold Ring
-3x Glamour of Surpassing Excellence`;
+3x Glamour of Surpassing Excellance`;
 
 function cardLabel(c, lang) {
   const bits = [c.setCode, c.type, c.alignment].filter(Boolean).join(' · ');

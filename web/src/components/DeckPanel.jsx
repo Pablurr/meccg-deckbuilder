@@ -127,14 +127,26 @@ export default function DeckPanel({
   const { previewRef, previewImgRef, stampRef, trackPointer, hidePreview } = useCardPreview(lang, proxyMode);
 
   const deckbuilding = deck && deck.mode === 'deckbuilding';
-  const tabs = deckbuilding ? ['play', 'pool', 'sideboard', 'location', 'notes'] : ['cards', 'notes'];
+  // A freeform deck normally has no reason to show Pool/Sideboard (freeform
+  // never routes new cards there), but a deck switched from deckbuilding to
+  // freeform keeps whatever zones it already had (normalizeDeck preserves
+  // them deliberately, never discarding user data). Those cards must stay
+  // reachable — viewable, adjustable, removable — from every surface, so the
+  // tab appears whenever its zone is non-empty, in either mode.
+  const hasPool = Object.keys(zones.pool || {}).length > 0;
+  const hasSideboard = Object.keys(zones.sideboard || {}).length > 0;
+  const tabs = deckbuilding
+    ? ['play', 'pool', 'sideboard', 'location', 'notes']
+    : ['cards', ...(hasPool ? ['pool'] : []), ...(hasSideboard ? ['sideboard'] : []), 'notes'];
   const [tab, setTab] = useState(deckbuilding ? 'play' : 'cards');
-  // The deck's mode can change (setup dialog) after mount; if the current tab
-  // no longer exists, fall back to the first tab rather than showing nothing.
+  // The deck's mode can change (setup dialog) after mount, and a freeform
+  // deck's pool/sideboard tabs can appear or disappear as those zones empty
+  // out; if the current tab no longer exists, fall back to the first tab
+  // rather than showing nothing.
   useEffect(() => {
     if (!tabs.includes(tab)) setTab(tabs[0]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deckbuilding]);
+  }, [deckbuilding, hasPool, hasSideboard]);
 
   // Card width driven by the zoom slider (% of the source image). min(…,100%)
   // keeps a card from overflowing when the panel is dragged narrower than it.

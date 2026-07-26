@@ -470,6 +470,130 @@ describe('validateDeck', () => {
     expect(hits[0].params.reason).toBe('type');
     expect(hits[0].params.id).toBe(hazard.id);
   });
+  it('BALROG-MIND: a non-exempt Balrog-side character at/above the per-character mind limit fires once the unverified rule is enabled', () => {
+    const balrogAvatar = firstWhere((c) => c.attributes.avatar && c.alignment === 'Balrog');
+    const bigMindChar = firstWhere((c) => c.type === 'Character' && !c.attributes.avatar && c.attributes.specific !== 'Balrog' && parseInt(c.attributes.mind, 10) >= 9);
+    const disabled = validateDeck({ ...base, side: 'balrog', quantities: { [balrogAvatar.id]: 1, [bigMindChar.id]: 1 } });
+    expect(byId(disabled, 'BALROG-MIND')).toHaveLength(0); // unverified rule, off by default
+
+    const out = validateDeck({
+      ...base, side: 'balrog', ruleOverrides: { 'BALROG-MIND': true },
+      quantities: { [balrogAvatar.id]: 1, [bigMindChar.id]: 1 },
+    });
+    const hits = byId(out, 'BALROG-MIND');
+    expect(hits).toHaveLength(1);
+    expect(hits[0].params.id).toBe(bigMindChar.id);
+    expect(hits[0].params.limit).toBe(9); // balrog's balrogMindPerCharacterLimit (sides.js)
+  });
+
+  it('BALROG-MIND: a Balrog-specific character is exempt even at/above the mind limit', () => {
+    const balrogAvatar = firstWhere((c) => c.attributes.avatar && c.alignment === 'Balrog');
+    const exemptChar = cards.find((c) => c.type === 'Character' && !c.attributes.avatar && c.attributes.specific === 'Balrog' && parseInt(c.attributes.mind, 10) >= 9);
+    if (exemptChar) {
+      const out = validateDeck({
+        ...base, side: 'balrog', ruleOverrides: { 'BALROG-MIND': true },
+        quantities: { [balrogAvatar.id]: 1, [exemptChar.id]: 1 },
+      });
+      expect(byId(out, 'BALROG-MIND')).toHaveLength(0);
+    }
+  });
+
+  it('BALROG-RACE: a non-Orc/Troll, non-exempt Balrog-side character fires once the unverified rule is enabled', () => {
+    const balrogAvatar = firstWhere((c) => c.attributes.avatar && c.alignment === 'Balrog');
+    const wrongRaceChar = firstWhere((c) => c.type === 'Character' && !c.attributes.avatar && c.attributes.specific !== 'Balrog'
+      && c.attributes.race && !String(c.attributes.race).includes('Orc') && !String(c.attributes.race).includes('Troll'));
+    const disabled = validateDeck({ ...base, side: 'balrog', quantities: { [balrogAvatar.id]: 1, [wrongRaceChar.id]: 1 } });
+    expect(byId(disabled, 'BALROG-RACE')).toHaveLength(0); // unverified rule, off by default
+
+    const out = validateDeck({
+      ...base, side: 'balrog', ruleOverrides: { 'BALROG-RACE': true },
+      quantities: { [balrogAvatar.id]: 1, [wrongRaceChar.id]: 1 },
+    });
+    const hits = byId(out, 'BALROG-RACE');
+    expect(hits).toHaveLength(1);
+    expect(hits[0].params.id).toBe(wrongRaceChar.id);
+  });
+
+  it('POOL-ITEMS: starting minor items above the per-side max fire once the unverified rule is enabled', () => {
+    const minorItem = firstWhere((c) => c.type === 'Resource' && c.attributes.playableAsStartingMinorItem === true);
+    const disabled = validateDeck({
+      ...base, quantities: { [wizardAvatar.id]: 1 },
+      zones: { sideboard: {}, pool: { [minorItem.id]: 3 } }, // wizard pool.maxMinorItems = 2
+    });
+    expect(byId(disabled, 'POOL-ITEMS')).toHaveLength(0); // unverified rule, off by default
+
+    const out = validateDeck({
+      ...base, ruleOverrides: { 'POOL-ITEMS': true },
+      quantities: { [wizardAvatar.id]: 1 },
+      zones: { sideboard: {}, pool: { [minorItem.id]: 3 } },
+    });
+    const hits = byId(out, 'POOL-ITEMS');
+    expect(hits).toHaveLength(1);
+    expect(hits[0].params.count).toBe(3);
+    expect(hits[0].params.max).toBe(2);
+  });
+
+  it('UNIQUE-LIMIT: exactly 2+ copies of a unique non-avatar card fire once the unverified rule is enabled; 1 copy never does', () => {
+    const uniqueCard = firstWhere((c) => c.attributes.unique === true && !c.attributes.avatar && c.type !== 'Site');
+    const disabled = validateDeck({ ...base, quantities: { [wizardAvatar.id]: 1, [uniqueCard.id]: 2 } });
+    expect(byId(disabled, 'UNIQUE-LIMIT')).toHaveLength(0); // unverified rule, off by default
+
+    const oneCopy = validateDeck({
+      ...base, ruleOverrides: { 'UNIQUE-LIMIT': true },
+      quantities: { [wizardAvatar.id]: 1, [uniqueCard.id]: 1 },
+    });
+    // Pins the implicit limit at 1 copy: DeckPanel.jsx's localizeParams computes
+    // `excess = count - 1` for this code without the validator emitting a
+    // `limit` param, so the "1" is an assumption this test locks down.
+    expect(byId(oneCopy, 'UNIQUE-LIMIT')).toHaveLength(0);
+
+    const twoCopies = validateDeck({
+      ...base, ruleOverrides: { 'UNIQUE-LIMIT': true },
+      quantities: { [wizardAvatar.id]: 1, [uniqueCard.id]: 2 },
+    });
+    const hits = byId(twoCopies, 'UNIQUE-LIMIT');
+    expect(hits).toHaveLength(1);
+    expect(hits[0].params.id).toBe(uniqueCard.id);
+    expect(hits[0].params.count).toBe(2);
+    expect(hits[0].params.count - 1).toBe(1); // matches DeckPanel.jsx's hardcoded excess = count - 1
+  });
+
+  it('DECKSIZE-LOCATION: play-deck cards with zero location-deck cards fire once the unverified rule is enabled', () => {
+    const disabled = validateDeck({ ...base, quantities: { [wizardAvatar.id]: 1 } });
+    expect(byId(disabled, 'DECKSIZE-LOCATION')).toHaveLength(0); // unverified rule, off by default
+
+    const out = validateDeck({
+      ...base, ruleOverrides: { 'DECKSIZE-LOCATION': true },
+      quantities: { [wizardAvatar.id]: 1 }, // a Character only: play count > 0, location count 0
+    });
+    const hits = byId(out, 'DECKSIZE-LOCATION');
+    expect(hits).toHaveLength(1);
+    expect(hits[0].params.count).toBe(0);
+    expect(hits[0].params.min).toBe(1);
+  });
+
+  it('POOL-ELIGIBLE.race: a pool character whose race the side forbids fires with reason "race" (verified, on by default)', () => {
+    // ringwraith's forbidRaces are ['Ringwraith', 'Agent'] (sides.js), but no
+    // real card in cards.json carries either race string (this dataset's
+    // Character races are Troll/Orc/Man/Dúnadan/Elf/Dwarf/Hobbit) — so, like
+    // the banned-list diacritic test above, a synthetic card is the only way
+    // to exercise this branch at all.
+    const forbiddenRaceChar = { id: 'test-agent-race', type: 'Character', alignment: 'Minion', attributes: { race: 'Agent', avatar: false }, name: { en: 'Test Agent Character' } };
+    const cardsWithSynthetic = new Map(cardsById);
+    cardsWithSynthetic.set(forbiddenRaceChar.id, forbiddenRaceChar);
+    const rwAvatar = firstWhere((c) => c.attributes.avatar && c.alignment === 'Minion');
+    const out = validateDeck({
+      ...base, side: 'ringwraith', cardsById: cardsWithSynthetic,
+      quantities: { [rwAvatar.id]: 1 },
+      zones: { sideboard: {}, pool: { [forbiddenRaceChar.id]: 1 } },
+    });
+    const hits = byId(out, 'POOL-ELIGIBLE');
+    const raceHit = hits.find((w) => w.code === 'POOL-ELIGIBLE.race');
+    expect(raceHit).toBeTruthy();
+    expect(raceHit.params.reason).toBe('race');
+    expect(raceHit.params.race).toBe('Agent');
+  });
+
   it('a prototype-named side ("constructor") is rejected rather than treated as a profile', () => {
     const out = validateDeck({ ...base, side: 'constructor', quantities: {} });
     expect(out).toEqual([]);

@@ -29,13 +29,19 @@ export function copiesText(t, profile) {
 // than one giant sentence template, since several fields are null/empty for
 // any given side (see SIDES.*.pool) and a single template can't gracefully
 // drop clauses per language.
+// mindPerCharacterMax (POOL-MIND.char, "≤ n") and balrogMindPerCharacterLimit
+// (BALROG-MIND, "< n", Balrog only) are two separate fields with different
+// comparators — a side may show both when it has both rules in play (e.g.
+// balrog), so the row never claims a single ≤ n cap when a stricter < n rule
+// also applies.
 export function poolText(t, pool) {
   const parts = [
     t('docs.pool.maxCharacters', { n: pool.maxCharacters }),
     t('docs.pool.maxMinorItems', { n: pool.maxMinorItems }),
   ];
   if (pool.mindCap != null) parts.push(t('docs.pool.mindCap', { n: pool.mindCap }));
-  if (pool.mindPerCharacter != null) parts.push(t('docs.pool.mindPerCharacter', { n: pool.mindPerCharacter }));
+  if (pool.mindPerCharacterMax != null) parts.push(t('docs.pool.mindPerCharacter', { n: pool.mindPerCharacterMax }));
+  if (pool.balrogMindPerCharacterLimit != null) parts.push(t('docs.pool.balrogMindBelow', { n: pool.balrogMindPerCharacterLimit }));
   if (pool.forbidRaces && pool.forbidRaces.length) {
     parts.push(t('docs.pool.forbidRaces', { races: pool.forbidRaces.map((r) => localize(t, 'race', r)).join(', ') }));
   }

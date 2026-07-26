@@ -13,8 +13,13 @@ export default function DeckSetupDialog({ initial = {}, onConfirm, onClose }) {
   const [tournament, setTournament] = useState(!!r.tournament);
 
   function confirm() {
+    // r.ruleOverrides only exists while the deck is already deckbuilding; a
+    // deck coming back from freeform has ruleset === null (see applySetup /
+    // normalizeDeck), so its overrides live in initial.savedRuleOverrides
+    // instead. Falling back to it here is what makes ignored rules survive a
+    // freeform round-trip (see deck.js normalizeDeck for where they're kept).
     onConfirm(mode === 'deckbuilding'
-      ? { mode, ruleset: { side, length, tournament, ruleOverrides: r.ruleOverrides || {} } }
+      ? { mode, ruleset: { side, length, tournament, ruleOverrides: r.ruleOverrides || initial.savedRuleOverrides || {} } }
       : { mode: 'freeform', ruleset: null });
   }
 

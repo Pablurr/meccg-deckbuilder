@@ -14,20 +14,6 @@ export function backGroupForType(type) {
   return BACK_GROUPS[type] || 'playdeck';
 }
 
-// Copy limits:
-//  - Avatars (wizards, ringwraiths, fallen-wizards, balrog): unique but up to 3.
-//  - Sites: always 1.
-//  - Other unique cards: 1.
-//  - Everything else: 3.
-export const MAX_COPIES = 3;
-export function maxCopies(card) {
-  const a = (card && card.attributes) || {};
-  if (a.avatar === true) return MAX_COPIES;
-  if (card && card.type === 'Site') return 1;
-  if (a.unique === true) return 1;
-  return MAX_COPIES;
-}
-
 // Expand a { id: count } map into an ordered list with repeats (for export/counts).
 export function expandQuantities(quantities = {}) {
   const out = [];
@@ -99,5 +85,13 @@ export function normalizeDeck(d = {}) {
       mode = 'freeform';
     }
   }
-  return { ...d, mode, ruleset, zones, notes, order: typeof d.order === 'number' ? d.order : null };
+  // "Ignore this rule" choices must survive a deckbuilding -> freeform -> back
+  // round-trip: freeform has no `ruleset` to hold ruleOverrides (it's nulled
+  // above), so DeckSetupDialog.confirm losing that object would silently wipe
+  // every per-deck override. Kept as its own top-level field, independent of
+  // `ruleset`, and mirrored from ruleset.ruleOverrides whenever one exists so
+  // it's always the latest choices; when there's no ruleset (freeform), the
+  // previously-saved value passes through untouched instead of being reset.
+  const savedRuleOverrides = { ...((ruleset && ruleset.ruleOverrides) || d.savedRuleOverrides || {}) };
+  return { ...d, mode, ruleset, zones, notes, savedRuleOverrides, order: typeof d.order === 'number' ? d.order : null };
 }

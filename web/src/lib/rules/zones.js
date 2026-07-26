@@ -1,8 +1,6 @@
 // Which zone counters a card exposes in deckbuilding mode.
 // 'deck' = the main deck; play vs location derives from the card type
 // (backGroupForType), so it is not a zone of its own here.
-export const ZONE_IDS = ['deck', 'sideboard', 'pool'];
-
 export function zonesFor(card) {
   const type = card && card.type;
   const a = (card && card.attributes) || {};

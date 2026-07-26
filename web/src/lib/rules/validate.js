@@ -128,8 +128,8 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
         emit('BALROG-RACE', { id: e.id, name: name(c), race });
       }
       const mind = toInt(a.mind);
-      if (mind != null && profile.pool.mindPerCharacter != null && mind >= profile.pool.mindPerCharacter) {
-        emit('BALROG-MIND', { id: e.id, name: name(c), mind, limit: profile.pool.mindPerCharacter });
+      if (mind != null && profile.pool.balrogMindPerCharacterLimit != null && mind >= profile.pool.balrogMindPerCharacterLimit) {
+        emit('BALROG-MIND', { id: e.id, name: name(c), mind, limit: profile.pool.balrogMindPerCharacterLimit });
       }
     }
   }
@@ -170,8 +170,8 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
       if (profile.pool.forbidRaces.some((r) => String(a.race || '').includes(r))) {
         emit('POOL-ELIGIBLE', { id, name: name(c), reason: 'race', race: String(a.race || '') }, 'POOL-ELIGIBLE.race');
       }
-      if (profile.pool.mindPerCharacter != null && (toInt(a.mind) || 0) > profile.pool.mindPerCharacter) {
-        emit('POOL-MIND', { id, name: name(c), mind: toInt(a.mind), limit: profile.pool.mindPerCharacter }, 'POOL-MIND.char');
+      if (profile.pool.mindPerCharacterMax != null && (toInt(a.mind) || 0) > profile.pool.mindPerCharacterMax) {
+        emit('POOL-MIND', { id, name: name(c), mind: toInt(a.mind), limit: profile.pool.mindPerCharacterMax }, 'POOL-MIND.char');
       }
     } else if (c.type === 'Resource' && a.playableAsStartingMinorItem === true) {
       poolItems += n;

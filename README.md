@@ -86,8 +86,8 @@ Un deck a jusqu'à quatre zones : le **talon** (Personnage/Ressource/Péril), le
 bas affiche des onglets par zone avec compteurs et plafonds (ex. `Pool 3 / 10`), et déposer une
 carte sur un onglet l'y déplace. Dans le navigateur de cartes, chaque carte affiche un compteur
 par zone ; en mode Construction de deck, un filtre de **légalité** (activé par défaut) masque les
-cartes non éligibles au camp/à la longueur choisis — bascule « Afficher les cartes illégales »
-pour tout voir quand même.
+cartes non éligibles au camp choisi (la longueur de partie n'affecte que la limite de réserve, pas
+la légalité d'une carte) — bascule « Afficher les cartes illégales » pour tout voir quand même.
 
 ### Avertissements de règles
 
@@ -192,11 +192,11 @@ Le mapping des dos par type est le même qu'en export MPC.
 Télécharge un fichier `.txt` listant les cartes **triées par type** (Characters, Resources,
 Hazards, Sites, Regions) avec les quantités, au format `Nx nom` — directement ré-importable
 via le bouton « Importer ». La **langue** de la liste est réglable (English, Français, Español,
-Deutsch, Nederlands — les langues complètes du JSON). Pour un deck en mode Construction, les
-zones apparaissent en sections (`## Pool`, `## Play deck`, `## Locations`, `## Sideboard`, dans
-cet ordre — le même ordre que le ZIP et le PDF) et les notes sont reprises en tête du fichier
-sous `## Notes` ; ré-importer ce fichier restaure les cartes **dans leurs zones d'origine** ainsi
-que les notes.
+Deutsch, Nederlands — les langues complètes du JSON). Quel que soit le mode du deck, dès qu'une
+zone (pool, réserve) contient des cartes, elle apparaît en section (`## Pool`, `## Play deck`,
+`## Locations`, `## Sideboard`, dans cet ordre — le même ordre que le ZIP et le PDF) et les notes
+sont reprises en tête du fichier sous `## Notes` ; ré-importer ce fichier restaure les cartes
+**dans leurs zones d'origine** ainsi que les notes.
 
 ## Langue de l'interface
 

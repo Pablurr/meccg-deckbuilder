@@ -62,7 +62,7 @@ describe('terminology guards', () => {
   // en/fr "faction" is spelled -cti-, es "facción" -cci-: a pattern for one
   // silently misses the other, so both stems are listed explicitly.
   const OFFENDING = /\b(factions?|facci[oó]n(?:es)?)\b/i;
-  const NAMESPACES = ['side.', 'setup.', 'zones.', 'rules.', 'docs.', 'notes.', 'status.', 'length.'];
+  const NAMESPACES = ['side.', 'setup.', 'zones.', 'rules.', 'docs.', 'notes.', 'status.', 'length.', 'decks.', 'browser.', 'panel.', 'drawer.'];
 
   it('the guard pattern actually catches every spelling it must', () => {
     for (const bad of ['faction', 'Faction', 'FACTION', 'factions', 'facción', 'faccion', 'facciones']) {
@@ -81,6 +81,31 @@ describe('terminology guards', () => {
           expect(`${lang}:${key}=${value}`).not.toMatch(OFFENDING);
         }
       }
+    }
+  });
+});
+
+// The key-set parity check above (`fr, en and es have identical key sets`)
+// only proves the three dictionaries agree on which keys exist — not on what
+// each string actually needs to render. A translator who drops `{limit}`
+// from one language's message still passes every existing test and ships a
+// warning silently missing its number. This guard closes that gap: for every
+// key present in all three dictionaries, the *set* of `{placeholder}` tokens
+// must be identical across fr/en/es (order doesn't matter, e.g. "{a} {b}" vs
+// "{b}, {a}" is fine — only the token set is compared).
+describe('placeholder parity across fr/en/es', () => {
+  const PLACEHOLDER_RE = /\{(\w+)\}/g;
+  const placeholderTokens = (s) => new Set([...String(s).matchAll(PLACEHOLDER_RE)].map((m) => m[1]));
+
+  it('every key present in all three dictionaries uses the same {placeholder} tokens in each language', () => {
+    const langs = ['fr', 'en', 'es'];
+    const sharedKeys = Object.keys(translations.fr)
+      .filter((k) => Object.prototype.hasOwnProperty.call(translations.en, k) && Object.prototype.hasOwnProperty.call(translations.es, k));
+    expect(sharedKeys.length).toBeGreaterThan(0);
+    for (const key of sharedKeys) {
+      const [frTokens, enTokens, esTokens] = langs.map((l) => [...placeholderTokens(translations[l][key])].sort());
+      expect(enTokens, `en:"${key}" placeholders ${JSON.stringify(enTokens)} != fr ${JSON.stringify(frTokens)}`).toEqual(frTokens);
+      expect(esTokens, `es:"${key}" placeholders ${JSON.stringify(esTokens)} != fr ${JSON.stringify(frTokens)}`).toEqual(frTokens);
     }
   });
 });

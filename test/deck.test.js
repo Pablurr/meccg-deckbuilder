@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { backGroupForType, deckCounts, deckWarnings, maxCopies, expandQuantities, countOccurrences } from '../web/src/lib/deck.js';
+import { backGroupForType, deckCounts, deckWarnings, expandQuantities, countOccurrences } from '../web/src/lib/deck.js';
 
 const cardsById = new Map([
   ['AS-1', { id: 'AS-1', type: 'Character', alignment: 'Minion', image: 'x.jpg' }],
@@ -28,23 +28,6 @@ describe('deckCounts', () => {
     expect(counts.total).toBe(4);
     expect(counts.byType).toEqual({ Hazard: 3, Site: 1 });
     expect(counts.byGroup).toEqual({ playdeck: 3, locationdeck: 1 });
-  });
-});
-
-describe('maxCopies', () => {
-  it('caps unique cards at 1 and others at 3', () => {
-    expect(maxCopies({ attributes: { unique: true } })).toBe(1);
-    expect(maxCopies({ attributes: {} })).toBe(3);
-    expect(maxCopies({ attributes: { unique: false } })).toBe(3);
-  });
-
-  it('caps all Sites at 1 (even non-unique ones)', () => {
-    expect(maxCopies({ type: 'Site', attributes: { unique: true } })).toBe(1);
-    expect(maxCopies({ type: 'Site', attributes: {} })).toBe(1);
-  });
-
-  it('allows avatars up to 3 despite being unique', () => {
-    expect(maxCopies({ type: 'Character', attributes: { unique: true, avatar: true } })).toBe(3);
   });
 });
 

@@ -52,29 +52,35 @@ describe('poolText', () => {
   it('ringwraith: a total mindCap (no per-character cap) plus forbidden races', () => {
     const pool = SIDES.ringwraith.pool;
     expect(pool.mindCap).not.toBeNull();
-    expect(pool.mindPerCharacter).toBeNull();
+    expect(pool.mindPerCharacterMax).toBeNull();
+    expect(pool.balrogMindPerCharacterLimit).toBeNull();
     const text = poolText(stubT, pool);
     expect(text).toContain(`docs.pool.mindCap::{"n":${pool.mindCap}}`);
     expect(text).not.toContain('docs.pool.mindPerCharacter');
+    expect(text).not.toContain('docs.pool.balrogMindBelow');
     expect(text).toContain(`docs.pool.forbidRaces::{"races":"${pool.forbidRaces.join(', ')}"}`);
     expect(text).not.toContain('docs.pool.requireRaces');
   });
 
-  it('fallen-wizard: a per-character mindPerCharacter (no total mindCap)', () => {
+  it('fallen-wizard: a per-character mindPerCharacterMax (no total mindCap, no Balrog-only limit)', () => {
     const pool = SIDES['fallen-wizard'].pool;
     expect(pool.mindCap).toBeNull();
-    expect(pool.mindPerCharacter).not.toBeNull();
+    expect(pool.mindPerCharacterMax).not.toBeNull();
+    expect(pool.balrogMindPerCharacterLimit).toBeNull();
     const text = poolText(stubT, pool);
     expect(text).not.toContain('docs.pool.mindCap::');
-    expect(text).toContain(`docs.pool.mindPerCharacter::{"n":${pool.mindPerCharacter}}`);
+    expect(text).toContain(`docs.pool.mindPerCharacter::{"n":${pool.mindPerCharacterMax}}`);
+    expect(text).not.toContain('docs.pool.balrogMindBelow');
   });
 
-  it('balrog: a per-character mindPerCharacter plus required races', () => {
+  it('balrog: both the general mindPerCharacterMax (≤ n, POOL-MIND.char) and the stricter balrogMindPerCharacterLimit (< n, BALROG-MIND) render, plus required races', () => {
     const pool = SIDES.balrog.pool;
-    expect(pool.mindPerCharacter).not.toBeNull();
+    expect(pool.mindPerCharacterMax).not.toBeNull();
+    expect(pool.balrogMindPerCharacterLimit).not.toBeNull();
     expect(pool.requireRaces).toEqual(['Orc', 'Troll']);
     const text = poolText(stubT, pool);
-    expect(text).toContain(`docs.pool.mindPerCharacter::{"n":${pool.mindPerCharacter}}`);
+    expect(text).toContain(`docs.pool.mindPerCharacter::{"n":${pool.mindPerCharacterMax}}`);
+    expect(text).toContain(`docs.pool.balrogMindBelow::{"n":${pool.balrogMindPerCharacterLimit}}`);
     expect(text).toContain(`docs.pool.requireRaces::{"races":"${pool.requireRaces.join(', ')}"}`);
     expect(text).not.toContain('docs.pool.forbidRaces');
   });
