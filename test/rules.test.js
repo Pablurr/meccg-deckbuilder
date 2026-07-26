@@ -6,6 +6,8 @@ import { SIDES, isLegalForSide } from '../web/src/lib/rules/sides.js';
 import { LENGTHS } from '../web/src/lib/rules/formats.js';
 import { BANNED, resolveBanned } from '../web/src/lib/rules/banned.js';
 import { RULES, validateDeck, isRuleEnabled } from '../web/src/lib/rules/validate.js';
+import { isDropAllowed, resolveDropTarget } from '../web/src/lib/rules/dropTargets.js';
+import { buildGroups, TYPE_ORDER } from '../web/src/lib/deckList.js';
 
 const { cards, index } = parseCards(raw);
 
@@ -37,6 +39,71 @@ describe('zonesFor', () => {
     const item = cards.find((c) => c.type === 'Resource' && c.attributes.playableAsStartingMinorItem === true);
     expect(item).toBeTruthy();
     expect(zonesFor(item)).toEqual({ primary: 'deck', extra: ['sideboard', 'pool'] });
+  });
+});
+
+describe('dropTargets', () => {
+  it('a Character may be dropped on Pool, Sideboard and the deck tabs', () => {
+    const chr = cards.find((c) => c.type === 'Character');
+    expect(chr).toBeTruthy();
+    expect(isDropAllowed(chr, 'pool')).toBe(true);
+    expect(isDropAllowed(chr, 'sideboard')).toBe(true);
+    expect(isDropAllowed(chr, 'play')).toBe(true);
+    expect(isDropAllowed(chr, 'location')).toBe(true);
+    expect(isDropAllowed(chr, 'cards')).toBe(true);
+  });
+  it('a Site may not be dropped on Pool or Sideboard', () => {
+    const site = cards.find((c) => c.type === 'Site');
+    expect(site).toBeTruthy();
+    expect(isDropAllowed(site, 'pool')).toBe(false);
+    expect(isDropAllowed(site, 'sideboard')).toBe(false);
+    expect(isDropAllowed(site, 'play')).toBe(true);
+  });
+  it('a Resource flagged playableAsStartingMinorItem may be dropped on Pool; an ordinary Resource may not', () => {
+    const minorItem = cards.find((c) => c.type === 'Resource' && c.attributes.playableAsStartingMinorItem === true);
+    expect(minorItem).toBeTruthy();
+    expect(isDropAllowed(minorItem, 'pool')).toBe(true);
+    const ordinaryResource = cards.find((c) => c.type === 'Resource' && c.attributes.playableAsStartingMinorItem !== true);
+    expect(ordinaryResource).toBeTruthy();
+    expect(isDropAllowed(ordinaryResource, 'pool')).toBe(false);
+  });
+  it('the play, location and cards tabs all resolve to the same deck target', () => {
+    expect(resolveDropTarget('play')).toBe('deck');
+    expect(resolveDropTarget('location')).toBe('deck');
+    expect(resolveDropTarget('cards')).toBe('deck');
+    expect(resolveDropTarget('pool')).toBe('pool');
+    expect(resolveDropTarget('sideboard')).toBe('sideboard');
+  });
+  it('isDropAllowed returns false for a missing card rather than throwing', () => {
+    expect(isDropAllowed(null, 'pool')).toBe(false);
+  });
+});
+
+describe('buildGroups', () => {
+  it('puts each card under its own type and preserves the existing type ordering', () => {
+    const chr = cards.find((c) => c.type === 'Character');
+    const site = cards.find((c) => c.type === 'Site');
+    const hz = cards.find((c) => c.type === 'Hazard');
+    expect(chr).toBeTruthy();
+    expect(site).toBeTruthy();
+    expect(hz).toBeTruthy();
+    // Deliberately out of TYPE_ORDER (Character, Resource, Hazard, Site, Region)
+    // in the input list, to prove buildGroups reorders rather than preserving
+    // insertion order.
+    const entries = [
+      { card: site, qty: 1 },
+      { card: hz, qty: 2 },
+      { card: chr, qty: 3 },
+    ];
+    const groups = buildGroups(entries, 'en');
+    expect(groups.map((g) => g.type)).toEqual(['Character', 'Hazard', 'Site']);
+    expect(TYPE_ORDER.indexOf('Character')).toBeLessThan(TYPE_ORDER.indexOf('Hazard'));
+    expect(TYPE_ORDER.indexOf('Hazard')).toBeLessThan(TYPE_ORDER.indexOf('Site'));
+    const charGroup = groups.find((g) => g.type === 'Character');
+    expect(charGroup.items).toEqual([{ card: chr, qty: 3 }]);
+    // Types absent from the entries list produce no group at all.
+    expect(groups.some((g) => g.type === 'Resource')).toBe(false);
+    expect(groups.some((g) => g.type === 'Region')).toBe(false);
   });
 });
 

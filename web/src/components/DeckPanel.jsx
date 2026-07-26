@@ -4,10 +4,11 @@ import { useCardPreview, CardPreview } from './CardPreview.jsx';
 import { useT } from '../i18n.jsx';
 import MiniCard from './MiniCard.jsx';
 import ZoneTabs from './ZoneTabs.jsx';
-import { zonesFor } from '../lib/rules/zones.js';
+import { isDropAllowed, resolveDropTarget } from '../lib/rules/dropTargets.js';
 import { LENGTHS } from '../lib/rules/formats.js';
 import { SIDES } from '../lib/rules/sides.js';
 import { backGroupForType } from '../lib/deck.js';
+import { buildGroups } from '../lib/deckList.js';
 import { REPORT_ISSUES_URL } from '../lib/constants.js';
 
 const SEV_ICON = { error: '⛔', warning: '⚠', info: 'ℹ' };
@@ -64,8 +65,6 @@ function reportUrl(w) {
   return `${REPORT_ISSUES_URL}?title=${title}&body=${body}`;
 }
 
-// Deck contents are grouped and displayed in this fixed type order.
-const TYPE_ORDER = ['Character', 'Resource', 'Hazard', 'Site', 'Region'];
 const NOTE_FIELDS = ['starting', 'resourceStrategy', 'hazardStrategy', 'other'];
 
 const MIN_WIDTH = 280;
@@ -86,15 +85,16 @@ function sumQty(map) {
   return Object.values(map || {}).reduce((a, b) => a + b, 0);
 }
 
-// Bucket a { card, qty } entry list by TYPE_ORDER, sorted by name within each
-// group — same grouping the panel has always used, now reused per tab.
-function buildGroups(entries, lang) {
-  return TYPE_ORDER.map((type) => {
-    const items = entries
-      .filter((it) => it.card && it.card.type === type)
-      .sort((a, b) => cardName(a.card, lang).localeCompare(cardName(b.card, lang)));
-    return { type, items };
-  }).filter((g) => g.items.length > 0);
+// The Pool tab's cap (SIDES[side].pool.maxCharacters) governs Character
+// entries only — eligible starting minor items also live in the pool but
+// answer to their own maxMinorItems cap (POOL-ITEMS), which this tab does
+// not display. Count only what the cap governs so the tab and the
+// POOL-CHARS validator warning never disagree on the same deck.
+function poolCharCount(pool, cardsById) {
+  return Object.entries(pool || {}).reduce((sum, [id, n]) => {
+    const c = cardsById.get(id);
+    return c && c.type === 'Character' ? sum + n : sum;
+  }, 0);
 }
 
 export default function DeckPanel({
@@ -175,7 +175,7 @@ export default function DeckPanel({
   const tabCounts = {
     play: counts.byGroup.playdeck,
     location: counts.byGroup.locationdeck,
-    pool: sumQty(zones.pool),
+    pool: poolCharCount(zones.pool, cardsById),
     sideboard: sumQty(zones.sideboard),
     cards: counts.total,
     notes: null, // the Notes tab carries no count
@@ -223,11 +223,8 @@ export default function DeckPanel({
     if (!payload || !payload.id) return;
     const card = cardsById.get(payload.id);
     if (!card) return;
-    const z = zonesFor(card);
-    const allowed = new Set([z.primary, ...z.extra, 'deck']);
-    const target = toZone === 'play' || toZone === 'location' || toZone === 'cards' ? 'deck' : toZone;
-    if (!allowed.has(target)) return; // e.g. a Site dropped on Pool: ignored silently
-    moveCopy(payload.id, payload.from, target);
+    if (!isDropAllowed(card, toZone)) return; // e.g. a Site dropped on Pool: ignored silently
+    moveCopy(payload.id, payload.from, resolveDropTarget(toZone));
   }
 
   if (collapsed) {
