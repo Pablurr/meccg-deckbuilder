@@ -92,9 +92,16 @@ export function parseDeckListDocument(text) {
   const noteBuf = { starting: [], resourceStrategy: [], hazardStrategy: [], other: [] };
   const lines = [];
 
-  let mode = null; // null | 'notes' | 'cards'
-  let target = null; // 'quantities' | 'pool' | 'sideboard' — only meaningful when mode === 'cards'
+  // Starts in 'cards' mode targeting the main deck ('quantities') so that a
+  // bare, headingless paste — the format ImportDialog's own placeholder
+  // advertises ("Nx name" per line, no "##" anywhere) — is collected as
+  // card lines instead of being silently dropped. Mode only ever *changes*
+  // on a "##" heading below; a document that has one starts collecting into
+  // whatever that first heading implies, exactly as before.
+  let mode = 'cards'; // 'notes' | 'cards'
+  let target = 'quantities'; // 'quantities' | 'pool' | 'sideboard' — only meaningful when mode === 'cards'
   let noteField = null; // only meaningful when mode === 'notes'
+  let sawHeading = false; // becomes true on the first "##" heading; gates the "# title" skip below
 
   for (const raw of String(text || '').split(/\r?\n/)) {
     const line = raw.trim();
@@ -103,6 +110,7 @@ export function parseDeckListDocument(text) {
     if (h2) {
       const heading = h2[1].trim();
       noteField = null;
+      sawHeading = true;
       if (heading === 'Notes') {
         mode = 'notes';
         target = null;
@@ -129,7 +137,12 @@ export function parseDeckListDocument(text) {
       continue;
     }
 
-    if (line.startsWith('# ')) continue; // deck title, not part of the body
+    // Only the deck-title line (always the first content line, before any
+    // "##" heading) is skipped here. Gating on sawHeading keeps this from
+    // also eating a note line that happens to start with "# " once we're
+    // past the title — e.g. a note body reading "# 1 goal: ramp" must
+    // round-trip intact, not get silently deleted.
+    if (!sawHeading && line.startsWith('# ')) continue; // deck title, not part of the body
 
     if (mode === 'notes') {
       // Guard for the central hazard: never call parseLine here. A stray
@@ -139,8 +152,7 @@ export function parseDeckListDocument(text) {
       continue;
     }
 
-    if (mode === 'cards') lines.push({ ...parseLine(line), target });
-    // mode === null: stray text before the first heading is ignored.
+    lines.push({ ...parseLine(line), target });
   }
 
   for (const field of Object.keys(notes)) notes[field] = noteBuf[field].join('\n').trim();

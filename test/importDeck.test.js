@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { parseDeckList, buildNameIndex, resolveDeckList, normalizeName, preferredMatchId } from '../web/src/lib/importDeck.js';
+import {
+  parseDeckList,
+  parseDeckListDocument,
+  importDeckList,
+  buildNameIndex,
+  resolveDeckList,
+  normalizeName,
+  preferredMatchId,
+} from '../web/src/lib/importDeck.js';
 
 const cards = [
   { id: 'AS-1', name: { en: 'Bûrat', fr: 'Bûrat' } },
@@ -118,5 +126,84 @@ describe('normalizeName', () => {
     expect(normalizeName('Star-glass')).toBe(normalizeName('star glass'));
     expect(normalizeName('Thrór’s Map')).toBe(normalizeName('thrors map'));
     expect(normalizeName('Fire & Ice')).toBe(normalizeName('fire and ice'));
+  });
+});
+
+// Legacy-compatibility gate on the REACHABLE path. ImportDialog.jsx calls
+// parseDeckListDocument/importDeckList, never parseDeckList directly (it has
+// zero production callers) — so that is what must be gated against these
+// classic flat-paste shapes, not parseDeckList. Each case below mirrors a
+// case above, run through the real entry point instead.
+describe('parseDeckListDocument / importDeckList (reachable path — legacy compatibility)', () => {
+  // The exact headingless input from the top of this file (line 15 in the
+  // original layout): "Nx name" / "N x name" / bare-name lines, no "##"
+  // heading anywhere. This is also exactly the shape ImportDialog.jsx's own
+  // PLACEHOLDER advertises. A prior regression made parseDeckListDocument
+  // start in a mode that only collects card lines once inside 'cards' mode,
+  // which only triggers on a "##" heading — so a headingless paste like this
+  // produced zero lines. See the report for the deliberate pre-fix failure
+  // this test was used to prove.
+  it('collects a bare headingless paste as main-deck card lines (the critical regression)', () => {
+    const { notes, lines } = parseDeckListDocument('1x burat\n2 x angmarim\n  \n3x All the Bells Ringing\nglamour');
+    expect(lines).toEqual([
+      { raw: '1x burat', qty: 1, name: 'burat', target: 'quantities' },
+      { raw: '2 x angmarim', qty: 2, name: 'angmarim', target: 'quantities' },
+      { raw: '3x All the Bells Ringing', qty: 3, name: 'All the Bells Ringing', target: 'quantities' },
+      { raw: 'glamour', qty: 1, name: 'glamour', target: 'quantities' },
+    ]);
+    expect(notes).toEqual({ starting: '', resourceStrategy: '', hazardStrategy: '', other: '' });
+  });
+
+  it('resolves that same headingless paste to real cards via importDeckList (the actual ImportDialog path)', () => {
+    const { quantities, zones, unmatched } = importDeckList('1x burat\n2 x angmarim\n  \n3x All the Bells Ringing\nglamour', cards);
+    // "glamour" alone has no matching card in this fixture set — notfound, not imported.
+    expect(quantities).toEqual({ 'AS-1': 1, 'AS-58': 2, 'AS-44': 3 });
+    expect(zones).toEqual({ pool: {}, sideboard: {} });
+    expect(unmatched.map((l) => l.name)).toEqual(['glamour']);
+  });
+
+  it('matches a French name through the reachable path', () => {
+    const { quantities } = importDeckList('2x sonner le tocsin', cards, 'fr');
+    expect(quantities).toEqual({ 'AS-44': 2 });
+  });
+
+  it('flags ambiguous names (hero/minion) with all matches through the reachable path', () => {
+    const { lines } = parseDeckListDocument('2x angmarim');
+    const [line] = resolveDeckList(lines, buildNameIndex(cards));
+    expect(line.status).toBe('ambiguous');
+    expect(line.matches.map((c) => c.id).sort()).toEqual(['AS-58', 'AS-62']);
+  });
+
+  it('flags unknown names as notfound through the reachable path', () => {
+    const { unmatched } = importDeckList('1x nonexistent card', cards);
+    expect(unmatched).toHaveLength(1);
+    expect(unmatched[0].matches).toEqual([]);
+  });
+
+  it('treats hyphen and space as interchangeable through the reachable path', () => {
+    expect(importDeckList('1x star glass', cards).quantities).toEqual({ 'TW-1': 1 });
+    expect(importDeckList('1x star-glass', cards).quantities).toEqual({ 'TW-1': 1 });
+    expect(importDeckList('1x STARGLASS', cards).quantities).toEqual({ 'TW-1': 1 });
+  });
+
+  it('ignores apostrophes and punctuation through the reachable path', () => {
+    expect(importDeckList("1x thrors map", cards).quantities).toEqual({ 'DM-1': 1 });
+    expect(importDeckList("1x thror's map", cards).quantities).toEqual({ 'DM-1': 1 });
+  });
+
+  it('still supports a "# title" line before the headingless body, dropping only the title', () => {
+    const { lines } = parseDeckListDocument('# My Deck\n\n1x burat\n2x angmarim');
+    expect(lines).toEqual([
+      { raw: '1x burat', qty: 1, name: 'burat', target: 'quantities' },
+      { raw: '2x angmarim', qty: 2, name: 'angmarim', target: 'quantities' },
+    ]);
+  });
+
+  it('does not drop a note line that happens to start with "# " once a heading has been seen', () => {
+    // Minor fix: the deck-title skip must only apply *before* any heading is
+    // seen. A note body line starting with "# " (e.g. a user's own outline
+    // syntax) must survive once we're inside a real section.
+    const { notes } = parseDeckListDocument('# Deck Title\n\n## Notes\n\n### Other notes\n\n# 1 goal: ramp\nthen attack');
+    expect(notes.other).toBe('# 1 goal: ramp\nthen attack');
   });
 });

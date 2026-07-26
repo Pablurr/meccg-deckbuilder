@@ -130,7 +130,7 @@ export const translations = {
 
     // Import dialog
     'import.title': 'Importer une liste',
-    'import.help': 'Colle une liste au format {fmt}. Le nom doit être complet, mais la casse, les accents, les tirets/espaces et la ponctuation sont ignorés ({ex}). L’import remplace la sélection courante.',
+    'import.help': 'Colle une liste au format {fmt}, ou une liste complète exportée : les titres {sections} (facultatifs) dirigent les cartes vers la bonne zone, et tout ce qui suit « ## Notes » est conservé comme texte libre, jamais importé comme des cartes. Le nom doit être complet, mais la casse, les accents, les tirets/espaces et la ponctuation sont ignorés ({ex}). L’import remplace la sélection courante.',
     'import.analyze': 'Analyser',
     'import.alignPref': 'Préférence d’alignement (doublons) :',
     'import.alignPref.none': 'Aucune préférence',
@@ -340,7 +340,7 @@ export const translations = {
     'decks.moveDown': 'Move down',
 
     'import.title': 'Import a list',
-    'import.help': 'Paste a list in the {fmt} format. The name must be complete, but case, accents, hyphens/spaces and punctuation are ignored ({ex}). Importing replaces the current selection.',
+    'import.help': 'Paste a list in the {fmt} format, or a full exported list: optional {sections} headings route cards to the right zone, and everything after "## Notes" is kept as free text, never imported as cards. The name must be complete, but case, accents, hyphens/spaces and punctuation are ignored ({ex}). Importing replaces the current selection.',
     'import.analyze': 'Analyze',
     'import.alignPref': 'Alignment preference (duplicates):',
     'import.alignPref.none': 'No preference',
@@ -473,6 +473,10 @@ export const translations = {
     'zoneShort.deck': 'Mazo',
     'zoneShort.sideboard': 'SB',
     'zoneShort.pool': 'Res',
+
+    // Import dialog — only the help text is here so far (falls back to en
+    // for the rest of the import.* namespace until a later task completes it).
+    'import.help': 'Pega una lista en el formato {fmt}, o una lista exportada completa: los encabezados {sections} (opcionales) dirigen las cartas a la zona correcta, y todo lo que sigue a «## Notes» se conserva como texto libre, nunca se importa como cartas. El nombre debe estar completo, pero se ignoran mayúsculas, acentos, guiones/espacios y puntuación ({ex}). Importar reemplaza la selección actual.',
 
     // Deck panel zone tabs
     'zones.play': 'Mazo de juego',

@@ -67,4 +67,60 @@ describe('buildDeckListText', () => {
     expect(text).toContain('## Sideboard');
     expect(text).toContain('1x Alatar');
   });
+
+  // The only other whole-document assertion above ('groups by type...') has
+  // no notes and no zones, so it can't catch a wrong assumption shared by
+  // both sides of the export/import round trip (e.g. a dropped blank line,
+  // or a "###" group heading emitted without its "(n)" count — import
+  // ignores "###" entirely, so a round-trip test alone would never notice).
+  // Pin the exact emitted text for a deck with notes AND all four sections
+  // (Pool, Play deck, Locations, Sideboard).
+  it('emits the exact literal text for a deck with notes and all four sections', () => {
+    const notes = { starting: 'Start with the ring', resourceStrategy: '', hazardStrategy: 'Stall', other: '' };
+    const text = buildDeckListText(
+      cardsById,
+      { 'AS-1': 1, 'AS-7': 1, 'BA-9': 1 },
+      'Full Deck',
+      'en',
+      { zones: { pool: { 'AS-44': 2 }, sideboard: { 'AS-7': 1 } }, notes }
+    );
+    expect(text).toBe(
+      [
+        '# Full Deck',
+        '',
+        '## Notes',
+        '',
+        '### Starting notes',
+        '',
+        'Start with the ring',
+        '',
+        '### Hazard strategy',
+        '',
+        'Stall',
+        '',
+        '## Pool',
+        '',
+        '### Resources (2)',
+        '2x All the Bells Ringing',
+        '',
+        '## Play deck',
+        '',
+        '### Characters (1)',
+        '1x Bûrat',
+        '',
+        '### Hazards (1)',
+        '1x Alatar',
+        '',
+        '## Locations',
+        '',
+        '### Sites (1)',
+        '1x Bag End',
+        '',
+        '## Sideboard',
+        '',
+        '### Hazards (1)',
+        '1x Alatar',
+      ].join('\n') + '\n'
+    );
+  });
 });

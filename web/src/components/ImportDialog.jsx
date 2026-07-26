@@ -84,7 +84,7 @@ export default function ImportDialog({ cards, lang = 'fr', onClose, onImport }) 
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <h2>{t('import.title')}</h2>
         <p className="muted" style={{ marginTop: 0 }}>
-          {t('import.help', { fmt: 'Nx name', ex: 'star glass = Star-glass' })}
+          {t('import.help', { fmt: 'Nx name', ex: 'star glass = Star-glass', sections: '## Pool / ## Sideboard / ## Notes' })}
         </p>
 
         <textarea

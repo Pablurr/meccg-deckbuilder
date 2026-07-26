@@ -1,5 +1,7 @@
-// The single source of export order. PDF and text both consume this, so they
-// cannot disagree. Sections: Pool, Play deck, Locations, Sideboard.
+// The single source of export order, intended to be consumed by both the PDF
+// and text exporters so they cannot disagree (today only the text exporter
+// does; the PDF consumer is a follow-up task). Sections: Pool, Play deck,
+// Locations, Sideboard.
 import { cardName } from '../lang.js';
 import { backGroupForType } from '../deck.js';
 
@@ -40,7 +42,11 @@ function grouped(sectionId, entries, lang) {
     (g >= 0 ? groups[g] : misc).entries.push(e);
   }
   if (misc.entries.length) groups.push(misc);
-  for (const g of groups) g.entries.sort((a, b) => cardName(a.card, lang).localeCompare(cardName(b.card, lang)));
+  // Locale pinned to 'en' for the *collation rules only* (card names still
+  // render in `lang`) so sort order can't diverge between a browser's and
+  // Node's default locale — this module is billed as the order the PDF
+  // exporter will also use, so it must be reproducible across environments.
+  for (const g of groups) g.entries.sort((a, b) => cardName(a.card, lang).localeCompare(cardName(b.card, lang), 'en'));
   return groups.filter((g) => g.entries.length > 0);
 }
 
