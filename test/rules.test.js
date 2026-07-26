@@ -147,4 +147,53 @@ describe('banned lists', () => {
     expect(bySide['fallen-wizard'].size).toBeGreaterThan(0);
     expect(bySide.balrog.size).toBeGreaterThan(0);
   });
+
+  it('diacritic folding: decomposed accents match precomposed names, unaccented matches accented', () => {
+    // Verify that the fold() helper (driven through resolveBanned) correctly:
+    // 1. Decomposes NFD accents and strips combining diacritical marks
+    // 2. Matches decomposed vs. precomposed forms
+    // 3. Matches accented vs. unaccented forms
+    //
+    // "Orders From Lugbúrz" (with precomposed ú, U+00FA) is in BANNED.balrog.
+    // Create synthetic cards that differ only in diacritic representation:
+
+    const syntheticCards = [
+      // Decomposed form: u + combining acute accent (U+0301)
+      {
+        id: 'test-decomposed-accent',
+        name: {
+          en: 'Orders From Lugbu' + '\u0301' + 'rz'
+        }
+      },
+      // Unaccented form (plain u, no accent)
+      {
+        id: 'test-unaccented',
+        name: {
+          en: 'Orders From Lugburz'
+        }
+      },
+      // Completely different name (negative control — should not be banned)
+      {
+        id: 'test-different-name',
+        name: {
+          en: 'This Is Definitely Not A Banned Card'
+        }
+      }
+    ];
+
+    const allCards = [...cards, ...syntheticCards];
+    const { unresolved, bySide } = resolveBanned(allCards);
+
+    // All banned names (including synthetic) must resolve
+    expect(unresolved).toEqual([]);
+
+    // Both decomposed and unaccented variants of "Orders From Lugbúrz" should match
+    // and appear in the balrog banned set
+    expect(bySide.balrog.has('test-decomposed-accent')).toBe(true);
+    expect(bySide.balrog.has('test-unaccented')).toBe(true);
+
+    // The genuinely different name must not appear in any banned set (negative control)
+    expect(bySide.balrog.has('test-different-name')).toBe(false);
+    expect(bySide['fallen-wizard'].has('test-different-name')).toBe(false);
+  });
 });
