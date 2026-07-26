@@ -308,7 +308,6 @@ export default function App() {
       {showExport && (
         <ExportDialog
           deck={deck}
-          cardIds={cardIds}
           cardsById={cardsById}
           quantities={quantities}
           zones={zones}
