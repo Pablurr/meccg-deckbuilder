@@ -53,3 +53,17 @@ describe('rules.<ID>.doc coverage', () => {
     }
   });
 });
+
+describe('terminology guards', () => {
+  it('side-related strings never use the word "faction" for a side', () => {
+    const OFFENDING = /facci[óo]n/i;
+    const NAMESPACES = ['side.', 'setup.', 'zones.', 'rules.', 'docs.', 'notes.', 'status.', 'length.'];
+    for (const lang of ['fr', 'en', 'es']) {
+      for (const [key, value] of Object.entries(translations[lang])) {
+        if (NAMESPACES.some((ns) => key.startsWith(ns))) {
+          expect(`${lang}:${key}=${value}`).not.toMatch(OFFENDING);
+        }
+      }
+    }
+  });
+});
