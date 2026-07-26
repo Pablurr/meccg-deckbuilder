@@ -18,20 +18,18 @@ describe('makeT', () => {
     expect(makeT('en')('does.not.exist')).toBe('does.not.exist');
   });
 
-  it('falls back to English for keys missing from a partial dictionary', () => {
-    // es is intentionally partial at this stage (see i18n.js); Task 20
-    // completes it and adds it to the parity check below.
+  it('falls back to English for a key missing from every dictionary', () => {
+    // es is now fully translated (Task 20); the fallback path is still
+    // exercised via a key absent from all three dictionaries.
     expect(makeT('es')('proxy.label')).toBe('Proxy'); // present in es
-    expect(makeT('es')('drawer.export')).toBe('Export'); // missing in es -> en
+    expect(makeT('es')('does.not.exist')).toBe('does.not.exist'); // absent everywhere -> raw key
   });
 
-  // Scoped to fr/en for now: es is a deliberately partial groundwork
-  // dictionary (see i18n.js). Task 20 (trilingual phase) completes es and
-  // extends this check to all three languages.
-  it('keeps the fr and en dictionaries in sync', () => {
-    const frKeys = Object.keys(translations.fr).sort();
-    const enKeys = Object.keys(translations.en).sort();
-    expect(enKeys).toEqual(frKeys);
+  it('fr, en and es have identical key sets', () => {
+    const langs = ['fr', 'en', 'es'];
+    const keySets = langs.map((l) => Object.keys(translations[l]).sort());
+    expect(keySets[1]).toEqual(keySets[0]);
+    expect(keySets[2]).toEqual(keySets[0]);
   });
 });
 

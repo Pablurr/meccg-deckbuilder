@@ -59,9 +59,9 @@ export default function App() {
   }, []);
 
   const cardsById = useMemo(() => new Map(cards.map((c) => [c.id, c])), [cards]);
-  // uiLang is the card-name display language (fr/en/es). UI chrome is only
-  // translated fr/en, so Spanish falls back to English text.
-  const textLang = uiLang === 'es' ? 'en' : uiLang;
+  // uiLang is the card-name display language (fr/en/es) and, since the es
+  // dictionary is now complete (Task 20), also the UI chrome language.
+  const textLang = uiLang;
   const t = useMemo(() => makeT(textLang), [textLang]);
 
   // race/subtype/skills hold compound values; show only deduplicated base
