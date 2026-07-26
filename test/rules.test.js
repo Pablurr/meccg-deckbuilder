@@ -58,6 +58,79 @@ describe('sides data', () => {
     expect(isLegalForSide(gandalfTW, 'wizard')).toBe(true);
     expect(isLegalForSide(gandalfTW, 'balrog')).toBe(false);
   });
+
+  it('wizard side accepts its own avatar (Hero alignment)', () => {
+    const gandalfTW = index.get('TW-156') || cards.find((c) => c.attributes.avatar && c.alignment === 'Hero');
+    expect(gandalfTW).toBeTruthy();
+    expect(isLegalForSide(gandalfTW, 'wizard')).toBe(true);
+  });
+
+  it('ringwraith side accepts its own avatar (Minion alignment)', () => {
+    const adunaphelLE = index.get('LE-50') || cards.find((c) => c.attributes.avatar && c.alignment === 'Minion');
+    expect(adunaphelLE).toBeTruthy();
+    expect(isLegalForSide(adunaphelLE, 'ringwraith')).toBe(true);
+  });
+
+  it('fallen-wizard side accepts its own avatar (Fallen-wizard alignment)', () => {
+    const alataWH = index.get('WH-1') || cards.find((c) => c.attributes.avatar && c.alignment === 'Fallen-wizard');
+    expect(alataWH).toBeTruthy();
+    expect(isLegalForSide(alataWH, 'fallen-wizard')).toBe(true);
+  });
+
+  it('balrog side accepts its own avatar (Balrog alignment)', () => {
+    const balrogBA = index.get('BA-3') || cards.find((c) => c.attributes.avatar && c.alignment === 'Balrog');
+    expect(balrogBA).toBeTruthy();
+    expect(isLegalForSide(balrogBA, 'balrog')).toBe(true);
+  });
+
+  it('wizard rejects ringwraith avatar', () => {
+    const adunaphelLE = index.get('LE-50') || cards.find((c) => c.attributes.avatar && c.alignment === 'Minion');
+    expect(adunaphelLE).toBeTruthy();
+    expect(isLegalForSide(adunaphelLE, 'wizard')).toBe(false);
+  });
+
+  it('ringwraith rejects wizard avatar', () => {
+    const gandalfTW = index.get('TW-156') || cards.find((c) => c.attributes.avatar && c.alignment === 'Hero');
+    expect(gandalfTW).toBeTruthy();
+    expect(isLegalForSide(gandalfTW, 'ringwraith')).toBe(false);
+  });
+
+  it('balrog rejects wizard avatar', () => {
+    const gandalfTW = index.get('TW-156') || cards.find((c) => c.attributes.avatar && c.alignment === 'Hero');
+    expect(gandalfTW).toBeTruthy();
+    expect(isLegalForSide(gandalfTW, 'balrog')).toBe(false);
+  });
+
+  it('fallen-wizard rejects balrog avatar', () => {
+    const balrogBA = index.get('BA-3') || cards.find((c) => c.attributes.avatar && c.alignment === 'Balrog');
+    expect(balrogBA).toBeTruthy();
+    expect(isLegalForSide(balrogBA, 'fallen-wizard')).toBe(false);
+  });
+
+  it('balrog side: Minion alignment card is legal (alignment membership)', () => {
+    const minionCard = cards.find((c) => c.alignment === 'Minion' && !c.attributes?.avatar);
+    expect(minionCard).toBeTruthy();
+    expect(isLegalForSide(minionCard, 'balrog')).toBe(true);
+  });
+
+  it('balrog side: Balrog alignment card is legal (alignment membership)', () => {
+    const balrogAlignCard = cards.find((c) => c.alignment === 'Balrog' && !c.attributes?.avatar);
+    expect(balrogAlignCard).toBeTruthy();
+    expect(isLegalForSide(balrogAlignCard, 'balrog')).toBe(true);
+  });
+
+  it('balrog side: Hero alignment card is illegal', () => {
+    const heroCard = cards.find((c) => c.alignment === 'Hero' && !c.attributes?.avatar);
+    expect(heroCard).toBeTruthy();
+    expect(isLegalForSide(heroCard, 'balrog')).toBe(false);
+  });
+
+  it('balrog side: specific:"Balrog" card is legal regardless of alignment', () => {
+    const specificBalrog = cards.find((c) => c.attributes?.specific === 'Balrog');
+    expect(specificBalrog).toBeTruthy();
+    expect(isLegalForSide(specificBalrog, 'balrog')).toBe(true);
+  });
+
   it('sideboard caps follow the length', () => {
     expect(LENGTHS.starter.sideboardMax).toBe(30);
     expect(LENGTHS.standard.sideboardMax).toBe(30);
