@@ -4,6 +4,7 @@ import { useCardPreview, CardPreview } from './CardPreview.jsx';
 import { useT } from '../i18n.jsx';
 import MiniCard from './MiniCard.jsx';
 import ZoneTabs from './ZoneTabs.jsx';
+import DeckNotes from './DeckNotes.jsx';
 import { isDropAllowed, resolveDropTarget } from '../lib/rules/dropTargets.js';
 import { LENGTHS } from '../lib/rules/formats.js';
 import { SIDES } from '../lib/rules/sides.js';
@@ -65,8 +66,6 @@ function reportUrl(w) {
   return `${REPORT_ISSUES_URL}?title=${title}&body=${body}`;
 }
 
-const NOTE_FIELDS = ['starting', 'resourceStrategy', 'hazardStrategy', 'other'];
-
 const MIN_WIDTH = 280;
 const DEFAULT_WIDTH = 360;
 // Fraction of the viewport the panel may cover at most (and the "maximize" size).
@@ -117,6 +116,7 @@ export default function DeckPanel({
   onZoom,
   onChangeQty,
   onToggle,
+  onChangeNote,
   asSheet = false,
   onClose,
   isMobile = false,
@@ -315,14 +315,7 @@ export default function DeckPanel({
 
       <div className="deckpanel-body">
         {tab === 'notes' ? (
-          <div className="deck-notes-placeholder">
-            {NOTE_FIELDS.map((field) => (
-              <label key={field} className="deck-notes-field">
-                {t(`notes.${field}`)}
-                <textarea disabled value={(deck && deck.notes && deck.notes[field]) || ''} readOnly />
-              </label>
-            ))}
-          </div>
+          <DeckNotes notes={(deck && deck.notes) || {}} onChange={onChangeNote} />
         ) : (
           groups.map((g) => {
             const n = g.items.reduce((a, b) => a + b.qty, 0);

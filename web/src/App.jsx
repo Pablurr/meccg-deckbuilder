@@ -185,6 +185,14 @@ export default function App() {
       : prev));
   }
 
+  // Notes tab: one of the four free-text fields changed. Deck is small
+  // (four short strings), so a plain functional setState per keystroke is
+  // cheap — no debounce needed, since nothing writes to storage until the
+  // user explicitly saves via DeckManager.
+  function changeNote(field, value) {
+    setDeck((prev) => ({ ...prev, notes: { ...prev.notes, [field]: value } }));
+  }
+
   if (error) return <div style={{ padding: 24 }}>{t('app.loadError', { error })}</div>;
   if (!facets) return <div style={{ padding: 24 }}>{t('app.loading')}</div>;
 
@@ -220,6 +228,7 @@ export default function App() {
             onZoom={setCardZoom}
             onChangeQty={changeQty}
             onToggle={toggleCard}
+            onChangeNote={changeNote}
             proxyMode={proxyMode}
           />
         )}
@@ -244,6 +253,7 @@ export default function App() {
           onZoom={setCardZoom}
           onChangeQty={changeQty}
           onToggle={toggleCard}
+          onChangeNote={changeNote}
           onPreview={setPreviewCard}
           onClose={() => setDeckSheetOpen(false)}
           proxyMode={proxyMode}
