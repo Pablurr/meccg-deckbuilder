@@ -62,6 +62,10 @@ export const translations = {
     'browser.selectAll': 'Tout sélectionner ({n})',
     'browser.addCopy': 'Ajouter une copie',
     'browser.removeCopy': 'Retirer une copie',
+    'browser.showAll': 'Afficher les cartes illégales',
+    'zoneShort.deck': 'Deck',
+    'zoneShort.sideboard': 'Rés',
+    'zoneShort.pool': 'Pool',
 
     // Deck drawer
     'drawer.total': 'Total',
@@ -221,6 +225,10 @@ export const translations = {
     'browser.selectAll': 'Select all ({n})',
     'browser.addCopy': 'Add a copy',
     'browser.removeCopy': 'Remove a copy',
+    'browser.showAll': 'Show illegal cards',
+    'zoneShort.deck': 'Deck',
+    'zoneShort.sideboard': 'SB',
+    'zoneShort.pool': 'Pool',
 
     'drawer.total': 'Total',
     'drawer.playdeck': 'Play deck',
@@ -357,6 +365,12 @@ export const translations = {
     // Proxy mode
     'proxy.label': 'Proxy',
     'proxy.tooltip': 'Modo Proxy: cubre el copyright con «Proxy» (requerido por MPC)',
+
+    // Card browser
+    'browser.showAll': 'Mostrar cartas ilegales',
+    'zoneShort.deck': 'Mazo',
+    'zoneShort.sideboard': 'SB',
+    'zoneShort.pool': 'Res',
 
     // Deck panel zone tabs
     'zones.play': 'Mazo de juego',

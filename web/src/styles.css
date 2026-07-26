@@ -140,6 +140,16 @@ body {
   justify-content: space-between;
   gap: 12px;
 }
+.browser-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.legality-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+}
 .btn.small { padding: 5px 10px; font-size: 13px; }
 
 /* Compact language selector: small text links, not a chunky toggle. */
@@ -177,6 +187,18 @@ body {
 .cardcell img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .cardcell.selected { border-color: var(--accent); }
 .cardcell img { cursor: pointer; }
+/* Legality filter, "show illegal cards" mode: still fully addable, just
+   visibly marked — the app advises, it never blocks. */
+.cardcell.illegal img { filter: grayscale(.6); }
+.cardcell.illegal::after {
+  content: '⚠';
+  position: absolute;
+  top: 4px; right: 4px;
+  z-index: 5;
+  font-size: 14px;
+  line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.8));
+}
 /* Proxy-mode overlay: cloned band strip + "Proxy" over the copyright zone.
    Positioned in % of the card box; background-size/position are set inline
    (self-clone stretch, see ProxyStamp). The label scales with the box via cqh. */
@@ -250,6 +272,46 @@ body {
   line-height: 1;
   color: var(--accent);
 }
+
+/* Deckbuilding mode: primary-zone counter always visible, in the same spot
+   as the freeform .qty-ctrl; a compact expander bar below it reveals the
+   remaining zones on click, per card cell (never shared across the grid). */
+.zone-ctrls {
+  position: absolute;
+  top: 20%; right: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  z-index: 3;
+}
+.qty-ctrl.zoned {
+  position: static;
+  height: auto;
+  padding: 2px 4px 3px;
+}
+.qty-ctrl.zoned .zlbl {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--accent);
+  line-height: 1.4;
+}
+.qty-ctrl.zoned.muted { background: rgba(0,0,0,.55); }
+.qty-ctrl.zoned.muted .zlbl { color: var(--muted); }
+.zone-expander {
+  background: rgba(0,0,0,.7);
+  border: none;
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.3;
+  padding: 3px 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.zone-expander:hover { color: var(--text); }
 
 /* ---- Deck drawer ---- */
 .drawer {
