@@ -55,9 +55,26 @@ describe('rules.<ID>.doc coverage', () => {
 });
 
 describe('terminology guards', () => {
+  // In MECCG "Faction" is a card category (Orc, Troll, Dragon, Wolf, Animal)
+  // AND a marshalling-point category, so it must never denote a player's camp —
+  // those are "sides" (camp / side / bando). Scoped to the namespaces this
+  // feature introduced: the word is legitimate elsewhere, in its card meaning.
+  // en/fr "faction" is spelled -cti-, es "facción" -cci-: a pattern for one
+  // silently misses the other, so both stems are listed explicitly.
+  const OFFENDING = /\b(factions?|facci[oó]n(?:es)?)\b/i;
+  const NAMESPACES = ['side.', 'setup.', 'zones.', 'rules.', 'docs.', 'notes.', 'status.', 'length.'];
+
+  it('the guard pattern actually catches every spelling it must', () => {
+    for (const bad of ['faction', 'Faction', 'FACTION', 'factions', 'facción', 'faccion', 'facciones']) {
+      expect(bad).toMatch(OFFENDING);
+    }
+    // and does not fire on unrelated words that merely start alike
+    for (const ok of ['factory', 'satisfaction', 'factual']) {
+      expect(ok).not.toMatch(OFFENDING);
+    }
+  });
+
   it('side-related strings never use the word "faction" for a side', () => {
-    const OFFENDING = /facci[óo]n/i;
-    const NAMESPACES = ['side.', 'setup.', 'zones.', 'rules.', 'docs.', 'notes.', 'status.', 'length.'];
     for (const lang of ['fr', 'en', 'es']) {
       for (const [key, value] of Object.entries(translations[lang])) {
         if (NAMESPACES.some((ns) => key.startsWith(ns))) {
