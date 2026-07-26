@@ -1566,7 +1566,7 @@ const orderedCards = orderedEntries.flatMap((e) => Array(e.count).fill(e.card));
 
 Use `orderedCards` for **PDF** (`buildSheetPdf({ cards: orderedCards, ... })` — no page-break logic; sections flow, backs are per-card already) and for **ZIP** (same expansion — naming and back logic untouched). Text export passes `{ zones, notes }`.
 
-- [ ] **Step 2: Verify** — manual: export a deck with pool + sideboard: PDF pages run Pool → Play → Locations → Sideboard with correct per-card backs on duplex pages; zip contains sideboard/pool card images; text shows notes first. A freeform deck (empty zones) exports identically to before.
+- [ ] **Step 2: Verify** — manual: export a deck with pool + sideboard: PDF pages run Pool → Play → Locations → Sideboard with correct per-card backs on duplex pages; zip contains sideboard/pool card images; text shows notes first. A freeform deck (empty zones) exports the same *content* as before, but now in canonical order rather than insertion order — **owner decision, 2026-07-26**: one export order for both modes, since grouping by type then alphabetically is easier to work with on a cut sheet than the order cards happened to be added.
 - [ ] **Step 3: Commit** `feat: exports follow the canonical section order incl. zones`.
 
 **Phase 6 checkpoint:** `npm test` green; exports ordered and round-trippable.

@@ -1,7 +1,7 @@
-// The single source of export order, intended to be consumed by both the PDF
-// and text exporters so they cannot disagree (today only the text exporter
-// does; the PDF consumer is a follow-up task). Sections: Pool, Play deck,
-// Locations, Sideboard.
+// The single source of export order: the PDF, the ZIP and the text list all
+// consume it, so they cannot disagree. Applies in both deck modes — a freeform
+// deck exports in this order too (owner decision, 2026-07-26), so there is only
+// one export order to explain. Sections: Pool, Play deck, Locations, Sideboard.
 import { cardName } from '../lang.js';
 import { backGroupForType } from '../deck.js';
 
