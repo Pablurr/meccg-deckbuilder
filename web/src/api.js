@@ -28,6 +28,7 @@ export const listDecks = () => store.list();
 export const getDeck = (id) => store.get(id);
 export const createDeck = (body) => store.create(body || {});
 export const updateDeck = (id, body) => store.update(id, body || {});
+export const reorderDecks = (orderedIds) => store.reorder(orderedIds);
 export const deleteDeck = async (id) => {
   await store.remove(id);
   return { ok: true };

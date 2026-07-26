@@ -68,6 +68,22 @@ export function createDeckStore(storage = globalThis.localStorage) {
       return deck;
     },
 
+    // Batch reorder: one read, apply every `order` patch in memory, one
+    // `writeAll` — unlike calling update() once per row, a storage-full
+    // failure here leaves the stored order completely unchanged instead of
+    // half-applied (see DeckManager's persistOrder). `orderedIds` is the
+    // desired sequence; each id gets order = its 1-based index in that array.
+    // Ids that no longer exist (deleted in another tab) are ignored rather
+    // than throwing.
+    async reorder(orderedIds) {
+      const all = readAll();
+      const now = new Date().toISOString();
+      orderedIds.forEach((id, i) => {
+        if (all[id]) all[id] = { ...all[id], order: i + 1, updatedAt: now };
+      });
+      writeAll(all);
+    },
+
     async remove(id) {
       const all = readAll();
       delete all[id];

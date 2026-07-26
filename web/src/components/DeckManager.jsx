@@ -44,16 +44,15 @@ export default function DeckManager({ deck, cardIds, quantities, zones, onClose,
   // Persists a manual order across the whole list in one pass: every row gets
   // an explicit `order` (1-based index), so decks created before the field
   // (order === null) get a stable position too, instead of drifting with
-  // updatedAt. Each `updateDeck` call is independent (its own read-modify-write
-  // of the whole store), so this is NOT atomic — if one write fails partway
-  // (e.g. storage-full), earlier rows in the pass may already be persisted
-  // with their new order while later ones keep the old one. We refresh from
-  // storage on failure so the UI reflects whatever actually landed rather
-  // than the optimistic (possibly wrong) in-memory order.
+  // updatedAt. api.reorderDecks does one read-modify-write of the whole
+  // store, so this is atomic — a storage-full failure leaves the stored
+  // order completely unchanged rather than half-applied. We still refresh
+  // from storage on failure so the UI reflects what's actually on disk
+  // rather than the optimistic (rolled-back) in-memory order.
   async function persistOrder(nextDecks) {
     setDecks(nextDecks);
     try {
-      await Promise.all(nextDecks.map((r, i) => api.updateDeck(r.id, { order: i + 1 })));
+      await api.reorderDecks(nextDecks.map((r) => r.id));
       await refresh();
     } catch (e) {
       setError(e.message === 'storage-full' ? t('decks.storageFull') : t('common.error', { msg: e.message }));

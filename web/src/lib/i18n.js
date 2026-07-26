@@ -488,6 +488,12 @@ export const translations = {
     'notes.hazardStrategy': 'Estrategia de peligros',
     'notes.other': 'Otras notas',
 
+    // Deck manager — only the reorder-button labels introduced alongside this
+    // task are here; the rest of the decks.* namespace is a pending backlog
+    // (falls back to en until a later task completes it).
+    'decks.moveUp': 'Subir',
+    'decks.moveDown': 'Bajar',
+
     // Rule warnings (deckbuilding mode — DeckPanel, validateDeck)
     'rules.AVATAR-PRESENT': 'Todavía no hay avatar — añade tu avatar {side} al mazo.',
     'rules.AVATAR-UNIQUE': '{count} cartas de avatar ({names}) — un mazo juega exactamente un avatar. Retira las sobrantes.',
