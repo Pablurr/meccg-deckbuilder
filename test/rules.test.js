@@ -4,6 +4,7 @@ import { parseCards } from '../web/src/lib/parseCards.js';
 import { zonesFor } from '../web/src/lib/rules/zones.js';
 import { SIDES, isLegalForSide } from '../web/src/lib/rules/sides.js';
 import { LENGTHS } from '../web/src/lib/rules/formats.js';
+import { BANNED, resolveBanned } from '../web/src/lib/rules/banned.js';
 
 const { cards, index } = parseCards(raw);
 
@@ -136,5 +137,14 @@ describe('sides data', () => {
     expect(LENGTHS.standard.sideboardMax).toBe(30);
     expect(LENGTHS.long.sideboardMax).toBe(35);
     expect(LENGTHS.campaign.sideboardMax).toBe(40);
+  });
+});
+
+describe('banned lists', () => {
+  it('every banned name resolves to at least one real card', () => {
+    const { unresolved, bySide } = resolveBanned(cards);
+    expect(unresolved).toEqual([]); // a typo must fail loudly, with the name in the diff
+    expect(bySide['fallen-wizard'].size).toBeGreaterThan(0);
+    expect(bySide.balrog.size).toBeGreaterThan(0);
   });
 });
