@@ -219,6 +219,80 @@ export const translations = {
     'rules.severity.error': 'Erreur',
     'rules.severity.warning': 'Avertissement',
     'rules.severity.info': 'Info',
+
+    // Rules documentation page (RulesDoc.jsx) — prose is hand-written;
+    // the tables below it are generated from the rules/sides/formats/banned
+    // data modules so the page can never drift from the validator.
+    'docs.title': 'Règles et modes',
+    'docs.intro': 'Cette page explique les deux modes de deck, la façon dont un deck est vérifié, et te permet de décider, deck par deck, quelles règles sont strictement appliquées.',
+    'docs.freeform': "L'impression libre n'a aucune règle : joue n'importe quelle carte, en n'importe quel nombre, sans avertissement ni case à cocher à régler.",
+    'docs.deckbuilding': 'La construction de deck choisit un camp, une longueur de partie et une sévérité tournoi/casual, puis vérifie ton deck en direct par rapport aux règles ci-dessous pendant que tu le construis.',
+    'docs.zonesTitle': 'Zones du deck',
+    'docs.zones': "Un deck a quatre zones : le talon (Personnage/Ressource/Péril), le deck de sites (Site/Région), une réserve optionnelle, et — pour les camps qui en utilisent un — un pool de départ de personnages et d'objets mineurs mis de côté avant la partie.",
+    'docs.warningsTitle': 'Lire un avertissement',
+    'docs.warnings': "Chaque avertissement nomme la carte et la règle en cause, en sévérité erreur ou avertissement (adoucie en info pour un deck casual, hors tournoi). Corrige la carte, ou laisse-la — rien n'est jamais bloqué.",
+    'docs.enforcementTitle': 'Ce que font les cases à cocher',
+    'docs.enforcement': "Chaque règle ci-dessous a une case à cocher : cochée, elle est appliquée par le deck courant. Les règles non vérifiées démarrent décochées tant que leur source officielle n'est pas confirmée. Rien ne bloque jamais l'ajout d'une carte.",
+
+    'docs.rulesTitle': 'Règles',
+    'docs.col.enforce': 'Appliquée',
+    'docs.col.id': 'ID',
+    'docs.col.summary': 'Ce qui est vérifié',
+    'docs.col.severity': 'Sévérité',
+    'docs.col.status': 'Statut',
+    'docs.col.source': 'Source',
+    'docs.sourceLink': 'Source',
+    'status.verified': 'Vérifiée',
+    'status.unverified': 'Non vérifiée',
+    'status.disputed': 'Contestée',
+
+    'docs.notCheckedTitle': 'Pas encore vérifiées',
+    'docs.notCheckedIntro': "Ces règles proviennent d'une base de connaissances non officielle et sont livrées désactivées tant qu'elles ne sont pas confirmées par les règles officielles — elles n'émettent aucun avertissement et leur case démarre décochée.",
+
+    'docs.sidesTitle': 'Camps',
+    'docs.col.side': 'Camp',
+    'docs.col.alignments': 'Alignements légaux',
+    'docs.col.copies': "Limite d'exemplaires",
+    'docs.col.playDeck': 'Taille du talon',
+    'docs.col.pool': 'Pool de départ',
+    'docs.copies.default': '{n} par carte',
+    'docs.copies.override': '{n} pour {alignment}',
+    'docs.pool.maxCharacters': '{n} personnages max',
+    'docs.pool.maxMinorItems': '{n} objets mineurs max',
+    'docs.pool.mindCap': 'esprit total ≤ {n}',
+    'docs.pool.mindPerCharacter': 'esprit par personnage < {n}',
+    'docs.pool.forbidRaces': 'races exclues : {races}',
+    'docs.pool.requireRaces': 'races requises : {races}',
+    'docs.playDeck.range': '{min}–{max} cartes',
+
+    'docs.lengthsTitle': 'Longueurs de partie',
+    'docs.col.length': 'Longueur',
+    'docs.col.sideboardMax': 'Plafond de réserve',
+
+    'docs.bannedTitle': 'Listes de cartes bannies',
+
+    'race.Agent': 'Agent',
+
+    // Short factual doc string per rule (RulesDoc table) — distinct from the
+    // warning message above, which is written for a specific violation.
+    'rules.AVATAR-PRESENT.doc': 'Le deck doit inclure un avatar.',
+    'rules.AVATAR-UNIQUE.doc': 'Un seul avatar au total, en comptant tous les exemplaires.',
+    'rules.AVATAR-SIDE.doc': "L'alignement de l'avatar doit correspondre à celui du camp.",
+    'rules.ALIGN-LEGAL.doc': "L'alignement de chaque carte non-avatar doit être légal pour le camp.",
+    'rules.BANNED.doc': 'La carte ne doit pas figurer sur la liste des cartes bannies de ce camp.',
+    'rules.COPIES-LIMIT.doc': "Limite d'exemplaires par camp (3, ou 2 pour Sorcier déchu, 3 pour Mise en scène)",
+    'rules.UNIQUE-LIMIT.doc': 'Les cartes uniques sont limitées à 1 exemplaire.',
+    'rules.SITE-COPIES.doc': 'Les sites sont limités à 1 exemplaire, sauf les havres propres au camp.',
+    'rules.SPECIFIC-AVATAR.doc': "Les cartes spécifiques à un sorcier doivent correspondre à l'avatar réel du deck.",
+    'rules.BALROG-RACE.doc': "Les personnages Balrog doivent être Orque ou Troll, sauf s'ils sont spécifiques au Balrog.",
+    'rules.BALROG-MIND.doc': "Les personnages Balrog doivent avoir un esprit inférieur à la limite par personnage du camp, sauf s'ils sont spécifiques au Balrog.",
+    'rules.DECKSIZE-PLAY.doc': 'La taille du talon doit rester dans la plage min–max du camp.',
+    'rules.DECKSIZE-LOCATION.doc': 'Le deck de sites ne devrait pas être vide.',
+    'rules.SIDEBOARD-MAX.doc': 'La taille de la réserve est plafonnée selon la longueur de partie.',
+    'rules.POOL-CHARS.doc': 'Le nombre de personnages du pool de départ est plafonné par camp.',
+    'rules.POOL-MIND.doc': "L'esprit du pool de départ est plafonné par personnage et/ou au total, selon le camp.",
+    'rules.POOL-ITEMS.doc': 'Les objets mineurs du pool de départ sont plafonnés par camp.',
+    'rules.POOL-ELIGIBLE.doc': 'Seuls les personnages éligibles et les objets mineurs de départ peuvent être dans le pool de départ ; certaines races sont exclues selon le camp.',
   },
 
   en: {
@@ -428,6 +502,80 @@ export const translations = {
     'rules.severity.error': 'Error',
     'rules.severity.warning': 'Warning',
     'rules.severity.info': 'Info',
+
+    // Rules documentation page (RulesDoc.jsx) — prose is hand-written;
+    // the tables below it are generated from the rules/sides/formats/banned
+    // data modules so the page can never drift from the validator.
+    'docs.title': 'Rules & modes',
+    'docs.intro': 'This page explains the two deck modes, how a deck is checked, and lets you decide — per deck — which rules are strictly enforced.',
+    'docs.freeform': 'Freeform printing has no rules at all: play any card, any number of copies, with no warnings and no checkboxes to configure.',
+    'docs.deckbuilding': "Deckbuilding picks a side, a game length and a tournament/casual severity, then checks your deck live against the rules below as you build it.",
+    'docs.zonesTitle': 'Deck zones',
+    'docs.zones': "A deck has four zones: the play deck (Character/Resource/Hazard), the location deck (Site/Region), an optional sideboard, and — for sides that use one — a starting pool of characters and minor items set aside before play.",
+    'docs.warningsTitle': 'Reading a warning',
+    'docs.warnings': "Each warning names the card and the rule it's tripping, at error or warning severity (softened to info for a casual, non-tournament deck). Fix the card, or leave it — nothing is ever blocked.",
+    'docs.enforcementTitle': 'What the checkboxes do',
+    'docs.enforcement': 'Each rule below has a checkbox: checked means the current deck enforces it. Unverified rules start unchecked until their official source is confirmed. Nothing ever blocks adding a card.',
+
+    'docs.rulesTitle': 'Rules',
+    'docs.col.enforce': 'Enforced',
+    'docs.col.id': 'ID',
+    'docs.col.summary': 'What it checks',
+    'docs.col.severity': 'Severity',
+    'docs.col.status': 'Status',
+    'docs.col.source': 'Source',
+    'docs.sourceLink': 'Source',
+    'status.verified': 'Verified',
+    'status.unverified': 'Unverified',
+    'status.disputed': 'Disputed',
+
+    'docs.notCheckedTitle': 'Not checked yet',
+    'docs.notCheckedIntro': 'These rules are seeded from an unofficial knowledge base and ship disabled until sourced against the official rules — they emit no warning and their checkbox starts unchecked.',
+
+    'docs.sidesTitle': 'Sides',
+    'docs.col.side': 'Side',
+    'docs.col.alignments': 'Legal alignments',
+    'docs.col.copies': 'Copy limit',
+    'docs.col.playDeck': 'Play deck size',
+    'docs.col.pool': 'Starting pool',
+    'docs.copies.default': '{n} per card',
+    'docs.copies.override': '{n} for {alignment}',
+    'docs.pool.maxCharacters': '{n} characters max',
+    'docs.pool.maxMinorItems': '{n} minor items max',
+    'docs.pool.mindCap': 'total mind ≤ {n}',
+    'docs.pool.mindPerCharacter': 'mind per character < {n}',
+    'docs.pool.forbidRaces': 'excluded races: {races}',
+    'docs.pool.requireRaces': 'required races: {races}',
+    'docs.playDeck.range': '{min}–{max} cards',
+
+    'docs.lengthsTitle': 'Game lengths',
+    'docs.col.length': 'Length',
+    'docs.col.sideboardMax': 'Sideboard cap',
+
+    'docs.bannedTitle': 'Banned lists',
+
+    'race.Agent': 'Agent',
+
+    // Short factual doc string per rule (RulesDoc table) — distinct from the
+    // warning message above, which is written for a specific violation.
+    'rules.AVATAR-PRESENT.doc': 'Deck must include an avatar.',
+    'rules.AVATAR-UNIQUE.doc': 'Only one avatar total, counting all copies.',
+    'rules.AVATAR-SIDE.doc': "The avatar's alignment must match the side's avatar alignment.",
+    'rules.ALIGN-LEGAL.doc': "Every non-avatar card's alignment must be legal for the side.",
+    'rules.BANNED.doc': "The card must not be on this side's banned list.",
+    'rules.COPIES-LIMIT.doc': 'Copy limits per side (3, or 2 for Fallen-wizard, 3 for Stage)',
+    'rules.UNIQUE-LIMIT.doc': 'Unique cards are limited to 1 copy.',
+    'rules.SITE-COPIES.doc': "Sites are limited to 1 copy, except a side's own havens.",
+    'rules.SPECIFIC-AVATAR.doc': "Wizard-specific cards must match the deck's actual avatar.",
+    'rules.BALROG-RACE.doc': 'Balrog characters must be Orc or Troll, unless Balrog-specific.',
+    'rules.BALROG-MIND.doc': "Balrog characters must have mind below the side's per-character limit, unless Balrog-specific.",
+    'rules.DECKSIZE-PLAY.doc': "Play deck size must fall within the side's min–max range.",
+    'rules.DECKSIZE-LOCATION.doc': 'Location deck should not be empty.',
+    'rules.SIDEBOARD-MAX.doc': 'Sideboard size is capped by the game length.',
+    'rules.POOL-CHARS.doc': 'Starting pool character count is capped per side.',
+    'rules.POOL-MIND.doc': 'Starting pool mind is capped per character and/or in total, per side.',
+    'rules.POOL-ITEMS.doc': 'Starting pool minor items are capped per side.',
+    'rules.POOL-ELIGIBLE.doc': 'Only pool-eligible characters and starting minor items may sit in the starting pool; some races are excluded per side.',
   },
 
   // Groundwork only — partial by design. Missing keys resolve through the
@@ -545,6 +693,80 @@ export const translations = {
     'rules.severity.error': 'Error',
     'rules.severity.warning': 'Aviso',
     'rules.severity.info': 'Info',
+
+    // Rules documentation page (RulesDoc.jsx) — prose is hand-written;
+    // the tables below it are generated from the rules/sides/formats/banned
+    // data modules so the page can never drift from the validator.
+    'docs.title': 'Reglas y modos',
+    'docs.intro': 'Esta página explica los dos modos de mazo, cómo se comprueba un mazo, y te permite decidir, mazo por mazo, qué reglas se aplican estrictamente.',
+    'docs.freeform': 'La impresión libre no tiene ninguna regla: juega cualquier carta, en cualquier cantidad, sin avisos ni casillas que configurar.',
+    'docs.deckbuilding': 'La construcción de mazo elige un bando, una duración de partida y una severidad torneo/casual, y luego comprueba tu mazo en vivo frente a las reglas de abajo mientras lo construyes.',
+    'docs.zonesTitle': 'Zonas del mazo',
+    'docs.zones': 'Un mazo tiene cuatro zonas: el mazo de juego (Personaje/Recurso/Peligro), el mazo de localizaciones (Sitio/Región), un sideboard opcional y — para los bandos que lo usan — una reserva inicial de personajes y objetos menores apartados antes de jugar.',
+    'docs.warningsTitle': 'Cómo leer un aviso',
+    'docs.warnings': 'Cada aviso nombra la carta y la regla que incumple, con severidad error o aviso (suavizada a info para un mazo casual, fuera de torneo). Corrige la carta, o déjala — nunca se bloquea nada.',
+    'docs.enforcementTitle': 'Qué hacen las casillas',
+    'docs.enforcement': 'Cada regla de abajo tiene una casilla: marcada significa que el mazo actual la aplica. Las reglas no verificadas empiezan sin marcar hasta que se confirme su fuente oficial. Nunca se bloquea añadir una carta.',
+
+    'docs.rulesTitle': 'Reglas',
+    'docs.col.enforce': 'Aplicada',
+    'docs.col.id': 'ID',
+    'docs.col.summary': 'Qué comprueba',
+    'docs.col.severity': 'Severidad',
+    'docs.col.status': 'Estado',
+    'docs.col.source': 'Fuente',
+    'docs.sourceLink': 'Fuente',
+    'status.verified': 'Verificada',
+    'status.unverified': 'No verificada',
+    'status.disputed': 'Disputada',
+
+    'docs.notCheckedTitle': 'Aún no comprobadas',
+    'docs.notCheckedIntro': 'Estas reglas provienen de una base de conocimiento no oficial y se entregan desactivadas hasta confirmarse contra las reglas oficiales — no emiten ningún aviso y su casilla empieza sin marcar.',
+
+    'docs.sidesTitle': 'Bandos',
+    'docs.col.side': 'Bando',
+    'docs.col.alignments': 'Alineaciones legales',
+    'docs.col.copies': 'Límite de copias',
+    'docs.col.playDeck': 'Tamaño del mazo de juego',
+    'docs.col.pool': 'Reserva inicial',
+    'docs.copies.default': '{n} por carta',
+    'docs.copies.override': '{n} para {alignment}',
+    'docs.pool.maxCharacters': '{n} personajes máx.',
+    'docs.pool.maxMinorItems': '{n} objetos menores máx.',
+    'docs.pool.mindCap': 'mente total ≤ {n}',
+    'docs.pool.mindPerCharacter': 'mente por personaje < {n}',
+    'docs.pool.forbidRaces': 'razas excluidas: {races}',
+    'docs.pool.requireRaces': 'razas requeridas: {races}',
+    'docs.playDeck.range': '{min}–{max} cartas',
+
+    'docs.lengthsTitle': 'Duraciones de partida',
+    'docs.col.length': 'Duración',
+    'docs.col.sideboardMax': 'Límite de sideboard',
+
+    'docs.bannedTitle': 'Listas de prohibidas',
+
+    'race.Agent': 'Agente',
+
+    // Short factual doc string per rule (RulesDoc table) — distinct from the
+    // warning message above, which is written for a specific violation.
+    'rules.AVATAR-PRESENT.doc': 'El mazo debe incluir un avatar.',
+    'rules.AVATAR-UNIQUE.doc': 'Solo un avatar en total, contando todas las copias.',
+    'rules.AVATAR-SIDE.doc': 'La alineación del avatar debe coincidir con la del bando.',
+    'rules.ALIGN-LEGAL.doc': 'La alineación de cada carta que no sea avatar debe ser legal para el bando.',
+    'rules.BANNED.doc': 'La carta no debe estar en la lista de prohibidas de este bando.',
+    'rules.COPIES-LIMIT.doc': 'Límite de copias por bando (3, o 2 para Mago caído, 3 para Puesta en escena)',
+    'rules.UNIQUE-LIMIT.doc': 'Las cartas únicas están limitadas a 1 copia.',
+    'rules.SITE-COPIES.doc': 'Los sitios están limitados a 1 copia, salvo los refugios propios del bando.',
+    'rules.SPECIFIC-AVATAR.doc': 'Las cartas específicas de un mago deben coincidir con el avatar real del mazo.',
+    'rules.BALROG-RACE.doc': 'Los personajes Balrog deben ser Orco o Troll, salvo que sean específicos de Balrog.',
+    'rules.BALROG-MIND.doc': 'Los personajes Balrog deben tener mente inferior al límite por personaje del bando, salvo que sean específicos de Balrog.',
+    'rules.DECKSIZE-PLAY.doc': 'El tamaño del mazo de juego debe estar dentro del rango mín-máx del bando.',
+    'rules.DECKSIZE-LOCATION.doc': 'El mazo de localizaciones no debería estar vacío.',
+    'rules.SIDEBOARD-MAX.doc': 'El tamaño del sideboard está limitado según la duración de la partida.',
+    'rules.POOL-CHARS.doc': 'El número de personajes de la reserva inicial está limitado por bando.',
+    'rules.POOL-MIND.doc': 'La mente de la reserva inicial está limitada por personaje y/o en total, según el bando.',
+    'rules.POOL-ITEMS.doc': 'Los objetos menores de la reserva inicial están limitados por bando.',
+    'rules.POOL-ELIGIBLE.doc': 'Solo los personajes elegibles y los objetos menores iniciales pueden estar en la reserva inicial; algunas razas quedan excluidas según el bando.',
   },
 };
 

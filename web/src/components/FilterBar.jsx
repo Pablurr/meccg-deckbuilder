@@ -57,7 +57,7 @@ function ProxyToggle({ on, onChange }) {
   );
 }
 
-export default function FilterBar({ facets, filters, onChange, lang, onLangChange, isMobile, proxyMode, onProxyChange }) {
+export default function FilterBar({ facets, filters, onChange, lang, onLangChange, isMobile, proxyMode, onProxyChange, onOpenDocs }) {
   const t = useT();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [openKey, setOpenKey] = useState(null); // which facet menu is open (only one)
@@ -113,6 +113,7 @@ export default function FilterBar({ facets, filters, onChange, lang, onLangChang
         </div>
         <ProxyToggle on={proxyMode} onChange={onProxyChange} />
         <LangLink lang={lang} onLangChange={onLangChange} />
+        <button className="chip-toggle docs-btn" onClick={onOpenDocs} title={t('docs.title')} aria-label={t('docs.title')}>?</button>
       </div>
       {isMobile && (
         <button

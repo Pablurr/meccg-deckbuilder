@@ -14,6 +14,7 @@ import DeckSetupDialog from './components/DeckSetupDialog.jsx';
 import ExportDialog from './components/ExportDialog.jsx';
 import ImportDialog from './components/ImportDialog.jsx';
 import CardPreviewModal from './components/CardPreviewModal.jsx';
+import RulesDoc from './components/RulesDoc.jsx';
 import { useIsMobile } from './lib/useIsMobile.js';
 
 export default function App() {
@@ -29,6 +30,7 @@ export default function App() {
   const [showSetup, setShowSetup] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showDocs, setShowDocs] = useState(false);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [panelWidth, setPanelWidth] = useState(360); // right deck panel width in px
   const [cardZoom, setCardZoom] = useState(50); // deck-panel card size, % of original image
@@ -214,7 +216,7 @@ export default function App() {
   return (
     <I18nProvider lang={textLang}>
     <div className="app">
-      <FilterBar facets={derivedFacets} filters={filters} onChange={setFilters} lang={uiLang} onLangChange={setUiLang} isMobile={isMobile} proxyMode={proxyMode} onProxyChange={setProxyMode} />
+      <FilterBar facets={derivedFacets} filters={filters} onChange={setFilters} lang={uiLang} onLangChange={setUiLang} isMobile={isMobile} proxyMode={proxyMode} onProxyChange={setProxyMode} onOpenDocs={() => setShowDocs(true)} />
       <div className="main-row">
         <CardBrowser cards={cards} filters={filters} quantities={quantities} lang={uiLang} onChangeQty={changeQty} onToggle={toggleCard} onSelectAll={selectAll} isMobile={isMobile} onPreview={setPreviewCard} proxyMode={proxyMode} deckMode={deck.mode} side={deck.mode === 'deckbuilding' ? deck.ruleset?.side ?? null : null} zones={zones} changeZoneQty={changeZoneQty} />
         {hasSelection && !isMobile && (
@@ -316,6 +318,13 @@ export default function App() {
           onClose={() => setShowExport(false)}
           onBacksChange={(backAssignments) => setDeck((prev) => ({ ...prev, backAssignments }))}
           proxyMode={proxyMode}
+        />
+      )}
+      {showDocs && (
+        <RulesDoc
+          deck={deck}
+          onToggleRule={onToggleRule}
+          onClose={() => setShowDocs(false)}
         />
       )}
       {previewCard && (

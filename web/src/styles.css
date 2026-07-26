@@ -15,6 +15,10 @@
      ~3.4:1, below WCAG AA's 4.5:1 for small text. This measures ~4.78:1
      on #262632. Do not use elsewhere --danger itself is fine on --bg/--panel. */
   --danger-label: #da7283;
+  --ok: #5aa05a;
+  /* Lighter ok color, same reasoning as --danger-label: readable as small
+     bold text on --panel-2 (used by .status-chip.verified). */
+  --ok-label: #8fc98f;
   --radius: 8px;
 }
 
@@ -396,6 +400,69 @@ body {
 }
 .linklike:hover { color: var(--accent); }
 .spacer { flex: 1; }
+
+/* ---- Rules documentation page (RulesDoc) ---- */
+.docs-btn { font-weight: 700; }
+.modal.doc {
+  width: min(1100px, 96vw);
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+}
+.doc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 12px;
+}
+.doc-head h2 { margin: 0; }
+.doc-prose { max-width: 72ch; }
+.doc-prose h3 { margin-bottom: 4px; }
+.doc-prose p { margin-top: 0; color: var(--text); }
+.doc-section { margin-top: 24px; }
+.doc-section h3 { margin-bottom: 8px; }
+.doc-table-wrap { overflow-x: auto; }
+.doc-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.doc-table th, .doc-table td {
+  text-align: left;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+.doc-table th { color: var(--muted); font-weight: 600; white-space: nowrap; }
+.doc-table tr.unchecked { background: rgba(217, 164, 65, .06); }
+
+/* Status/severity chip: colour is never the only signal — the localized
+   word is always shown alongside it (see status.* / rules.severity.* keys),
+   so the chip reads fine under colour-vision deficiency or a colour-
+   inverting browser extension. */
+.status-chip {
+  display: inline-block;
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-size: 11px;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+.status-chip.verified { color: var(--ok-label); background: rgba(90, 160, 90, .12); }
+.status-chip.unverified { color: var(--warn); background: rgba(217, 164, 65, .12); }
+.status-chip.disputed { color: var(--danger-label); background: rgba(209, 73, 91, .12); }
+
+.doc-notchecked { list-style: none; padding: 0; margin: 8px 0; display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
+.doc-notchecked code { margin-right: 4px; }
+.doc-banned-side { margin-bottom: 14px; }
+.doc-banned-side h4 { margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
+.doc-banned-list { margin: 0; color: var(--muted); font-size: 12px; }
+
+@media (max-width: 720px) {
+  .modal.doc { width: 100vw; max-height: 100vh; height: 100vh; border-radius: 0; }
+}
 .btn {
   background: var(--accent-2);
   border: none;
