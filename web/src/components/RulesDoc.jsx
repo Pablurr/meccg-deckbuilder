@@ -5,54 +5,11 @@ import { SIDES } from '../lib/rules/sides.js';
 import { LENGTHS } from '../lib/rules/formats.js';
 import { BANNED } from '../lib/rules/banned.js';
 import { REPORT_ISSUES_URL, SIDE_IDS, LENGTH_IDS } from '../lib/constants.js';
-
-// Same fallback-safe localization DeckPanel's localizeParams uses for raw
-// data values: keep the untranslated value rather than show a raw i18n key
-// when a translation doesn't exist yet.
-function localize(t, prefix, value) {
-  const localized = t(`${prefix}.${value}`);
-  return localized === `${prefix}.${value}` ? value : localized;
-}
+import { localize, copiesText, poolText, playDeckText } from '../lib/rules/docText.js';
 
 function reportRuleUrl(ruleId) {
   const title = encodeURIComponent(`[rule] ${ruleId}`);
   return `${REPORT_ISSUES_URL}?title=${title}`;
-}
-
-// "3 per card, 3 for Stage" — the default copy limit plus any per-alignment
-// overrides, straight from SIDES[side].copies.
-function copiesText(t, profile) {
-  const parts = [t('docs.copies.default', { n: profile.copies.default })];
-  for (const [alignment, n] of Object.entries(profile.copies.byAlignment)) {
-    parts.push(t('docs.copies.override', { n, alignment: localize(t, 'alignment', alignment) }));
-  }
-  return parts.join(', ');
-}
-
-// Compose the starting-pool constraints as short localized fragments rather
-// than one giant sentence template, since several fields are null/empty for
-// any given side (see SIDES.*.pool) and a single template can't gracefully
-// drop clauses per language.
-function poolText(t, pool) {
-  const parts = [
-    t('docs.pool.maxCharacters', { n: pool.maxCharacters }),
-    t('docs.pool.maxMinorItems', { n: pool.maxMinorItems }),
-  ];
-  if (pool.mindCap != null) parts.push(t('docs.pool.mindCap', { n: pool.mindCap }));
-  if (pool.mindPerCharacter != null) parts.push(t('docs.pool.mindPerCharacter', { n: pool.mindPerCharacter }));
-  if (pool.forbidRaces && pool.forbidRaces.length) {
-    parts.push(t('docs.pool.forbidRaces', { races: pool.forbidRaces.map((r) => localize(t, 'race', r)).join(', ') }));
-  }
-  if (pool.requireRaces && pool.requireRaces.length) {
-    parts.push(t('docs.pool.requireRaces', { races: pool.requireRaces.map((r) => localize(t, 'race', r)).join(', ') }));
-  }
-  return parts.join(' · ');
-}
-
-// playDeck is null for sides whose min/max haven't been sourced yet (see
-// sides.js "// unverified" comments) — say so rather than showing a blank.
-function playDeckText(t, playDeck) {
-  return playDeck ? t('docs.playDeck.range', { min: playDeck.min, max: playDeck.max }) : t('status.unverified');
 }
 
 function StatusChip({ status, t }) {

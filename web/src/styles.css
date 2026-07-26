@@ -15,7 +15,6 @@
      ~3.4:1, below WCAG AA's 4.5:1 for small text. This measures ~4.78:1
      on #262632. Do not use elsewhere --danger itself is fine on --bg/--panel. */
   --danger-label: #da7283;
-  --ok: #5aa05a;
   /* Lighter ok color, same reasoning as --danger-label: readable as small
      bold text on --panel-2 (used by .status-chip.verified). */
   --ok-label: #8fc98f;
