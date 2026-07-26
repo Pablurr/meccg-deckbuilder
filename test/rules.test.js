@@ -15,14 +15,18 @@ describe('zonesFor', () => {
   });
   it('sites and regions are location-only (single deck counter, no expander)', () => {
     const site = cards.find((c) => c.type === 'Site');
+    expect(site).toBeTruthy();
     const region = cards.find((c) => c.type === 'Region');
+    expect(region).toBeTruthy();
     expect(zonesFor(site)).toEqual({ primary: 'deck', extra: [] });
     expect(zonesFor(region)).toEqual({ primary: 'deck', extra: [] });
   });
   it('characters default to pool; resources/hazards default to deck', () => {
     const chr = cards.find((c) => c.type === 'Character');
+    expect(chr).toBeTruthy();
     expect(zonesFor(chr)).toEqual({ primary: 'pool', extra: ['deck', 'sideboard'] });
     const hz = cards.find((c) => c.type === 'Hazard');
+    expect(hz).toBeTruthy();
     expect(zonesFor(hz)).toEqual({ primary: 'deck', extra: ['sideboard'] });
   });
   it('starting minor items also offer the pool', () => {
