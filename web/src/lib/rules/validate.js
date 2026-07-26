@@ -5,6 +5,7 @@ import { SIDES } from './sides.js';
 import { LENGTHS } from './formats.js';
 import { resolveBanned } from './banned.js';
 import { backGroupForType } from '../deck.js';
+import { zonesFor } from './zones.js';
 
 const SRC = 'https://councilofelrond.org/'; // stub source; refined per rule during sourcing
 
@@ -48,7 +49,10 @@ function bannedFor(cardsById, side) {
 }
 
 export function validateDeck({ side, length, tournament, ruleOverrides = {}, quantities = {}, zones = {}, cardsById }) {
-  const profile = SIDES[side];
+  // Reject inherited keys ('constructor', 'toString', ...): SIDES is a plain
+  // object literal, so SIDES['constructor'] would otherwise resolve to
+  // Object() rather than undefined and blow up the checks below.
+  const profile = Object.prototype.hasOwnProperty.call(SIDES, side) ? SIDES[side] : undefined;
   if (!profile) return [];
   const caps = LENGTHS[length] || LENGTHS.standard;
   const sb = zones.sideboard || {};
@@ -76,10 +80,13 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
   const name = (c) => (c.name && (c.name.en || Object.values(c.name)[0])) || c.id;
 
   // --- avatar ---
-  const avatars = entries.filter((e) => e.card.attributes.avatar === true);
+  const avatars = entries.filter((e) => (e.card.attributes || {}).avatar === true);
   if (avatars.length === 0) emit('AVATAR-PRESENT', { side });
   const avatarCount = avatars.reduce((s, e) => s + e.count, 0);
-  if (avatars.length > 1) emit('AVATAR-UNIQUE', { count: avatarCount, names: avatars.map((e) => name(e.card)).join(', ') });
+  // Fires on total copies, not distinct avatar cards: 3 copies of one avatar
+  // is exactly as illegal as 2 different avatars. `names` is left as an
+  // array — joining into a sentence is a UI/i18n concern, not this layer's.
+  if (avatarCount > 1) emit('AVATAR-UNIQUE', { count: avatarCount, names: avatars.map((e) => name(e.card)) });
   for (const e of avatars) {
     if (e.card.alignment !== profile.avatarAlignment) emit('AVATAR-SIDE', { name: name(e.card), side });
   }
@@ -143,8 +150,19 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
   for (const [id, n] of Object.entries(pool)) {
     const c = cardsById.get(id); if (!c) continue;
     const a = c.attributes || {};
+    // zonesFor (zones.js) is the single source of truth for what may sit in
+    // the pool — the same function Phase 3's drag-and-drop will consult —
+    // so eligibility is derived from it rather than re-decided here.
+    const z = zonesFor(c);
+    const poolEligible = z.primary === 'pool' || z.extra.includes('pool');
+    if (!poolEligible) {
+      emit('POOL-ELIGIBLE', { id, name: name(c), reason: 'type' });
+      continue;
+    }
     if (c.type === 'Character') {
       poolChars += n; poolMind += (toInt(a.mind) || 0) * n;
+      // Race exclusion is a separate rule concern from zone eligibility:
+      // a character can be pool-eligible by type yet still forbidden by race.
       if (profile.pool.forbidRaces.some((r) => String(a.race || '').includes(r))) {
         emit('POOL-ELIGIBLE', { id, name: name(c), reason: 'race' });
       }
@@ -153,8 +171,6 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
       }
     } else if (c.type === 'Resource' && a.playableAsStartingMinorItem === true) {
       poolItems += n;
-    } else {
-      emit('POOL-ELIGIBLE', { id, name: name(c), reason: 'type' });
     }
   }
   if (poolChars > profile.pool.maxCharacters) emit('POOL-CHARS', { count: poolChars, max: profile.pool.maxCharacters, side });

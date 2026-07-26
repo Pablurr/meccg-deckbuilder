@@ -212,6 +212,30 @@ describe('validateDeck', () => {
     expect(byId(out, 'AVATAR-PRESENT')).toHaveLength(1);
     expect(byId(out, 'AVATAR-PRESENT')[0].severity).toBe('warning');
   });
+  it('AVATAR-UNIQUE: fires on 3 copies of a single avatar (copy count, not distinct-card count)', () => {
+    const out = validateDeck({ ...base, quantities: { [wizardAvatar.id]: 3 } });
+    const hits = byId(out, 'AVATAR-UNIQUE');
+    expect(hits).toHaveLength(1);
+    expect(hits[0].params.count).toBe(3);
+    expect(hits[0].params.names).toEqual([wizardAvatar.name.en || Object.values(wizardAvatar.name)[0]]);
+  });
+  it('AVATAR-UNIQUE: fires on two different avatar cards', () => {
+    const otherWizardAvatar = cards.find(
+      (c) => c.attributes.avatar && c.alignment === 'Hero' && c.id !== wizardAvatar.id
+    );
+    expect(otherWizardAvatar).toBeTruthy();
+    const out = validateDeck({ ...base, quantities: { [wizardAvatar.id]: 1, [otherWizardAvatar.id]: 1 } });
+    const hits = byId(out, 'AVATAR-UNIQUE');
+    expect(hits).toHaveLength(1);
+    expect(hits[0].params.count).toBe(2);
+  });
+  it('AVATAR-SIDE: an avatar whose alignment does not match the side fires', () => {
+    const rwAvatar = firstWhere((c) => c.attributes.avatar && c.alignment === 'Minion');
+    const out = validateDeck({ ...base, side: 'wizard', quantities: { [rwAvatar.id]: 1 } });
+    const hits = byId(out, 'AVATAR-SIDE');
+    expect(hits).toHaveLength(1);
+    expect(hits[0].params.name).toBeTruthy();
+  });
   it('flags illegal alignment for the side', () => {
     const minionRes = firstWhere((c) => c.alignment === 'Minion' && c.type === 'Resource');
     const out = validateDeck({ ...base, quantities: { [wizardAvatar.id]: 1, [minionRes.id]: 1 } });
@@ -228,8 +252,11 @@ describe('validateDeck', () => {
     expect(copies.some((w) => w.params.id === stage.id)).toBe(false); // 3 <= 3
   });
   it('counts copies across deck + sideboard + pool', () => {
+    // Split across all three zones (2 + 1 + 1 = 4 > the wizard default limit
+    // of 3) so that dropping any one zone from the totals loop in validate.js
+    // would bring the count back to 3 and silently pass.
     const hz = firstWhere((c) => c.type === 'Hazard' && !c.attributes.unique && c.alignment === 'Neutral');
-    const out = validateDeck({ ...base, quantities: { [hz.id]: 3 }, zones: { sideboard: { [hz.id]: 1 }, pool: {} } });
+    const out = validateDeck({ ...base, quantities: { [hz.id]: 2 }, zones: { sideboard: { [hz.id]: 1 }, pool: { [hz.id]: 1 } } });
     expect(byId(out, 'COPIES-LIMIT').some((w) => w.params.id === hz.id)).toBe(true);
   });
   it('wizard-specific cards must match the avatar', () => {
@@ -269,6 +296,11 @@ describe('validateDeck', () => {
     const casual = validateDeck({ ...base, tournament: false, quantities: { [minionRes.id]: 1 } });
     expect(byId(strict, 'ALIGN-LEGAL')[0].severity).toBe('error');
     expect(byId(casual, 'ALIGN-LEGAL')[0].severity).toBe('warning');
+    // Same fixture has no avatar in quantities, so AVATAR-PRESENT (base
+    // severity 'warning') also fires — covering the warning -> info half
+    // of the one-notch-down rule, never below 'info'.
+    expect(byId(strict, 'AVATAR-PRESENT')[0].severity).toBe('warning');
+    expect(byId(casual, 'AVATAR-PRESENT')[0].severity).toBe('info');
   });
   it('POOL-MIND: per-character mind limit over the cap uses the .char code', () => {
     // BA-1 (Strider), Hero alignment, mind 8 > fallen-wizard's mindPerCharacter (5).
@@ -307,7 +339,68 @@ describe('validateDeck', () => {
     expect(poolMind.some((w) => w.code === 'POOL-MIND.total')).toBe(true);
     expect(poolMind.some((w) => w.code === 'POOL-MIND.char')).toBe(false);
   });
-  it('disabled and unverified rules emit nothing; overrides can enable them', () => {
+  it('SITE-COPIES: a non-haven site over 1 copy fires; the haven exemption suppresses it', () => {
+    const nonHavenSite = firstWhere((c) => c.type === 'Site' && ['Hero', 'Neutral'].includes(c.alignment));
+    const overCount = validateDeck({ ...base, quantities: { [wizardAvatar.id]: 1, [nonHavenSite.id]: 2 } });
+    expect(byId(overCount, 'SITE-COPIES').some((w) => w.params.id === nonHavenSite.id)).toBe(true);
+
+    // Real cards.json has no Site with attributes.haven === true — `haven`
+    // there holds the site's place name (a string) pending authoritative
+    // sourcing, never the boolean the exemption checks for. A synthetic
+    // card (same pattern as the banned-list diacritics test above) is the
+    // only way to exercise the exemption branch at validate.js:113.
+    const syntheticHavenSite = {
+      id: 'synthetic-haven-site',
+      type: 'Site',
+      alignment: 'Hero',
+      name: { en: 'Synthetic Haven Site' },
+      attributes: { haven: true },
+    };
+    const cardsWithSynthetic = new Map(cardsById);
+    cardsWithSynthetic.set(syntheticHavenSite.id, syntheticHavenSite);
+    const exempt = validateDeck({
+      ...base,
+      cardsById: cardsWithSynthetic,
+      quantities: { [wizardAvatar.id]: 1, [syntheticHavenSite.id]: 2 },
+    });
+    expect(byId(exempt, 'SITE-COPIES').some((w) => w.params.id === syntheticHavenSite.id)).toBe(false);
+  });
+  it('DECKSIZE-PLAY: play-deck count below the side minimum fires', () => {
+    const out = validateDeck({ ...base, quantities: { [wizardAvatar.id]: 1 } });
+    const hits = byId(out, 'DECKSIZE-PLAY');
+    expect(hits).toHaveLength(1);
+    expect(hits[0].params.count).toBe(1);
+    expect(hits[0].params.min).toBe(25);
+  });
+  it('POOL-CHARS: pool character count above the side max fires', () => {
+    const poolChar = firstWhere((c) => c.type === 'Character' && ['Hero', 'Neutral'].includes(c.alignment) && !c.attributes.avatar);
+    const out = validateDeck({
+      ...base,
+      quantities: { [wizardAvatar.id]: 1 },
+      zones: { sideboard: {}, pool: { [poolChar.id]: 11 } }, // wizard pool.maxCharacters = 10
+    });
+    const hits = byId(out, 'POOL-CHARS');
+    expect(hits).toHaveLength(1);
+    expect(hits[0].params.count).toBe(11);
+    expect(hits[0].params.max).toBe(10);
+  });
+  it('POOL-ELIGIBLE: a card whose type cannot occupy the pool fires with reason "type"', () => {
+    const hazard = firstWhere((c) => c.type === 'Hazard' && ['Hero', 'Neutral'].includes(c.alignment));
+    const out = validateDeck({
+      ...base,
+      quantities: { [wizardAvatar.id]: 1 },
+      zones: { sideboard: {}, pool: { [hazard.id]: 1 } },
+    });
+    const hits = byId(out, 'POOL-ELIGIBLE');
+    expect(hits).toHaveLength(1);
+    expect(hits[0].params.reason).toBe('type');
+    expect(hits[0].params.id).toBe(hazard.id);
+  });
+  it('a prototype-named side ("constructor") is rejected rather than treated as a profile', () => {
+    const out = validateDeck({ ...base, side: 'constructor', quantities: {} });
+    expect(out).toEqual([]);
+  });
+  it('isRuleEnabled: unverified rules default off, overrides can flip them, unknown ids are ignored', () => {
     const unverified = RULES.find((r) => r.status === 'unverified');
     expect(unverified.defaultEnabled).toBe(false);
     expect(isRuleEnabled(unverified.id, {})).toBe(false);
