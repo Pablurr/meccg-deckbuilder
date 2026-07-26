@@ -1,0 +1,66 @@
+// The single source of export order. PDF and text both consume this, so they
+// cannot disagree. Sections: Pool, Play deck, Locations, Sideboard.
+import { cardName } from '../lang.js';
+import { backGroupForType } from '../deck.js';
+
+const GROUP_DEFS = {
+  pool: [
+    { id: 'characters', match: (c) => c.type === 'Character' },
+    { id: 'resources', match: (c) => c.type === 'Resource' },
+  ],
+  play: [
+    { id: 'avatars', match: (c) => c.attributes.avatar === true },
+    { id: 'characters', match: (c) => c.type === 'Character' && !c.attributes.avatar },
+    { id: 'resources', match: (c) => c.type === 'Resource' },
+    { id: 'hazards', match: (c) => c.type === 'Hazard' },
+  ],
+  locations: [
+    { id: 'sites', match: (c) => c.type === 'Site' },
+    { id: 'regions', match: (c) => c.type === 'Region' },
+  ],
+  sideboard: [
+    { id: 'characters', match: (c) => c.type === 'Character' },
+    { id: 'resources', match: (c) => c.type === 'Resource' },
+    { id: 'hazards', match: (c) => c.type === 'Hazard' },
+  ],
+};
+
+function toEntries(map, cardsById) {
+  return Object.entries(map)
+    .map(([id, count]) => ({ card: cardsById.get(id), count }))
+    .filter((e) => e.card && e.count > 0);
+}
+
+function grouped(sectionId, entries, lang) {
+  const defs = GROUP_DEFS[sectionId];
+  const groups = defs.map((d) => ({ id: d.id, entries: [] }));
+  const misc = { id: 'other', entries: [] };
+  for (const e of entries) {
+    const g = defs.findIndex((d) => d.match(e.card));
+    (g >= 0 ? groups[g] : misc).entries.push(e);
+  }
+  if (misc.entries.length) groups.push(misc);
+  for (const g of groups) g.entries.sort((a, b) => cardName(a.card, lang).localeCompare(cardName(b.card, lang)));
+  return groups.filter((g) => g.entries.length > 0);
+}
+
+export function deckSections({ quantities = {}, zones = {}, cardsById, lang = 'en' }) {
+  const main = toEntries(quantities, cardsById);
+  const play = main.filter((e) => backGroupForType(e.card.type) === 'playdeck');
+  const locations = main.filter((e) => backGroupForType(e.card.type) === 'locationdeck');
+  const sections = [
+    { id: 'pool', entries: toEntries(zones.pool || {}, cardsById) },
+    { id: 'play', entries: play },
+    { id: 'locations', entries: locations },
+    { id: 'sideboard', entries: toEntries(zones.sideboard || {}, cardsById) },
+  ];
+  return sections
+    .map((s) => ({ id: s.id, groups: grouped(s.id, s.entries, lang) }))
+    .filter((s) => s.groups.length > 0);
+}
+
+export function flattenSections(sections) {
+  const out = [];
+  for (const s of sections) for (const g of s.groups) for (const e of g.entries) out.push(e);
+  return out;
+}
