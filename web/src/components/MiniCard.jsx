@@ -7,12 +7,17 @@ import { useT } from '../i18n.jsx';
 // thumbnail + same −/count/+ control. Clicking the image asks for confirmation
 // before removing the card, so a stray click can't silently empty the deck.
 // Hover shows the shared full-size preview so the card stays readable at any zoom.
-export default function MiniCard({ card, qty, lang, thumbW, onChangeQty, onToggle, trackPointer, hidePreview, isMobile, onPreview, proxyMode }) {
+export default function MiniCard({ card, qty, lang, thumbW, onChangeQty, onToggle, trackPointer, hidePreview, isMobile, onPreview, proxyMode, zone = 'deck' }) {
   const t = useT();
   const [confirming, setConfirming] = useState(false);
   const name = cardName(card, lang);
   return (
-    <div className="cardcell deck-mini selected" title={name}>
+    <div
+      className="cardcell deck-mini selected"
+      title={name}
+      draggable={!isMobile}
+      onDragStart={(e) => e.dataTransfer.setData('text/plain', JSON.stringify({ id: card.id, from: zone }))}
+    >
       <img
         src={cardThumbSrc(card, lang, thumbW)}
         alt={name}

@@ -1,11 +1,17 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { cardName, deckThumbWidth } from '../lib/lang.js';
 import { useCardPreview, CardPreview } from './CardPreview.jsx';
 import { useT } from '../i18n.jsx';
 import MiniCard from './MiniCard.jsx';
+import ZoneTabs from './ZoneTabs.jsx';
+import { zonesFor } from '../lib/rules/zones.js';
+import { LENGTHS } from '../lib/rules/formats.js';
+import { SIDES } from '../lib/rules/sides.js';
+import { backGroupForType } from '../lib/deck.js';
 
 // Deck contents are grouped and displayed in this fixed type order.
 const TYPE_ORDER = ['Character', 'Resource', 'Hazard', 'Site', 'Region'];
+const NOTE_FIELDS = ['starting', 'resourceStrategy', 'hazardStrategy', 'other'];
 
 const MIN_WIDTH = 280;
 const DEFAULT_WIDTH = 360;
@@ -21,9 +27,28 @@ function warningText(t, w) {
   return '';
 }
 
+function sumQty(map) {
+  return Object.values(map || {}).reduce((a, b) => a + b, 0);
+}
+
+// Bucket a { card, qty } entry list by TYPE_ORDER, sorted by name within each
+// group — same grouping the panel has always used, now reused per tab.
+function buildGroups(entries, lang) {
+  return TYPE_ORDER.map((type) => {
+    const items = entries
+      .filter((it) => it.card && it.card.type === type)
+      .sort((a, b) => cardName(a.card, lang).localeCompare(cardName(b.card, lang)));
+    return { type, items };
+  }).filter((g) => g.items.length > 0);
+}
+
 export default function DeckPanel({
   cardsById,
   quantities,
+  zones = { sideboard: {}, pool: {} },
+  deck,
+  changeZoneQty,
+  moveCopy,
   lang,
   counts,
   warnings,
@@ -43,6 +68,16 @@ export default function DeckPanel({
 }) {
   const t = useT();
   const { previewRef, previewImgRef, stampRef, trackPointer, hidePreview } = useCardPreview(lang, proxyMode);
+
+  const deckbuilding = deck && deck.mode === 'deckbuilding';
+  const tabs = deckbuilding ? ['play', 'pool', 'sideboard', 'location', 'notes'] : ['cards', 'notes'];
+  const [tab, setTab] = useState(deckbuilding ? 'play' : 'cards');
+  // The deck's mode can change (setup dialog) after mount; if the current tab
+  // no longer exists, fall back to the first tab rather than showing nothing.
+  useEffect(() => {
+    if (!tabs.includes(tab)) setTab(tabs[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deckbuilding]);
 
   // Card width driven by the zoom slider (% of the source image). min(…,100%)
   // keeps a card from overflowing when the panel is dragged narrower than it.
@@ -75,14 +110,68 @@ export default function DeckPanel({
     onResize(isMaxed ? DEFAULT_WIDTH : maxW);
   }
 
-  // Bucket selected cards by type, preserving TYPE_ORDER, sorted by name within.
-  const groups = TYPE_ORDER.map((type) => {
-    const items = Object.entries(quantities)
+  // Caps: sideboard from the game length, pool characters from the side.
+  // Both null in freeform (deck.ruleset is null) or while unset.
+  const sbMax = deck && deck.ruleset ? LENGTHS[deck.ruleset.length].sideboardMax : null;
+  const poolMax = deck && deck.ruleset ? SIDES[deck.ruleset.side].pool.maxCharacters : null;
+
+  const tabCounts = {
+    play: counts.byGroup.playdeck,
+    location: counts.byGroup.locationdeck,
+    pool: sumQty(zones.pool),
+    sideboard: sumQty(zones.sideboard),
+    cards: counts.total,
+    notes: null, // the Notes tab carries no count
+  };
+  const tabCaps = { play: null, location: null, pool: poolMax, sideboard: sbMax, cards: null, notes: null };
+  const tabLabels = {
+    play: t('zones.play'),
+    location: t('zones.location'),
+    pool: t('zones.pool'),
+    sideboard: t('zones.sideboard'),
+    cards: t('zones.cards'),
+    notes: t('zones.notes'),
+  };
+
+  // Entries + editing wired for whichever tab is active. play/location/cards
+  // all edit `quantities` (zone 'deck'); pool/sideboard edit their zone map.
+  let activeEntries = [];
+  let activeZone = 'deck';
+  let activeOnChangeQty = onChangeQty;
+  let activeOnToggle = onToggle;
+  if (tab === 'play' || tab === 'location' || tab === 'cards') {
+    const wantGroup = tab === 'play' ? 'playdeck' : tab === 'location' ? 'locationdeck' : null;
+    activeEntries = Object.entries(quantities)
       .map(([id, qty]) => ({ card: cardsById.get(id), qty }))
-      .filter((it) => it.card && it.card.type === type)
-      .sort((a, b) => cardName(a.card, lang).localeCompare(cardName(b.card, lang)));
-    return { type, items };
-  }).filter((g) => g.items.length > 0);
+      .filter((it) => it.card && (wantGroup == null || backGroupForType(it.card.type) === wantGroup));
+  } else if (tab === 'pool' || tab === 'sideboard') {
+    activeZone = tab;
+    activeEntries = Object.entries(zones[tab] || {})
+      .map(([id, qty]) => ({ card: cardsById.get(id), qty }))
+      .filter((it) => it.card);
+    activeOnChangeQty = (id, delta) => changeZoneQty(tab, id, delta);
+    // Full removal (the mini-card's confirm button) must zero out this zone's
+    // entry specifically — the shared `onToggle` only knows about `quantities`.
+    activeOnToggle = (id) => changeZoneQty(tab, id, -((zones[tab] || {})[id] || 0));
+  }
+  const groups = tab === 'notes' ? [] : buildGroups(activeEntries, lang);
+
+  // Drop target is the tab itself (not an area inside the panel): zones live
+  // in separate tabs, so source and destination are never visible together,
+  // and this still works when the destination zone is empty.
+  function onDropOnTab(e, toZone) {
+    e.preventDefault();
+    let payload;
+    try { payload = JSON.parse(e.dataTransfer.getData('text/plain')); } catch { return; }
+    if (!payload || !payload.id) return;
+    const card = cardsById.get(payload.id);
+    if (!card) return;
+    const z = zonesFor(card);
+    const allowed = new Set([z.primary, ...z.extra, 'deck']);
+    const target = toZone === 'play' || toZone === 'location' || toZone === 'cards' ? 'deck' : toZone;
+    if (!allowed.has(target)) return; // e.g. a Site dropped on Pool: ignored silently
+    moveCopy(payload.id, payload.from, target);
+  }
 
   if (collapsed) {
     return (
@@ -135,39 +224,61 @@ export default function DeckPanel({
         </label>
       </div>
 
+      <ZoneTabs
+        tabs={tabs}
+        active={tab}
+        onSelect={setTab}
+        onDrop={onDropOnTab}
+        labels={tabLabels}
+        counts={tabCounts}
+        caps={tabCaps}
+      />
+
       {warnings.length > 0 && (
         <div className="warns">⚠ {warnings.map((w) => warningText(t, w)).join(' · ')}</div>
       )}
 
       <div className="deckpanel-body">
-        {groups.map((g) => {
-          const n = g.items.reduce((a, b) => a + b.qty, 0);
-          return (
-            <div key={g.type} className="deck-group">
-              <div className="deck-group-head">
-                {t(`panel.group.${g.type}`)} <span className="muted">({n})</span>
+        {tab === 'notes' ? (
+          <div className="deck-notes-placeholder">
+            {NOTE_FIELDS.map((field) => (
+              <label key={field} className="deck-notes-field">
+                {t(`notes.${field}`)}
+                <textarea disabled value={(deck && deck.notes && deck.notes[field]) || ''} readOnly />
+              </label>
+            ))}
+          </div>
+        ) : (
+          groups.map((g) => {
+            const n = g.items.reduce((a, b) => a + b.qty, 0);
+            return (
+              <div key={g.type} className="deck-group">
+                <div className="deck-group-head">
+                  {t(`panel.group.${g.type}`)} <span className="muted">({n})</span>
+                </div>
+                <div className="deck-mini-grid" style={gridStyle}>
+                  {g.items.map(({ card, qty }) => (
+                    <MiniCard
+                      key={card.id}
+                      card={card}
+                      qty={qty}
+                      lang={lang}
+                      thumbW={thumbW}
+                      onChangeQty={activeOnChangeQty}
+                      onToggle={activeOnToggle}
+                      trackPointer={trackPointer}
+                      hidePreview={hidePreview}
+                      isMobile={isMobile}
+                      onPreview={onPreview}
+                      proxyMode={proxyMode}
+                      zone={activeZone}
+                    />
+                  ))}
+                </div>
               </div>
-              <div className="deck-mini-grid" style={gridStyle}>
-                {g.items.map(({ card, qty }) => (
-                  <MiniCard
-                    key={card.id}
-                    card={card}
-                    qty={qty}
-                    lang={lang}
-                    thumbW={thumbW}
-                    onChangeQty={onChangeQty}
-                    onToggle={onToggle}
-                    trackPointer={trackPointer}
-                    hidePreview={hidePreview}
-                    isMobile={isMobile}
-                    onPreview={onPreview}
-                    proxyMode={proxyMode}
-                  />
-                ))}
-              </div>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
       </div>
       {/* Shared hover preview (hidden until a card is hovered). */}
       <CardPreview previewRef={previewRef} previewImgRef={previewImgRef} stampRef={stampRef} />

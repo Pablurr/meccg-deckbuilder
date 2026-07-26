@@ -92,6 +92,20 @@ export const translations = {
     'panel.group.Site': 'Sites',
     'panel.group.Region': 'Régions',
 
+    // Deck panel zone tabs
+    'zones.play': 'Talon',
+    'zones.pool': 'Pool',
+    'zones.sideboard': 'Réserve',
+    'zones.location': 'Sites',
+    'zones.notes': 'Notes',
+    'zones.cards': 'Cartes',
+
+    // Notes tab (placeholder textareas until Task 15)
+    'notes.starting': 'Notes de départ',
+    'notes.resourceStrategy': 'Stratégie ressources',
+    'notes.hazardStrategy': 'Stratégie périls',
+    'notes.other': 'Autres notes',
+
     // Deck manager
     'decks.title': 'Mes decks',
     'decks.namePlaceholder': 'Nom du deck',
@@ -235,6 +249,20 @@ export const translations = {
     'panel.group.Site': 'Sites',
     'panel.group.Region': 'Regions',
 
+    // Deck panel zone tabs
+    'zones.play': 'Play deck',
+    'zones.pool': 'Pool',
+    'zones.sideboard': 'Sideboard',
+    'zones.location': 'Location',
+    'zones.notes': 'Notes',
+    'zones.cards': 'Cards',
+
+    // Notes tab (placeholder textareas until Task 15)
+    'notes.starting': 'Starting notes',
+    'notes.resourceStrategy': 'Resource strategy',
+    'notes.hazardStrategy': 'Hazard strategy',
+    'notes.other': 'Other notes',
+
     'decks.title': 'My decks',
     'decks.namePlaceholder': 'Deck name',
     'decks.save': 'Save',
@@ -329,6 +357,20 @@ export const translations = {
     // Proxy mode
     'proxy.label': 'Proxy',
     'proxy.tooltip': 'Modo Proxy: cubre el copyright con «Proxy» (requerido por MPC)',
+
+    // Deck panel zone tabs
+    'zones.play': 'Mazo de juego',
+    'zones.pool': 'Reserva',
+    'zones.sideboard': 'Sideboard',
+    'zones.location': 'Localizaciones',
+    'zones.notes': 'Notas',
+    'zones.cards': 'Cartas',
+
+    // Notes tab (placeholder textareas until Task 15)
+    'notes.starting': 'Notas iniciales',
+    'notes.resourceStrategy': 'Estrategia de recursos',
+    'notes.hazardStrategy': 'Estrategia de peligros',
+    'notes.other': 'Otras notas',
   },
 };
 

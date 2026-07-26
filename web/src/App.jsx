@@ -177,6 +177,10 @@ export default function App() {
           <DeckPanel
             cardsById={cardsById}
             quantities={quantities}
+            zones={zones}
+            deck={deck}
+            changeZoneQty={changeZoneQty}
+            moveCopy={moveCopy}
             lang={uiLang}
             counts={counts}
             warnings={warnings}
@@ -198,6 +202,10 @@ export default function App() {
           isMobile
           cardsById={cardsById}
           quantities={quantities}
+          zones={zones}
+          deck={deck}
+          changeZoneQty={changeZoneQty}
+          moveCopy={moveCopy}
           lang={uiLang}
           counts={counts}
           warnings={warnings}

@@ -356,6 +356,47 @@ body {
   padding: 1px 7px;
   font-size: 12px;
 }
+/* Zone tabs: the tab bar IS the drop target (zones live in separate tabs, so
+   source and destination are never both visible — this also works when the
+   destination zone is empty). */
+.ztabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.ztab {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: var(--radius);
+  cursor: pointer;
+  padding: 4px 10px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ztab:hover { border-color: var(--accent); }
+.ztab.on { font-weight: 700; border-color: currentColor; }
+.ztab .cnt { opacity: .65; font-variant-numeric: tabular-nums; }
+.ztab.over .cnt { color: var(--danger); font-weight: 700; opacity: 1; }
+
+/* Notes tab placeholder (Task 15 wires real editing + persistence). */
+.deck-notes-placeholder { display: flex; flex-direction: column; gap: 12px; }
+.deck-notes-field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+.deck-notes-field textarea {
+  min-height: 70px;
+  resize: vertical;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--text);
+  padding: 6px 8px;
+  font: inherit;
+}
+
 .deckpanel-body { overflow: auto; padding: 10px 12px; }
 .deck-group { margin-bottom: 14px; }
 .deck-group-head {
