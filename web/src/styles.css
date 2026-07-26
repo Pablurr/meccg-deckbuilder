@@ -9,6 +9,7 @@
   --accent-2: #7a5cff;
   --warn: #d9a441;
   --danger: #d1495b;
+  --info: #5b9bd1;
   --radius: 8px;
 }
 
@@ -327,6 +328,68 @@ body {
 .count-pill { background: var(--panel-2); border: 1px solid var(--line); border-radius: 20px; padding: 4px 12px; }
 .count-pill b { color: var(--accent); }
 .warns { color: var(--warn); font-size: 12px; }
+
+/* Live rule warnings (deckbuilding mode): rendered above the tab content so
+   they stay visible regardless of which zone tab is active. Severity is
+   never colour-only — each row also carries an icon + text label, since
+   colour-inverting browser extensions and colour-vision deficiency both
+   make colour-only encoding unreadable. */
+.rule-warns {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.rule-warn {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  font-size: 12px;
+}
+.rule-warn.error { border-left: 3px solid var(--danger); }
+.rule-warn.warning { border-left: 3px solid var(--warn); }
+.rule-warn.info { border-left: 3px solid var(--info); }
+.rule-warn .rule-sev {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+}
+.rule-warn.error .rule-sev { color: var(--danger); }
+.rule-warn.warning .rule-sev { color: var(--warn); }
+.rule-warn.info .rule-sev { color: var(--info); }
+.rule-warn .msg { color: var(--text); }
+.rule-warn .rule-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.rule-warn .rule-meta code {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.linklike {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent-2);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  text-decoration: underline;
+}
+.linklike:hover { color: var(--accent); }
 .spacer { flex: 1; }
 .btn {
   background: var(--accent-2);

@@ -4,6 +4,7 @@ import { expandQuantities, countOccurrences, deckCounts, deckWarnings, normalize
 import { baseOptions } from './lib/tags.js';
 import { I18nProvider } from './i18n.jsx';
 import { makeT } from './lib/i18n.js';
+import { validateDeck } from './lib/rules/validate.js';
 import FilterBar from './components/FilterBar.jsx';
 import CardBrowser from './components/CardBrowser.jsx';
 import DeckDrawer from './components/DeckDrawer.jsx';
@@ -159,6 +160,31 @@ export default function App() {
     setShowSetup(false);
   }
 
+  // Live rule warnings for deckbuilding decks (validateDeck is pure and runs
+  // on every edit, so it's memoized; freeform decks always have ruleset ===
+  // null and therefore produce no warnings — nothing blocks either way).
+  const ruleWarnings = useMemo(() => (
+    deck.mode === 'deckbuilding' && deck.ruleset
+      ? validateDeck({
+          side: deck.ruleset.side,
+          length: deck.ruleset.length,
+          tournament: deck.ruleset.tournament,
+          ruleOverrides: deck.ruleset.ruleOverrides,
+          quantities,
+          zones,
+          cardsById,
+        })
+      : []
+  ), [deck.mode, deck.ruleset, quantities, zones, cardsById]);
+
+  // "Ignore this rule": writes the override on the current deck's ruleset so
+  // it's per-deck (persists with the deck on save) and never global.
+  function onToggleRule(ruleId, enabled) {
+    setDeck((prev) => (prev.ruleset
+      ? { ...prev, ruleset: { ...prev.ruleset, ruleOverrides: { ...prev.ruleset.ruleOverrides, [ruleId]: enabled } } }
+      : prev));
+  }
+
   if (error) return <div style={{ padding: 24 }}>{t('app.loadError', { error })}</div>;
   if (!facets) return <div style={{ padding: 24 }}>{t('app.loading')}</div>;
 
@@ -184,6 +210,8 @@ export default function App() {
             lang={uiLang}
             counts={counts}
             warnings={warnings}
+            ruleWarnings={ruleWarnings}
+            onToggleRule={onToggleRule}
             collapsed={panelCollapsed}
             onToggleCollapsed={() => setPanelCollapsed((v) => !v)}
             width={panelWidth}
@@ -209,6 +237,8 @@ export default function App() {
           lang={uiLang}
           counts={counts}
           warnings={warnings}
+          ruleWarnings={ruleWarnings}
+          onToggleRule={onToggleRule}
           collapsed={false}
           zoom={cardZoom}
           onZoom={setCardZoom}

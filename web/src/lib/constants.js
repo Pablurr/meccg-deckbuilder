@@ -14,3 +14,6 @@ export const CARD_H_CUT = CARD_H_BLEED - 2 * BLEED_PX; // 1050
 
 export const SIDE_IDS = ['wizard', 'ringwraith', 'fallen-wizard', 'balrog'];
 export const LENGTH_IDS = ['starter', 'standard', 'long', 'campaign'];
+
+// Target for the "Report this rule" link in rule-warning rows (DeckPanel).
+export const REPORT_ISSUES_URL = 'https://github.com/Pablurr/meccg-deckbuilder/issues/new';

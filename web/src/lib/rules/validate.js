@@ -58,9 +58,10 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
   const sb = zones.sideboard || {};
   const pool = zones.pool || {};
   const out = [];
-  // code defaults to ruleId; POOL-MIND uses distinct dotted codes for its two
-  // message shapes (per-character vs pool total) while keeping one ruleId so
-  // a single checkbox governs both.
+  // code defaults to ruleId; POOL-MIND and POOL-ELIGIBLE use distinct dotted
+  // codes for their message shapes (POOL-MIND: per-character vs pool total;
+  // POOL-ELIGIBLE: wrong card type vs forbidden race) while keeping one
+  // ruleId so a single checkbox governs both.
   const emit = (ruleId, params = {}, code = ruleId) => {
     if (!isRuleEnabled(ruleId, ruleOverrides)) return;
     let severity = RULE_BY_ID.get(ruleId).severity;
@@ -158,7 +159,7 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
     const z = zonesFor(c);
     const poolEligible = z.primary === 'pool' || z.extra.includes('pool');
     if (!poolEligible) {
-      emit('POOL-ELIGIBLE', { id, name: name(c), reason: 'type' });
+      emit('POOL-ELIGIBLE', { id, name: name(c), reason: 'type' }, 'POOL-ELIGIBLE.type');
       continue;
     }
     if (c.type === 'Character') {
@@ -166,7 +167,7 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
       // Race exclusion is a separate rule concern from zone eligibility:
       // a character can be pool-eligible by type yet still forbidden by race.
       if (profile.pool.forbidRaces.some((r) => String(a.race || '').includes(r))) {
-        emit('POOL-ELIGIBLE', { id, name: name(c), reason: 'race' });
+        emit('POOL-ELIGIBLE', { id, name: name(c), reason: 'race', race: String(a.race || '') }, 'POOL-ELIGIBLE.race');
       }
       if (profile.pool.mindPerCharacter != null && (toInt(a.mind) || 0) > profile.pool.mindPerCharacter) {
         emit('POOL-MIND', { id, name: name(c), mind: toInt(a.mind), limit: profile.pool.mindPerCharacter }, 'POOL-MIND.char');

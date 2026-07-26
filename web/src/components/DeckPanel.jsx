@@ -8,6 +8,37 @@ import { zonesFor } from '../lib/rules/zones.js';
 import { LENGTHS } from '../lib/rules/formats.js';
 import { SIDES } from '../lib/rules/sides.js';
 import { backGroupForType } from '../lib/deck.js';
+import { REPORT_ISSUES_URL } from '../lib/constants.js';
+
+const SEV_ICON = { error: '⛔', warning: '⚠', info: 'ℹ' };
+
+// validate.js resolves card names English-first (it has no notion of the
+// user's display language). Where a warning's params carry a card `id`, look
+// the card back up here and swap in the localized name; a few codes only
+// ever get a precomputed name string with no id (AVATAR-UNIQUE's `names`
+// list, AVATAR-SIDE) and keep validate.js's name as-is.
+function localizeParams(w, { cardsById, lang, t }) {
+  const p = { ...w.params };
+  if (p.id) {
+    const c = cardsById.get(p.id);
+    if (c) p.name = cardName(c, lang);
+  }
+  if (p.names) p.names = p.names.join(', ');
+  if (p.side) p.side = t(`side.${p.side}`);
+  if (p.length) p.length = t(`length.${p.length}`);
+  // UNIQUE-LIMIT/SITE-COPIES: validate.js reports the raw count against an
+  // implicit limit of 1; compute how many copies to remove here rather than
+  // widening the validator's param shape for two single-purpose numbers.
+  if (w.code === 'UNIQUE-LIMIT' || w.code === 'SITE-COPIES') p.excess = p.count - 1;
+  if (w.code === 'SIDEBOARD-MAX' || w.code === 'POOL-CHARS' || w.code === 'POOL-ITEMS') p.over = p.count - p.max;
+  return p;
+}
+
+function reportUrl(w) {
+  const title = encodeURIComponent(`[rule] ${w.ruleId}`);
+  const body = encodeURIComponent(JSON.stringify(w.params));
+  return `${REPORT_ISSUES_URL}?title=${title}&body=${body}`;
+}
 
 // Deck contents are grouped and displayed in this fixed type order.
 const TYPE_ORDER = ['Character', 'Resource', 'Hazard', 'Site', 'Region'];
@@ -52,6 +83,8 @@ export default function DeckPanel({
   lang,
   counts,
   warnings,
+  ruleWarnings = [],
+  onToggleRule,
   collapsed,
   onToggleCollapsed,
   width = DEFAULT_WIDTH,
@@ -233,6 +266,27 @@ export default function DeckPanel({
         counts={tabCounts}
         caps={tabCaps}
       />
+
+      {ruleWarnings.length > 0 && (
+        <div className="rule-warns">
+          {ruleWarnings.map((w, i) => {
+            const params = localizeParams(w, { cardsById, lang, t });
+            return (
+              <div key={i} className={`rule-warn ${w.severity}`} role="alert">
+                <span className="rule-sev" title={t(`rules.severity.${w.severity}`)}>
+                  <span aria-hidden="true">{SEV_ICON[w.severity]}</span> {t(`rules.severity.${w.severity}`)}
+                </span>
+                <span className="msg">{t(`rules.${w.code}`, params)}</span>
+                <span className="rule-meta">
+                  <code>{w.ruleId}</code>
+                  <button className="linklike" onClick={() => onToggleRule(w.ruleId, false)}>{t('rules.disable')}</button>
+                  <a className="linklike" href={reportUrl(w)} target="_blank" rel="noreferrer">{t('rules.report')}</a>
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {warnings.length > 0 && (
         <div className="warns">⚠ {warnings.map((w) => warningText(t, w)).join(' · ')}</div>
