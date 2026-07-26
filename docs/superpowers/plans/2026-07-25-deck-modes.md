@@ -21,6 +21,38 @@
 - **Tests:** `npm test` (Vitest) must pass at the end of every task. Existing ~59 tests must never regress.
 - Node 24; run everything from the repo root. Dev server: `npm run dev:web` (Vite :5173).
 
+## Model assignment (subagent-driven execution)
+
+Least capable model that can do the job, per the Model Selection rules. **Turn count beats token price**: the cheapest tier is only used where the plan text already contains the complete code, making the work transcription plus verification. Reviewers have a mid-tier floor; the two highest-risk diffs and the final whole-branch review get the most capable model.
+
+| Task | Implementer | Reviewer | Why |
+|---|---|---|---|
+| 1 Deck model & store | sonnet | sonnet | Multi-file, integrates into existing store |
+| 2 Remove copy clamp | sonnet | sonnet | Touches 4 components; scope grew mid-flight |
+| 3 es dictionary groundwork | sonnet | sonnet | Discovery-then-implement in an 11 KB file |
+| 4 Setup dialog + App state | sonnet | sonnet | New component + wiring across 3 files |
+| 5 zones.js | **haiku** | sonnet | Complete code in plan → transcription |
+| 6 sides.js + formats.js | sonnet | sonnet | Data + one function, id verification needed |
+| 7 banned.js | sonnet | sonnet | Iterative name-resolution against real data |
+| 8 validate.js | sonnet | **opus** | Feature's central module; subtle rule logic |
+| 9 Extract MiniCard | sonnet | *(controller)* | Pure verbatim move, verified from diff shape |
+| 10 App zone state | sonnet | sonnet | State wiring + persistence |
+| 11 Zone tabs + drop | sonnet | sonnet | Largest UI change of Phase 3 |
+| 12 Browser counters + filter | sonnet | sonnet | Per-cell state, legality filter |
+| 13 Rule warnings UI | sonnet | **opus** | 20 user-facing messages ×3 languages; the copy is an acceptance criterion |
+| 14 Notes tab | sonnet | sonnet | Small component + wiring |
+| 15 Deck list rename/reorder/badge | sonnet | sonnet | UI + store ordering |
+| 16 deckSections.js | **haiku** | sonnet | Complete code + tests in plan → transcription |
+| 17 Markdown sections + import | sonnet | **opus** | Parser state machine; round-trip fidelity and the notes-swallowing hazard |
+| 18 Export dialog ordering | sonnet | sonnet | Integration across PDF/ZIP/text |
+| 19 Documentation page | sonnet | sonnet | Large component, prose ×3 languages |
+| 20 Complete es translation | sonnet | sonnet | Mechanical but large; parity test is the gate |
+| 21 Terminology guard test | **haiku** | *(controller)* | One test, complete code in plan |
+| 22 Final pass + README | sonnet | — | Smoke test and docs |
+| **Final whole-branch review** | — | **opus** | Broad architectural judgement across 30+ commits |
+
+Fix subagents inherit their task's implementer tier, except single-file mechanical fixes which drop to haiku. Where the table says *(controller)* the diff is small enough that the controller verifies it directly rather than paying for a dispatch — the reasoning is recorded in the progress ledger either way.
+
 ## File Structure (end state)
 
 ```
