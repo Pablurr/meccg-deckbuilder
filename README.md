@@ -66,6 +66,50 @@ npx wrangler pages deploy web/dist
    sont pré-remplis avec les défauts du projet (voir `web/public/card-backs/`) et peuvent être
    remplacés par une image perso (stockée avec le deck, en `localStorage`).
 
+## Modes de deck
+
+Chaque deck a un **mode**, choisi à sa création et modifiable ensuite via « Réglages » :
+
+- **Impression libre** : aucune règle, aucune limite de copies — imprime n'importe quelle carte,
+  en n'importe quelle quantité. C'est le mode de tous les decks créés avant cette fonctionnalité
+  (migration automatique et transparente : un ancien deck se rouvre en impression libre).
+- **Construction de deck** : choisis un **camp** (Sorcier, Spectre de l'Anneau, Sorcier déchu,
+  Balrog — jamais « faction », qui désigne une catégorie de carte MECCG), une **longueur de
+  partie** (Starter, Standard, Longue, Campagne) et une **sévérité** (tournoi ou casual), puis le
+  deck est vérifié **en direct** pendant que tu le construis.
+
+### Zones
+
+Un deck a jusqu'à quatre zones : le **talon** (Personnage/Ressource/Péril), le **deck de sites**
+(Site/Région), une **réserve** (sideboard) optionnelle et, pour les camps qui en utilisent un, un
+**pool de départ** de personnages et d'objets mineurs mis de côté avant la partie. Le tiroir du
+bas affiche des onglets par zone avec compteurs et plafonds (ex. `Pool 3 / 10`), et déposer une
+carte sur un onglet l'y déplace. Dans le navigateur de cartes, chaque carte affiche un compteur
+par zone ; en mode Construction de deck, un filtre de **légalité** (activé par défaut) masque les
+cartes non éligibles au camp/à la longueur choisis — bascule « Afficher les cartes illégales »
+pour tout voir quand même.
+
+### Avertissements de règles
+
+En mode Construction de deck, chaque règle vérifiée signale les problèmes en direct (trop
+d'exemplaires d'une carte, taille de talon hors plage, pool de départ hors limites, etc.) en
+nommant la carte concernée. **Rien n'est jamais bloqué.** Par deck, tu peux **ignorer une règle**
+(elle ne sera plus signalée pour ce deck précis) ou **la signaler** (ouvre un ticket GitHub
+pré-rempli si tu penses qu'elle est fausse).
+
+**Important — les valeurs des règles sont des stubs.** Elles viennent d'une base de connaissances
+utilisée comme piste de départ, pas comme source faisant autorité : la vérification contre une
+source officielle est encore en cours. Toute règle non confirmée démarre **désactivée** et ne
+produit aucun avertissement. La page **Règles et modes** (bouton `?` en haut) documente chaque
+règle — description, sévérité, source — à partir des mêmes données que le validateur, et permet
+de cocher, deck par deck, celles que tu veux appliquer quand même une fois vérifiées de ton côté.
+
+### Notes
+
+Chaque deck a quatre champs de notes libres (notes de départ, stratégie ressources, stratégie
+périls, autres notes), sauvegardés avec le deck et repris en tête de l'export « Deck list
+(texte) ».
+
 ## Formats d'export
 
 Tous les exports (ZIP, PDF) tournent **entièrement dans le navigateur** : les images de cartes
@@ -148,20 +192,27 @@ Le mapping des dos par type est le même qu'en export MPC.
 Télécharge un fichier `.txt` listant les cartes **triées par type** (Characters, Resources,
 Hazards, Sites, Regions) avec les quantités, au format `Nx nom` — directement ré-importable
 via le bouton « Importer ». La **langue** de la liste est réglable (English, Français, Español,
-Deutsch, Nederlands — les langues complètes du JSON).
+Deutsch, Nederlands — les langues complètes du JSON). Pour un deck en mode Construction, les
+zones apparaissent en sections (`## Pool`, `## Play deck`, `## Locations`, `## Sideboard`, dans
+cet ordre — le même ordre que le ZIP et le PDF) et les notes sont reprises en tête du fichier
+sous `## Notes` ; ré-importer ce fichier restaure les cartes **dans leurs zones d'origine** ainsi
+que les notes.
 
 ## Langue de l'interface
 
-Le sélecteur **FR / EN** en haut à droite change la langue de **toute l'interface** (boutons,
-filtres, dialogues, avertissements), des **noms de cartes** **et** des **images de cartes** : les
-visuels sont chargés depuis le CDN dans la langue choisie (`imageBaseUrl[fr|en]` + nom de
-fichier). Si l'image dans la langue choisie manque, l'affichage retombe automatiquement sur la
-version anglaise.
+Le sélecteur **FR / EN / ES** en haut à droite change la langue de **toute l'interface**
+(boutons, filtres, dialogues, avertissements de règles, page de documentation), des **noms de
+cartes** (y compris dans les avertissements) **et** des **images de cartes** : les visuels sont
+chargés depuis le CDN dans la langue choisie (`imageBaseUrl[fr|en|es]` + nom de fichier). Si
+l'image dans la langue choisie manque, l'affichage retombe automatiquement sur la version
+anglaise.
 
 Les textes sont centralisés dans [`web/src/lib/i18n.js`](web/src/lib/i18n.js) (un dictionnaire
 par langue, clés partagées). Pour ajouter une langue, ajouter un bloc avec les mêmes clés et
-l'inscrire dans `UI_LANGUAGES` ([`web/src/lib/lang.js`](web/src/lib/lang.js)). Un test vérifie
-que les dictionnaires `fr`/`en` ont exactement les mêmes clés.
+l'inscrire dans `UI_LANGUAGES` ([`web/src/lib/lang.js`](web/src/lib/lang.js)). Des tests vérifient
+que les dictionnaires `fr`/`en`/`es` ont exactement les mêmes clés, et qu'aucune chaîne liée aux
+camps n'emploie « faction » (qui désigne autre chose sur les cartes MECCG — voir « Modes de
+deck » plus haut).
 
 ## Sélection en masse
 
@@ -190,5 +241,7 @@ npm test
 ## Structure
 
 - `web/` — front Vite + React (toute l'app, y compris la logique d'export en `web/src/lib/export/`)
+- `web/src/lib/rules/` — moteur de règles pur (validation en mode Construction de deck) ; les
+  valeurs sont des stubs à vérifier, voir la page « Règles et modes » dans l'app
 - `web/public/` — assets statiques servis tels quels : `cards.json`, `card-backs/`, `_redirects`
 - `docs/superpowers/` — spec et plan d'implémentation
