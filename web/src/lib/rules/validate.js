@@ -87,11 +87,12 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
   // Fires on total copies, not distinct avatar cards: 3 copies of one avatar
   // is exactly as illegal as 2 different avatars. `names` is left as an
   // array — joining into a sentence is a UI/i18n concern, not this layer's.
-  if (avatarCount > 1) emit('AVATAR-UNIQUE', { count: avatarCount, names: avatars.map((e) => name(e.card)) });
+  if (avatarCount > 1) emit('AVATAR-UNIQUE', { count: avatarCount, names: avatars.map((e) => name(e.card)), ids: avatars.map((e) => e.id) });
   for (const e of avatars) {
-    if (e.card.alignment !== profile.avatarAlignment) emit('AVATAR-SIDE', { name: name(e.card), side });
+    if (e.card.alignment !== profile.avatarAlignment) emit('AVATAR-SIDE', { id: e.id, name: name(e.card), side });
   }
   const avatarName = avatars.length === 1 ? name(avatars[0].card) : null;
+  const avatarId = avatars.length === 1 ? avatars[0].id : null;
 
   // --- per-card checks ---
   const bannedSet = bannedFor(cardsById, side);
@@ -106,7 +107,7 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
     }
 
     if (profile.specificMode === 'avatar-match' && a.specific && a.specific !== 'Balrog' && avatarName && !avatarName.includes(a.specific)) {
-      emit('SPECIFIC-AVATAR', { id: e.id, name: name(c), wizard: a.specific, avatar: avatarName });
+      emit('SPECIFIC-AVATAR', { id: e.id, name: name(c), wizard: a.specific, avatar: avatarName, avatarId });
     }
 
     if (c.type === 'Site') {

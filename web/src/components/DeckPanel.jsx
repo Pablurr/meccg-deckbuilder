@@ -13,19 +13,43 @@ import { REPORT_ISSUES_URL } from '../lib/constants.js';
 const SEV_ICON = { error: '⛔', warning: '⚠', info: 'ℹ' };
 
 // validate.js resolves card names English-first (it has no notion of the
-// user's display language). Where a warning's params carry a card `id`, look
-// the card back up here and swap in the localized name; a few codes only
-// ever get a precomputed name string with no id (AVATAR-UNIQUE's `names`
-// list, AVATAR-SIDE) and keep validate.js's name as-is.
+// user's display language). Where a warning's params carry a card `id` (or,
+// for the multi-name/avatar-reference cases, an `ids`/`avatarId`), look the
+// card(s) back up here and swap in the localized name so every row names
+// cards in the viewer's language, never a mix of English and translated.
 function localizeParams(w, { cardsById, lang, t }) {
   const p = { ...w.params };
   if (p.id) {
     const c = cardsById.get(p.id);
     if (c) p.name = cardName(c, lang);
   }
-  if (p.names) p.names = p.names.join(', ');
+  if (p.avatarId) {
+    const c = cardsById.get(p.avatarId);
+    if (c) p.avatar = cardName(c, lang);
+  }
+  if (p.names) {
+    p.names = p.names
+      .map((n, i) => {
+        const id = p.ids && p.ids[i];
+        const c = id && cardsById.get(id);
+        return c ? cardName(c, lang) : n;
+      })
+      .join(', ');
+  }
   if (p.side) p.side = t(`side.${p.side}`);
   if (p.length) p.length = t(`length.${p.length}`);
+  // Localize raw data values (alignment/race) the same way as side/length
+  // above; t() falls back key -> en -> the key string itself when a
+  // translation is missing, so an exact-match-to-key means "no translation
+  // exists" and we keep the original data value rather than show a raw key.
+  if (p.alignment) {
+    const localized = t(`alignment.${p.alignment}`);
+    p.alignment = localized === `alignment.${p.alignment}` ? p.alignment : localized;
+  }
+  if (p.race) {
+    const localized = t(`race.${p.race}`);
+    p.race = localized === `race.${p.race}` ? p.race : localized;
+  }
   // UNIQUE-LIMIT/SITE-COPIES: validate.js reports the raw count against an
   // implicit limit of 1; compute how many copies to remove here rather than
   // widening the validator's param shape for two single-purpose numbers.
@@ -268,11 +292,11 @@ export default function DeckPanel({
       />
 
       {ruleWarnings.length > 0 && (
-        <div className="rule-warns">
+        <div className="rule-warns" role="status">
           {ruleWarnings.map((w, i) => {
             const params = localizeParams(w, { cardsById, lang, t });
             return (
-              <div key={i} className={`rule-warn ${w.severity}`} role="alert">
+              <div key={i} className={`rule-warn ${w.severity}`}>
                 <span className="rule-sev" title={t(`rules.severity.${w.severity}`)}>
                   <span aria-hidden="true">{SEV_ICON[w.severity]}</span> {t(`rules.severity.${w.severity}`)}
                 </span>

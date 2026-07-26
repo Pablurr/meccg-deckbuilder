@@ -10,6 +10,11 @@
   --warn: #d9a441;
   --danger: #d1495b;
   --info: #5b9bd1;
+  /* Lighter danger, same hue/saturation as --danger, for small bold text
+     (.rule-warn.error .rule-sev) on --panel-2: --danger there measures
+     ~3.4:1, below WCAG AA's 4.5:1 for small text. This measures ~4.78:1
+     on #262632. Do not use elsewhere --danger itself is fine on --bg/--panel. */
+  --danger-label: #da7283;
   --radius: 8px;
 }
 
@@ -362,7 +367,7 @@ body {
   text-transform: uppercase;
   letter-spacing: .02em;
 }
-.rule-warn.error .rule-sev { color: var(--danger); }
+.rule-warn.error .rule-sev { color: var(--danger-label); }
 .rule-warn.warning .rule-sev { color: var(--warn); }
 .rule-warn.info .rule-sev { color: var(--info); }
 .rule-warn .msg { color: var(--text); }
