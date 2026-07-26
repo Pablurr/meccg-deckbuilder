@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import * as api from '../api.js';
 import { useT } from '../i18n.jsx';
 
-export default function DeckManager({ deck, cardIds, quantities, onClose, onLoad, onSaved }) {
+export default function DeckManager({ deck, cardIds, quantities, zones, onClose, onLoad, onSaved }) {
   const t = useT();
   const [decks, setDecks] = useState([]);
   const [name, setName] = useState(deck.name || t('app.newDeck'));
@@ -21,7 +21,7 @@ export default function DeckManager({ deck, cardIds, quantities, onClose, onLoad
     try {
       const payload = {
         name, cardIds, quantities, backAssignments: deck.backAssignments || {},
-        mode: deck.mode, ruleset: deck.ruleset, zones: deck.zones, notes: deck.notes, order: deck.order,
+        mode: deck.mode, ruleset: deck.ruleset, zones, notes: deck.notes, order: deck.order,
       };
       const saved = deck.id ? await api.updateDeck(deck.id, payload) : await api.createDeck(payload);
       onSaved(saved);

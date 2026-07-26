@@ -23,6 +23,7 @@ export default function App() {
   const [uiLang, setUiLang] = useState('fr'); // display language for card names
   const [quantities, setQuantities] = useState({}); // id -> copy count
   const [deck, setDeck] = useState(() => normalizeDeck({ id: null, name: 'Nouveau deck', backAssignments: {} }));
+  const [zones, setZones] = useState({ sideboard: {}, pool: {} }); // id -> copy count, per zone
   const [showManager, setShowManager] = useState(false);
   const [showSetup, setShowSetup] = useState(false);
   const [showExport, setShowExport] = useState(false);
@@ -45,7 +46,7 @@ export default function App() {
 
   // When the deck empties the mobile sheet unmounts; reset its flag so re-adding
   // a card doesn't pop the sheet back open unprompted.
-  const deckEmpty = Object.keys(quantities).length === 0;
+  const deckEmpty = Object.keys(quantities).length === 0 && Object.keys(zones.sideboard).length === 0 && Object.keys(zones.pool).length === 0;
   useEffect(() => { if (deckEmpty) setDeckSheetOpen(false); }, [deckEmpty]);
 
   useEffect(() => {
@@ -84,6 +85,27 @@ export default function App() {
     });
   }
 
+  // Zone-aware quantity helper shared by sideboard/pool. Mirrors changeQty's
+  // floor-at-0-and-delete-the-key semantics; deliberately uncapped like it.
+  function bump(map, id, delta) {
+    const next = Math.max(0, (map[id] || 0) + delta);
+    const out = { ...map };
+    if (next <= 0) delete out[id]; else out[id] = next;
+    return out;
+  }
+  // zone is 'deck' | 'sideboard' | 'pool'; 'deck' routes to the existing
+  // quantities map rather than being a zone of its own.
+  function changeZoneQty(zone, id, delta) {
+    if (zone === 'deck') return changeQty(id, delta);
+    setZones((prev) => ({ ...prev, [zone]: bump(prev[zone], id, delta) }));
+  }
+  // Move one copy between zones (including 'deck'); no-op if fromZone === toZone.
+  function moveCopy(id, fromZone, toZone) {
+    if (fromZone === toZone) return;
+    changeZoneQty(fromZone, id, -1);
+    changeZoneQty(toZone, id, +1);
+  }
+
   // First click selects (1 copy), second click deselects.
   function toggleCard(id) {
     setQuantities((prev) => {
@@ -114,8 +136,10 @@ export default function App() {
   }
 
   function loadDeckIntoState(d) {
-    setDeck(normalizeDeck(d));
+    const normalized = normalizeDeck(d);
+    setDeck(normalized);
     setQuantities(d.quantities || countOccurrences(d.cardIds || []));
+    setZones(normalized.zones);
     setShowManager(false);
   }
 
@@ -124,6 +148,7 @@ export default function App() {
   function newDeck() {
     setDeck(normalizeDeck({ id: null, name: t('app.newDeck'), backAssignments: {} }));
     setQuantities({});
+    setZones({ sideboard: {}, pool: {} });
     setShowManager(false);
     setShowSetup(true);
   }
@@ -131,6 +156,7 @@ export default function App() {
   // Called by DeckSetupDialog.onConfirm with { mode, ruleset }.
   function applySetup(partial) {
     setDeck((prev) => normalizeDeck({ ...prev, id: prev.id, ...partial }));
+    setZones({ sideboard: {}, pool: {} });
     setShowSetup(false);
   }
 
@@ -140,7 +166,7 @@ export default function App() {
   const cardIds = expandQuantities(quantities);
   const counts = deckCounts(cardsById, cardIds);
   const warnings = deckWarnings(cardsById, cardIds, deck.backAssignments, defaultBacks);
-  const hasSelection = counts.total > 0;
+  const hasSelection = counts.total > 0 || Object.keys(zones.sideboard).length > 0 || Object.keys(zones.pool).length > 0;
 
   return (
     <I18nProvider lang={textLang}>
@@ -208,6 +234,7 @@ export default function App() {
           deck={deck}
           cardIds={cardIds}
           quantities={quantities}
+          zones={zones}
           onClose={() => setShowManager(false)}
           onLoad={loadDeckIntoState}
           onSaved={(d) => setDeck((prev) => normalizeDeck({ ...prev, ...d }))}
