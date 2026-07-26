@@ -125,6 +125,8 @@ export const translations = {
     'decks.confirmDelete': 'Supprimer « {name} » ?',
     'decks.copySuffix': '(copie)',
     'decks.storageFull': 'Stockage plein : impossible d’enregistrer. Supprime des decks ou des dos personnalisés.',
+    'decks.moveUp': 'Monter',
+    'decks.moveDown': 'Descendre',
 
     // Import dialog
     'import.title': 'Importer une liste',
@@ -334,6 +336,8 @@ export const translations = {
     'decks.confirmDelete': 'Delete “{name}”?',
     'decks.copySuffix': '(copy)',
     'decks.storageFull': 'Storage full: cannot save. Remove some decks or custom backs.',
+    'decks.moveUp': 'Move up',
+    'decks.moveDown': 'Move down',
 
     'import.title': 'Import a list',
     'import.help': 'Paste a list in the {fmt} format. The name must be complete, but case, accents, hyphens/spaces and punctuation are ignored ({ex}). Importing replaces the current selection.',

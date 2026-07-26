@@ -1,19 +1,81 @@
 import React, { useEffect, useState } from 'react';
 import * as api from '../api.js';
 import { useT } from '../i18n.jsx';
+import { useIsMobile } from '../lib/useIsMobile.js';
 
 export default function DeckManager({ deck, cardIds, quantities, zones, onClose, onLoad, onSaved }) {
   const t = useT();
+  const isMobile = useIsMobile();
   const [decks, setDecks] = useState([]);
   const [name, setName] = useState(deck.name || t('app.newDeck'));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [confirmId, setConfirmId] = useState(null); // deck id awaiting delete confirmation
+  const [renamingId, setRenamingId] = useState(null); // deck id whose name is being edited inline
+  const [renameValue, setRenameValue] = useState('');
+  const [dragIndex, setDragIndex] = useState(null); // index of the row currently being dragged (desktop reorder)
 
   async function refresh() {
     setDecks(await api.listDecks());
   }
   useEffect(() => { refresh().catch(() => {}); }, []);
+
+  function startRename(d) {
+    setRenamingId(d.id);
+    setRenameValue(d.name);
+  }
+
+  function cancelRename() {
+    setRenamingId(null);
+  }
+
+  async function commitRename(id) {
+    const value = renameValue.trim();
+    setRenamingId(null);
+    if (!value) return; // empty name: cancel silently rather than saving a blank one
+    try {
+      await api.updateDeck(id, { name: value });
+      await refresh();
+    } catch (e) {
+      setError(e.message === 'storage-full' ? t('decks.storageFull') : t('common.error', { msg: e.message }));
+    }
+  }
+
+  // Persists a manual order across the whole list in one pass: every row gets
+  // an explicit `order` (1-based index), so decks created before the field
+  // (order === null) get a stable position too, instead of drifting with
+  // updatedAt. Each `updateDeck` call is independent (its own read-modify-write
+  // of the whole store), so this is NOT atomic — if one write fails partway
+  // (e.g. storage-full), earlier rows in the pass may already be persisted
+  // with their new order while later ones keep the old one. We refresh from
+  // storage on failure so the UI reflects whatever actually landed rather
+  // than the optimistic (possibly wrong) in-memory order.
+  async function persistOrder(nextDecks) {
+    setDecks(nextDecks);
+    try {
+      await Promise.all(nextDecks.map((r, i) => api.updateDeck(r.id, { order: i + 1 })));
+      await refresh();
+    } catch (e) {
+      setError(e.message === 'storage-full' ? t('decks.storageFull') : t('common.error', { msg: e.message }));
+      await refresh().catch(() => {});
+    }
+  }
+
+  function moveTo(from, to) {
+    if (from === to || from < 0 || to < 0 || from >= decks.length || to >= decks.length) return;
+    const next = decks.slice();
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    persistOrder(next);
+  }
+
+  function moveUp(index) {
+    if (index > 0) moveTo(index, index - 1);
+  }
+
+  function moveDown(index) {
+    if (index < decks.length - 1) moveTo(index, index + 1);
+  }
 
   async function save() {
     setBusy(true);
@@ -83,24 +145,61 @@ export default function DeckManager({ deck, cardIds, quantities, zones, onClose,
 
         <ul className="deck-list">
           {decks.length === 0 && <li className="muted">{t('decks.none')}</li>}
-          {decks.map((d) => (
-            <li key={d.id}>
-              <span className="name">{d.name} <span className="muted">· {t('decks.cardsCount', { n: d.count })}</span></span>
-              {confirmId === d.id ? (
-                <>
-                  <span className="muted">{t('decks.confirmDelete', { name: d.name })}</span>
-                  <button className="btn danger small" onClick={() => remove(d.id)}>{t('panel.remove')}</button>
-                  <button className="btn secondary small" onClick={() => setConfirmId(null)}>{t('common.cancel')}</button>
-                </>
-              ) : (
-                <>
-                  <button className="btn secondary" onClick={() => load(d.id)}>{t('decks.load')}</button>
-                  <button className="btn secondary" onClick={() => duplicate(d.id)}>{t('decks.duplicate')}</button>
-                  <button className="btn secondary" onClick={() => setConfirmId(d.id)}>{t('decks.delete')}</button>
-                </>
-              )}
-            </li>
-          ))}
+          {decks.map((d, i) => {
+            const sideKey = d.mode === 'deckbuilding' ? d.side : 'freeform';
+            return (
+              <li
+                key={d.id}
+                draggable={!isMobile}
+                onDragStart={() => setDragIndex(i)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (dragIndex != null) moveTo(dragIndex, i);
+                  setDragIndex(null);
+                }}
+                onDragEnd={() => setDragIndex(null)}
+              >
+                {isMobile && (
+                  <span className="order-btns">
+                    <button className="btn secondary small" disabled={i === 0} onClick={() => moveUp(i)} aria-label={t('decks.moveUp')}>▲</button>
+                    <button className="btn secondary small" disabled={i === decks.length - 1} onClick={() => moveDown(i)} aria-label={t('decks.moveDown')}>▼</button>
+                  </span>
+                )}
+                {renamingId === d.id ? (
+                  <input
+                    autoFocus
+                    type="text"
+                    className="name"
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') commitRename(d.id);
+                      else if (e.key === 'Escape') cancelRename();
+                    }}
+                  />
+                ) : (
+                  <span className="name" onClick={() => startRename(d)}>
+                    {d.name} <span className="muted">· {t('decks.cardsCount', { n: d.count })}</span>
+                  </span>
+                )}
+                <span className={`side-badge ${sideKey}`}>{t(`side.${sideKey}`)}</span>
+                {confirmId === d.id ? (
+                  <>
+                    <span className="muted">{t('decks.confirmDelete', { name: d.name })}</span>
+                    <button className="btn danger small" onClick={() => remove(d.id)}>{t('panel.remove')}</button>
+                    <button className="btn secondary small" onClick={() => setConfirmId(null)}>{t('common.cancel')}</button>
+                  </>
+                ) : (
+                  <>
+                    <button className="btn secondary" onClick={() => load(d.id)}>{t('decks.load')}</button>
+                    <button className="btn secondary" onClick={() => duplicate(d.id)}>{t('decks.duplicate')}</button>
+                    <button className="btn secondary" onClick={() => setConfirmId(d.id)}>{t('decks.delete')}</button>
+                  </>
+                )}
+              </li>
+            );
+          })}
         </ul>
 
         <div className="row" style={{ justifyContent: 'flex-end' }}>

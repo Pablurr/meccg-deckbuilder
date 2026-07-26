@@ -603,8 +603,37 @@ body {
   display: flex; align-items: center; gap: 8px;
   padding: 8px; border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 6px;
 }
-.deck-list .name { flex: 1; }
+.deck-list li[draggable="true"] { cursor: grab; }
+.deck-list .name { flex: 1; cursor: text; }
+input.name {
+  flex: 1;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  padding: 6px 8px;
+  border-radius: var(--radius);
+  font: inherit;
+}
+.order-btns { display: flex; flex-direction: column; gap: 2px; }
+.order-btns .btn { padding: 0 6px; line-height: 1.4; }
 .muted { color: var(--muted); }
+
+/* Side badge: colour is decoration only, the label always carries the
+   meaning (readable under colour-vision deficiency and colour-inverting
+   browser extensions alike). */
+.side-badge {
+  display: inline-block;
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-size: 11px;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+.side-badge.wizard { color: #7aa2f7; background: rgba(122, 162, 247, .12); }
+.side-badge.ringwraith { color: #d1495b; background: rgba(209, 73, 91, .12); }
+.side-badge.fallen-wizard { color: #a56cff; background: rgba(165, 108, 255, .12); }
+.side-badge.balrog { color: #e08a3c; background: rgba(224, 138, 60, .12); }
+.side-badge.freeform { color: #9a9aab; background: rgba(154, 154, 171, .12); }
 .close-x { position: absolute; }
 
 /* ---- Import dialog ---- */

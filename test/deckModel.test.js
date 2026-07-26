@@ -47,6 +47,22 @@ describe('deckStore ordering & projection', () => {
     expect(rows).toHaveLength(2);
     expect(rows[0].name).toBe('Ordered');
   });
+
+  it('reordering swaps order values and a rename does not change position', async () => {
+    const store = createDeckStore(memStorage());
+    const a = await store.create({ name: 'First' });
+    const b = await store.create({ name: 'Second' });
+    await store.update(a.id, { order: 1 });
+    await store.update(b.id, { order: 2 });
+    // swap
+    await store.update(a.id, { order: 2 });
+    await store.update(b.id, { order: 1 });
+    let rows = await store.list();
+    expect(rows.map((r) => r.name)).toEqual(['Second', 'First']);
+    await store.update(b.id, { name: 'Second renamed' });
+    rows = await store.list();
+    expect(rows[0].name).toBe('Second renamed'); // still first
+  });
 });
 
 import { maxCopies } from '../web/src/lib/deck.js';
