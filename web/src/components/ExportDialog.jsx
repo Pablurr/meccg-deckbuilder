@@ -23,7 +23,7 @@ function downloadText(text, filename) {
   URL.revokeObjectURL(url);
 }
 
-export default function ExportDialog({ deck, cardIds, cardsById, quantities, defaultBacks = {}, uiLang = 'fr', onClose, onBacksChange, proxyMode = false }) {
+export default function ExportDialog({ deck, cardIds, cardsById, quantities, zones = { sideboard: {}, pool: {} }, defaultBacks = {}, uiLang = 'fr', onClose, onBacksChange, proxyMode = false }) {
   const t = useT();
   const [backs, setBacks] = useState(deck.backAssignments || {});
   const [format, setFormat] = useState('mpc'); // 'mpc' | 'pdf' | 'list'
@@ -76,7 +76,7 @@ export default function ExportDialog({ deck, cardIds, cardsById, quantities, def
           (r.failures.length ? t('export.result.failures', { n: r.failures.length }) : '')
         );
       } else {
-        const text = buildDeckListText(cardsById, quantities, deck.name, listLang);
+        const text = buildDeckListText(cardsById, quantities, deck.name, listLang, { zones, notes: deck.notes });
         downloadText(text, `${(deck.name || 'deck').replace(/[^a-zA-Z0-9_-]+/g, '_')}.txt`);
         setResult(t('export.result.list'));
       }

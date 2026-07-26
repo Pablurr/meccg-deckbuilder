@@ -1,3 +1,7 @@
+// SECTION_TITLES/NOTE_TITLES are the canonical (English) headings emitted by
+// buildDeckListText — imported here so the two files can never drift apart.
+import { SECTION_TITLES, NOTE_TITLES } from './deckList.js';
+
 // Aggressive normalization for full-name matching so the pasted list is
 // forgiving. Beyond accents/case, it makes these all equivalent:
 //   - hyphen vs space vs underscore ("star-glass" = "star glass")
@@ -17,30 +21,138 @@ export function normalizeName(s) {
     .replace(/[^a-z0-9]/g, ''); // drop spaces, hyphens, apostrophes, punctuation
 }
 
-// Parse a pasted deck list. Each non-empty line is "<qty>x <name>" (the "x" and
-// count are optional; a bare name means quantity 1).
+// Parse one "<qty>x <name>" line (the "x" and count are optional; a bare name
+// means quantity 1). Extracted from parseDeckList so the section-aware
+// document parser below (parseDeckListDocument) can reuse the exact same
+// per-line rule.
 //   "1x burat" -> { qty: 1, name: 'burat' }
 //   "2 x beautiful gold ring" -> { qty: 2, name: 'beautiful gold ring' }
 //   "glamour" -> { qty: 1, name: 'glamour' }
+function parseLine(line) {
+  const m = line.match(/^(\d+)\s*[xX]?\s+(.+)$/) || line.match(/^(\d+)[xX]\s*(.+)$/);
+  let qty = 1;
+  let name = line;
+  if (m) {
+    qty = parseInt(m[1], 10);
+    name = m[2].trim();
+  }
+  return { raw: line, qty: Math.max(1, qty || 1), name };
+}
+
+// Parse a pasted deck list with no section structure at all (the flat legacy
+// paste format, and still how a bare card-name-per-line clipboard paste is
+// read). Kept byte-for-byte compatible with its original behavior.
 export function parseDeckList(text) {
   const out = [];
   for (const raw of String(text || '').split(/\r?\n/)) {
     const line = raw.trim();
     if (!line) continue;
-    const m = line.match(/^(\d+)\s*[xX]?\s+(.+)$/) || line.match(/^(\d+)[xX]\s*(.+)$/);
-    let qty = 1;
-    let name = line;
-    if (m) {
-      qty = parseInt(m[1], 10);
-      name = m[2].trim();
-    }
-    out.push({ raw: line, qty: Math.max(1, qty || 1), name });
+    out.push(parseLine(line));
   }
   return out;
 }
 
-// Index cards by their full name (en and fr), normalized (accent/case-insensitive).
-export function buildNameIndex(cards) {
+// Reverse lookup: canonical English `##` section heading -> target zone.
+// "Play deck" and "Locations" (and any *unrecognized* `##` heading — which
+// includes every legacy flat heading like "Characters (3)") are not listed
+// here and fall back to the main deck ('quantities') in
+// parseDeckListDocument below. That fallback is exactly what keeps old flat
+// exports importing unchanged.
+const ZONE_HEADING_TARGETS = { [SECTION_TITLES.pool]: 'pool', [SECTION_TITLES.sideboard]: 'sideboard' };
+
+// Reverse lookup: canonical English `###` note heading -> notes field.
+const NOTE_FIELD_BY_TITLE = Object.fromEntries(Object.entries(NOTE_TITLES).map(([field, title]) => [title, field]));
+
+// Parse a full deck-list document (title + optional Notes + card sections)
+// into the free-text notes plus a flat list of card lines, each tagged with
+// its target zone ('quantities' | 'pool' | 'sideboard'). Sections are
+// identified purely by canonical English `##`/`###` headings (see
+// deckList.js's SECTION_TITLES/GROUP_TITLES/NOTE_TITLES), so a list exported
+// in any UI language still imports — only card *names* are language-specific,
+// and those are resolved later by resolveDeckList.
+//
+// The central hazard this guards against: prose under `## Notes` must never
+// be read as a card line. For example a note reading "3x Gandalf is the
+// plan" must not import three Gandalfs. The rule (per the task brief) is
+// absolute: once mode === 'notes', every non-heading line — including one
+// that looks exactly like "<qty>x <name>" — is appended to the current note
+// field's text and is never passed to parseLine/matched against a card name.
+// That branch never calls parseLine while mode is 'notes'; only the 'cards'
+// branch does. Mode changes only on a `##` heading line, so a note body can
+// never accidentally slip into 'cards' mode by itself.
+//
+// A `##` line inside a note's own text (e.g. a note that talks about
+// Markdown) intentionally ends the notes section early and starts a new
+// (unrecognized) section targeting the main deck — see the report for why
+// this is an acceptable, documented trade-off rather than a bug: escaping
+// arbitrary user prose while still allowing every real `##` heading to work
+// as a heading is not solvable within a plain-text, line-oriented format.
+export function parseDeckListDocument(text) {
+  const notes = { starting: '', resourceStrategy: '', hazardStrategy: '', other: '' };
+  const noteBuf = { starting: [], resourceStrategy: [], hazardStrategy: [], other: [] };
+  const lines = [];
+
+  let mode = null; // null | 'notes' | 'cards'
+  let target = null; // 'quantities' | 'pool' | 'sideboard' — only meaningful when mode === 'cards'
+  let noteField = null; // only meaningful when mode === 'notes'
+
+  for (const raw of String(text || '').split(/\r?\n/)) {
+    const line = raw.trim();
+
+    const h2 = line.match(/^##\s+(.+)$/);
+    if (h2) {
+      const heading = h2[1].trim();
+      noteField = null;
+      if (heading === 'Notes') {
+        mode = 'notes';
+        target = null;
+      } else {
+        mode = 'cards';
+        target = ZONE_HEADING_TARGETS[heading] || 'quantities';
+      }
+      continue;
+    }
+
+    const h3 = line.match(/^###\s+(.+)$/);
+    if (h3) {
+      // Inside 'cards' mode this is a group header ("Characters (3)", ...)
+      // with no state to track beyond the enclosing section. Inside 'notes'
+      // mode it selects which field subsequent lines accumulate into.
+      if (mode === 'notes') noteField = NOTE_FIELD_BY_TITLE[h3[1].trim()] || 'other';
+      continue;
+    }
+
+    if (!line) {
+      // A blank line inside a note is part of that note's own paragraph
+      // breaks — keep it. Blank lines elsewhere are pure formatting.
+      if (mode === 'notes' && noteField) noteBuf[noteField].push('');
+      continue;
+    }
+
+    if (line.startsWith('# ')) continue; // deck title, not part of the body
+
+    if (mode === 'notes') {
+      // Guard for the central hazard: never call parseLine here. A stray
+      // line before the first ### field heading still lands in 'other' —
+      // kept as text, never matched as a card.
+      noteBuf[noteField || 'other'].push(line);
+      continue;
+    }
+
+    if (mode === 'cards') lines.push({ ...parseLine(line), target });
+    // mode === null: stray text before the first heading is ignored.
+  }
+
+  for (const field of Object.keys(notes)) notes[field] = noteBuf[field].join('\n').trim();
+  return { notes, lines };
+}
+
+// Index cards by their full name (en and fr, plus `extraLang` when it's a
+// third language), normalized (accent/case-insensitive). `extraLang` lets a
+// list exported in, say, Spanish or German still resolve on import even
+// though only en/fr are indexed by default (matches ImportDialog's existing,
+// unchanged default call with no second argument).
+export function buildNameIndex(cards, extraLang) {
   const idx = new Map();
   const add = (name, card) => {
     const key = normalizeName(name);
@@ -52,6 +164,7 @@ export function buildNameIndex(cards) {
   for (const c of cards) {
     add(c.name && c.name.en, c);
     add(c.name && c.name.fr, c);
+    if (extraLang && extraLang !== 'en' && extraLang !== 'fr') add(c.name && c.name[extraLang], c);
   }
   return idx;
 }
@@ -99,4 +212,40 @@ export function resolveDeckList(parsed, nameIndex) {
     else if (matches.length > 1) status = 'ambiguous';
     return { ...item, matches, status };
   });
+}
+
+// Full, non-interactive import: parse the section-aware document and resolve
+// every card line against `cards` (by name, in `lang` — see buildNameIndex's
+// `extraLang`). This is the round-trip entry point used by the deck
+// round-trip tests and is what a legacy flat-format paste also goes through
+// (every line simply targets 'quantities', since no zone headings are
+// present, and there is no ## Notes to trigger notes mode).
+//
+// Ambiguous lines (matched by a shared name, e.g. a hero/minion pair) fall
+// back to their first match here, exactly like ImportDialog's own default
+// selection, but are also listed in `ambiguous` so an interactive caller can
+// still prompt to disambiguate. Unmatched lines are omitted from
+// quantities/zones and listed in `unmatched`.
+export function importDeckList(text, cards, lang = 'en') {
+  const { notes, lines } = parseDeckListDocument(text);
+  const nameIndex = buildNameIndex(cards, lang);
+  const resolved = resolveDeckList(lines, nameIndex);
+
+  const quantities = {};
+  const zones = { pool: {}, sideboard: {} };
+  const unmatched = [];
+  const ambiguous = [];
+
+  for (const line of resolved) {
+    if (line.status === 'notfound') {
+      unmatched.push(line);
+      continue;
+    }
+    if (line.status === 'ambiguous') ambiguous.push(line);
+    const id = line.matches[0].id;
+    const bucket = line.target === 'pool' ? zones.pool : line.target === 'sideboard' ? zones.sideboard : quantities;
+    bucket[id] = (bucket[id] || 0) + line.qty;
+  }
+
+  return { quantities, zones, notes, unmatched, ambiguous };
 }

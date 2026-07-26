@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { parseDeckList, buildNameIndex, resolveDeckList, preferredMatchId } from '../lib/importDeck.js';
+import { parseDeckListDocument, buildNameIndex, resolveDeckList, preferredMatchId } from '../lib/importDeck.js';
 import { cardName } from '../lib/lang.js';
 import { useT } from '../i18n.jsx';
 
@@ -25,14 +25,17 @@ function cardLabel(c, lang) {
 export default function ImportDialog({ cards, lang = 'fr', onClose, onImport }) {
   const t = useT();
   const [text, setText] = useState('');
-  const [resolved, setResolved] = useState(null); // array of resolved lines
+  const [resolved, setResolved] = useState(null); // array of resolved lines, each tagged with .target zone
+  const [notes, setNotes] = useState(null); // { starting, resourceStrategy, hazardStrategy, other } from ## Notes, or null pre-analysis
   const [choice, setChoice] = useState({}); // line index -> chosen card id (for ambiguous)
   const [alignPref, setAlignPref] = useState(''); // '' | hero | minion | balrog | fallenWizard
 
-  const nameIndex = useMemo(() => buildNameIndex(cards), [cards]);
+  const nameIndex = useMemo(() => buildNameIndex(cards, lang), [cards, lang]);
 
   function analyze() {
-    setResolved(resolveDeckList(parseDeckList(text), nameIndex));
+    const doc = parseDeckListDocument(text);
+    setNotes(doc.notes);
+    setResolved(resolveDeckList(doc.lines, nameIndex));
   }
 
   // (Re)compute the per-line default selection whenever the results or the
@@ -51,19 +54,27 @@ export default function ImportDialog({ cards, lang = 'fr', onClose, onImport }) 
     setChoice(next);
   }, [resolved, alignPref]);
 
-  // Build the final { id: count } map from resolved+chosen lines (floored at 1).
+  // Build the final { quantities, zones } maps from resolved+chosen lines
+  // (floored at 1), routing each line to its target zone (main deck, pool,
+  // or sideboard) as recorded by parseDeckListDocument.
   const importable = useMemo(() => {
-    if (!resolved) return {};
-    const q = {};
+    const quantities = {};
+    const zones = { pool: {}, sideboard: {} };
+    if (!resolved) return { quantities, zones };
     resolved.forEach((line, i) => {
       if (line.status === 'notfound') return;
       const id = choice[i] || (line.matches[0] && line.matches[0].id);
       if (!id) return;
       const count = Math.max(1, line.qty);
-      q[id] = (q[id] || 0) + count;
+      const bucket = line.target === 'pool' ? zones.pool : line.target === 'sideboard' ? zones.sideboard : quantities;
+      bucket[id] = (bucket[id] || 0) + count;
     });
-    return q;
+    return { quantities, zones };
   }, [resolved, choice]);
+
+  const importCount = Object.values(importable.quantities).reduce((a, b) => a + b, 0)
+    + Object.values(importable.zones.pool).reduce((a, b) => a + b, 0)
+    + Object.values(importable.zones.sideboard).reduce((a, b) => a + b, 0);
 
   const okCount = resolved ? resolved.filter((l) => l.status !== 'notfound').length : 0;
   const notFoundCount = resolved ? resolved.filter((l) => l.status === 'notfound').length : 0;
@@ -140,10 +151,10 @@ export default function ImportDialog({ cards, lang = 'fr', onClose, onImport }) 
           <button className="btn secondary" onClick={onClose}>{t('common.cancel')}</button>
           <button
             className="btn"
-            onClick={() => onImport(importable)}
-            disabled={!resolved || Object.keys(importable).length === 0}
+            onClick={() => onImport({ quantities: importable.quantities, zones: importable.zones, notes: notes || {} })}
+            disabled={!resolved || importCount === 0}
           >
-            {t('import.submit', { n: Object.values(importable).reduce((a, b) => a + b, 0) })}
+            {t('import.submit', { n: importCount })}
           </button>
         </div>
       </div>

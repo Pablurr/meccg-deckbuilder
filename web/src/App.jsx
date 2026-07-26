@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import * as api from './api.js';
-import { expandQuantities, countOccurrences, deckCounts, deckWarnings, normalizeDeck } from './lib/deck.js';
+import { expandQuantities, countOccurrences, deckCounts, deckWarnings, normalizeDeck, EMPTY_NOTES } from './lib/deck.js';
 import { baseOptions } from './lib/tags.js';
 import { I18nProvider } from './i18n.jsx';
 import { makeT } from './lib/i18n.js';
@@ -126,13 +126,23 @@ export default function App() {
     });
   }
 
-  // Replace the current selection with an imported { id: count } map (floored at 1).
-  function importQuantities(imported) {
-    const clamped = {};
-    for (const [id, count] of Object.entries(imported)) {
-      clamped[id] = Math.max(1, count);
-    }
-    setQuantities(clamped);
+  // Replace the current selection with an imported { quantities, zones, notes }
+  // (counts floored at 1). Matches the pre-existing full-replace semantics of
+  // the old importQuantities (quantities always fully replaced, never
+  // merged) — zones/notes default to empty so a legacy paste (no sections,
+  // no ## Notes) clears them rather than leaving stale state behind.
+  function importDeckData({ quantities: imported = {}, zones: importedZones, notes: importedNotes }) {
+    const clamp = (map) => {
+      const out = {};
+      for (const [id, count] of Object.entries(map || {})) out[id] = Math.max(1, count);
+      return out;
+    };
+    setQuantities(clamp(imported));
+    setZones({
+      sideboard: clamp(importedZones && importedZones.sideboard),
+      pool: clamp(importedZones && importedZones.pool),
+    });
+    setDeck((prev) => ({ ...prev, notes: { ...EMPTY_NOTES, ...(importedNotes || {}) } }));
     setShowImport(false);
   }
 
@@ -292,7 +302,7 @@ export default function App() {
           cards={cards}
           lang={uiLang}
           onClose={() => setShowImport(false)}
-          onImport={importQuantities}
+          onImport={importDeckData}
         />
       )}
       {showExport && (
@@ -301,6 +311,7 @@ export default function App() {
           cardIds={cardIds}
           cardsById={cardsById}
           quantities={quantities}
+          zones={zones}
           defaultBacks={defaultBacks}
           uiLang={uiLang}
           onClose={() => setShowExport(false)}
