@@ -109,8 +109,10 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
     }
 
     if (c.type === 'Site') {
-      // 1 copy per site; the side's unlimited havens are exempt (stub: haven attr + legal alignment)
-      const unlimited = a.haven === true && profile.alignments.concat(profile.avatarAlignment).includes(c.alignment);
+      // 1 copy per site; a Darkhaven/Wizardhaven ({H} siteType) is unlimited,
+      // but only for the side whose alignment it matches (e.g. a Minion-
+      // alignment haven is unlimited for ringwraith, not for wizard).
+      const unlimited = a.siteType === '{H}' && profile.alignments.concat(profile.avatarAlignment).includes(c.alignment);
       if (e.count > 1 && !unlimited) emit('SITE-COPIES', { id: e.id, name: name(c), count: e.count });
     } else if (!a.avatar) {
       const limit = profile.copies.byAlignment[c.alignment] ?? profile.copies.default;

@@ -345,25 +345,32 @@ describe('validateDeck', () => {
     expect(byId(overCount, 'SITE-COPIES').some((w) => w.params.id === nonHavenSite.id)).toBe(true);
 
     // Real cards.json has no Site with attributes.haven === true — `haven`
-    // there holds the site's place name (a string) pending authoritative
-    // sourcing, never the boolean the exemption checks for. A synthetic
-    // card (same pattern as the banned-list diacritics test above) is the
-    // only way to exercise the exemption branch at validate.js:113.
-    const syntheticHavenSite = {
-      id: 'synthetic-haven-site',
-      type: 'Site',
-      alignment: 'Hero',
-      name: { en: 'Synthetic Haven Site' },
-      attributes: { haven: true },
-    };
-    const cardsWithSynthetic = new Map(cardsById);
-    cardsWithSynthetic.set(syntheticHavenSite.id, syntheticHavenSite);
+    // there is a string (the haven place-name recorded on OTHER cards that
+    // may be stored/healed there), never the boolean the old exemption
+    // checked for. The real criterion is attributes.siteType === '{H}'
+    // (13 cards, one per Darkhaven/Wizardhaven). LE-367 "Dol Guldur" is
+    // Minion-alignment and is exempt for the ringwraith side, whose
+    // alignments+avatarAlignment include Minion.
+    const dolGuldur = firstWhere((c) => c.id === 'LE-367');
+    expect(dolGuldur.attributes.siteType).toBe('{H}');
+    expect(dolGuldur.alignment).toBe('Minion');
+    const rwAvatar = firstWhere((c) => c.attributes.avatar && c.alignment === 'Minion');
     const exempt = validateDeck({
       ...base,
-      cardsById: cardsWithSynthetic,
-      quantities: { [wizardAvatar.id]: 1, [syntheticHavenSite.id]: 2 },
+      side: 'ringwraith',
+      quantities: { [rwAvatar.id]: 1, [dolGuldur.id]: 2 },
     });
-    expect(byId(exempt, 'SITE-COPIES').some((w) => w.params.id === syntheticHavenSite.id)).toBe(false);
+    expect(byId(exempt, 'SITE-COPIES').some((w) => w.params.id === dolGuldur.id)).toBe(false);
+
+    // Same haven site, but in a deck for a side whose alignment it does NOT
+    // match (wizard: Hero/Neutral) — the exemption is per-side, not blanket,
+    // so SITE-COPIES must fire here even though it didn't for ringwraith.
+    const wrongSide = validateDeck({
+      ...base,
+      side: 'wizard',
+      quantities: { [wizardAvatar.id]: 1, [dolGuldur.id]: 2 },
+    });
+    expect(byId(wrongSide, 'SITE-COPIES').some((w) => w.params.id === dolGuldur.id)).toBe(true);
   });
   it('DECKSIZE-PLAY: play-deck count below the side minimum fires', () => {
     const out = validateDeck({ ...base, quantities: { [wizardAvatar.id]: 1 } });
