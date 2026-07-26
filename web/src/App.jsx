@@ -156,7 +156,6 @@ export default function App() {
   // Called by DeckSetupDialog.onConfirm with { mode, ruleset }.
   function applySetup(partial) {
     setDeck((prev) => normalizeDeck({ ...prev, id: prev.id, ...partial }));
-    setZones({ sideboard: {}, pool: {} });
     setShowSetup(false);
   }
 
