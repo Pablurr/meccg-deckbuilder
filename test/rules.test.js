@@ -681,10 +681,10 @@ describe('races', () => {
     expect(singularize('Dwarves')).toBe('dwarf');
     // Irregular
     expect(singularize('Men')).toBe('man');
-    expect(singularize('Dúnedain')).toBe('dunadan');
+    expect(singularize('D\u00fanedain')).toBe('dunadan');
     // Already singular, and accent folding
     expect(singularize('Orc')).toBe('orc');
-    expect(singularize('Dúnadan')).toBe('dunadan');
+    expect(singularize('D\u00fanadan')).toBe('dunadan');
   });
 
   it('matches a wanted race against any of a compound value', () => {

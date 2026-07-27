@@ -9,7 +9,7 @@
 // copy/paste intact.
 const IRREGULAR = {
   men: 'man',
-  dunedain: 'dunadan', // Dúnedain / Dúnadan both appear in the data
+  dunedain: 'dunadan', // D\u00fanedain / D\u00fanadan both appear in the data
 };
 
 // /([^s])s$/ rather than /s$/ so a value already ending in ss is left alone
@@ -18,7 +18,7 @@ const PLURALS = [[/ves$/, 'f'], [/ies$/, 'y'], [/([^s])s$/, '$1']];
 
 const fold = (s) => String(s || '')
   .normalize('NFD')
-  .replace(/[̀-ͯ]/g, '')
+  .replace(/[\u0300-\u036f]/g, '')
   .toLowerCase()
   .trim();
 
