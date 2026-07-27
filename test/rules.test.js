@@ -10,6 +10,7 @@ import { COE, ruleRefs } from '../web/src/lib/rules/catalog.js';
 import { isDropAllowed, resolveDropTarget } from '../web/src/lib/rules/dropTargets.js';
 import { racesOf, singularize, matchesRace } from '../web/src/lib/rules/races.js';
 import { buildGroups, TYPE_ORDER } from '../web/src/lib/deckList.js';
+import { copyCaps, remainingCopies } from '../web/src/lib/rules/copies.js';
 
 const { cards, index } = parseCards(raw);
 
@@ -943,6 +944,104 @@ describe('races', () => {
       const v = (c.attributes || {}).race;
       if (v === undefined) continue;
       for (const r of racesOf(v)) expect(typeof singularize(r)).toBe('string');
+    }
+  });
+});
+
+describe('copyCaps / remainingCopies', () => {
+  const ctx = (side) => ({ side, ruleOverrides: {} });
+  const state = (quantities = {}, sideboard = {}, pool = {}) => ({ quantities, zones: { sideboard, pool } });
+
+  it('a non-unique card is capped at three, cumulative across zones (1.3.1, 1.6)', () => {
+    const c = index.get('TW-104'); // Tookish Blood, non-unique hazard
+    const caps = copyCaps(c, ctx('wizard'));
+    expect(caps).toEqual([{ limit: 3, scope: 'total', ruleId: 'COPIES-LIMIT' }]);
+    // 2 in the deck + 1 in the sideboard leaves nothing anywhere.
+    const s = state({ 'TW-104': 2 }, { 'TW-104': 1 });
+    expect(remainingCopies(c, 'deck', s, ctx('wizard')).remaining).toBe(0);
+    expect(remainingCopies(c, 'sideboard', s, ctx('wizard')).remaining).toBe(0);
+    expect(remainingCopies(c, 'pool', s, ctx('wizard')).remaining).toBe(0);
+  });
+
+  it('a unique card is capped at one across every zone (1.3.1)', () => {
+    const c = cards.find((x) => (x.attributes || {}).unique && x.type === 'Resource' && x.alignment === 'Hero');
+    expect(copyCaps(c, ctx('wizard'))[0]).toMatchObject({ limit: 1, scope: 'total', ruleId: 'UNIQUE-LIMIT' });
+    // Held in the pool -> the deck cannot take one.
+    const s = state({}, {}, { [c.id]: 1 });
+    expect(remainingCopies(c, 'deck', s, ctx('wizard')).remaining).toBe(0);
+    expect(remainingCopies(c, 'deck', s, ctx('wizard')).ruleId).toBe('UNIQUE-LIMIT');
+  });
+
+  it('a non-haven site is capped at one; a haven of the side is uncapped (1.4)', () => {
+    const site = index.get('TW-374'); // Barad-dur, Site/Hero, {D}
+    expect(copyCaps(site, ctx('wizard'))[0]).toMatchObject({ limit: 1, ruleId: 'SITE-COPIES' });
+    const haven = index.get('TW-421'); // Rivendell, Site/Hero, {H}
+    expect(copyCaps(haven, ctx('wizard'))).toEqual([]);
+    expect(remainingCopies(haven, 'deck', state({ 'TW-421': 9 }), ctx('wizard')).remaining).toBe(Infinity);
+    // The same haven is not unlimited for a side whose location deck cannot
+    // hold Hero sites.
+    expect(copyCaps(haven, ctx('ringwraith'))[0]).toMatchObject({ limit: 1, ruleId: 'SITE-COPIES' });
+  });
+
+  it('an avatar carries two caps: three in total, one in the sideboard (1.5, 1.6, 1.6.2)', () => {
+    const g = index.get('TW-156'); // Gandalf
+    const caps = copyCaps(g, ctx('wizard'));
+    expect(caps).toEqual([
+      { limit: 3, scope: 'total', ruleId: 'AVATAR-COPIES' },
+      { limit: 1, scope: { zone: 'sideboard' }, ruleId: 'AVATAR-SIDEBOARD' },
+    ]);
+    // 3 in the play deck spends the whole allowance.
+    const full = state({ 'TW-156': 3 });
+    expect(remainingCopies(g, 'deck', full, ctx('wizard')).remaining).toBe(0);
+    expect(remainingCopies(g, 'sideboard', full, ctx('wizard')).remaining).toBe(0);
+    // 2 in the play deck: one more may go to either zone, but the sideboard
+    // sub-cap stops a second one there.
+    const two = state({ 'TW-156': 2 });
+    expect(remainingCopies(g, 'sideboard', two, ctx('wizard')).remaining).toBe(1);
+    const split = state({ 'TW-156': 1 }, { 'TW-156': 1 });
+    expect(remainingCopies(g, 'sideboard', split, ctx('wizard'))).toEqual({ remaining: 0, ruleId: 'AVATAR-SIDEBOARD' });
+    expect(remainingCopies(g, 'deck', split, ctx('wizard')).remaining).toBe(1);
+  });
+
+  it('a zone cap does not constrain a different zone', () => {
+    const g = index.get('TW-156');
+    // One in the sideboard: the sideboard is full, the deck still has room.
+    const s = state({}, { 'TW-156': 1 });
+    expect(remainingCopies(g, 'sideboard', s, ctx('wizard')).remaining).toBe(0);
+    expect(remainingCopies(g, 'deck', s, ctx('wizard')).remaining).toBe(2);
+  });
+
+  it('disabling a rule removes its cap', () => {
+    const c = index.get('TW-104');
+    const off = { side: 'wizard', ruleOverrides: { 'COPIES-LIMIT': false } };
+    expect(copyCaps(c, off)).toEqual([]);
+    expect(remainingCopies(c, 'deck', state({ 'TW-104': 9 }), off).remaining).toBe(Infinity);
+  });
+
+  it('Fallen-wizard copy limits follow the side profile', () => {
+    const heroRes = cards.find((c) => c.type === 'Resource' && c.alignment === 'Hero' && !(c.attributes || {}).unique);
+    expect(copyCaps(heroRes, ctx('fallen-wizard'))[0].limit).toBe(2);
+    const stage = cards.find((c) => c.alignment === 'Stage' && !(c.attributes || {}).unique);
+    expect(copyCaps(stage, ctx('fallen-wizard'))[0].limit).toBe(3);
+  });
+
+  it('an unknown side or a missing card yields no cap rather than throwing', () => {
+    expect(copyCaps(index.get('TW-104'), ctx('constructor'))).toEqual([]);
+    expect(copyCaps(null, ctx('wizard'))).toEqual([]);
+    expect(remainingCopies(null, 'deck', state(), ctx('wizard')).remaining).toBe(Infinity);
+  });
+
+  it('never throws over every card and side', () => {
+    for (const side of ['wizard', 'ringwraith', 'fallen-wizard', 'balrog']) {
+      for (const c of cards) {
+        const caps = copyCaps(c, ctx(side));
+        expect(Array.isArray(caps)).toBe(true);
+        for (const cap of caps) {
+          expect(cap.limit).toBeGreaterThan(0);
+          expect(typeof cap.ruleId).toBe('string');
+        }
+        expect(remainingCopies(c, 'deck', state(), ctx(side)).remaining).toBeGreaterThan(0);
+      }
     }
   });
 });
