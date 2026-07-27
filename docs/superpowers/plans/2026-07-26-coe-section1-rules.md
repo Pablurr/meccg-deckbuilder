@@ -2804,6 +2804,16 @@ Import `bucketCounts` from `validate.js`.
 
 - [ ] **Step 2: Run to confirm failure** — `npx vitest run test/rules.test.js -t "play-deck budgets"` → FAIL.
 
+**Plan gap found during execution.** `DECKSIZE-PLAY` is the catalogue's last
+`status: 'unverified'` rule, so retiring it leaves `test/rules.test.js`'s
+`isRuleEnabled` test with no fixture — it does `RULES.find(r => r.status ===
+'unverified')` and then reads `.defaultEnabled` off `undefined`. Do not weaken it
+into a conditional. Replace the unfixturable half with the fact that now holds and
+is worth pinning: **no rule remains unverified — every rule in the catalogue is
+sourced from Section 1.** Keep the override and unknown-id halves, exercised
+against a verified rule. If someone later ships an unverified rule the new
+assertion fails loudly, which is the moment to restore the old coverage.
+
 - [ ] **Step 3: Catalogue**
 
 Delete the `DECKSIZE-PLAY` line; add:
