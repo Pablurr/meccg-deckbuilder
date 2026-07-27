@@ -11,6 +11,8 @@ import { SIDES } from '../lib/rules/sides.js';
 import { backGroupForType } from '../lib/deck.js';
 import { buildGroups } from '../lib/deckList.js';
 import { REPORT_ISSUES_URL } from '../lib/constants.js';
+import { COE, RULE_BY_ID } from '../lib/rules/catalog.js';
+import { refText } from '../lib/rules/docText.js';
 
 const SEV_ICON = { error: '⛔', warning: '⚠', info: 'ℹ' };
 
@@ -304,6 +306,7 @@ export default function DeckPanel({
         <div className="rule-warns" role="status">
           {ruleWarnings.map((w, i) => {
             const params = localizeParams(w, { cardsById, lang, t });
+            const ref = refText(t, RULE_BY_ID.get(w.ruleId) || {});
             return (
               <div key={i} className={`rule-warn ${w.severity}`}>
                 <span className="rule-sev" title={t(`rules.severity.${w.severity}`)}>
@@ -312,6 +315,9 @@ export default function DeckPanel({
                 <span className="msg">{t(`rules.${w.code}`, params)}</span>
                 <span className="rule-meta">
                   <code>{w.ruleId}</code>
+                  {ref && (
+                    <a className="linklike" href={COE} target="_blank" rel="noreferrer">{ref}</a>
+                  )}
                   <button className="linklike" onClick={() => onToggleRule(w.ruleId, false)}>{t('rules.disable')}</button>
                   <a className="linklike" href={reportUrl(w)} target="_blank" rel="noreferrer">{t('rules.report')}</a>
                 </span>

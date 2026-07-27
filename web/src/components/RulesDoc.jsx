@@ -5,7 +5,8 @@ import { SIDES } from '../lib/rules/sides.js';
 import { LENGTHS } from '../lib/rules/formats.js';
 import { BANNED } from '../lib/rules/banned.js';
 import { REPORT_ISSUES_URL, SIDE_IDS, LENGTH_IDS } from '../lib/constants.js';
-import { localize, copiesText, poolText, playDeckText } from '../lib/rules/docText.js';
+import { localize, copiesText, poolText, playDeckText, refText } from '../lib/rules/docText.js';
+import { COE } from '../lib/rules/catalog.js';
 
 function reportRuleUrl(ruleId) {
   const title = encodeURIComponent(`[rule] ${ruleId}`);
@@ -66,25 +67,36 @@ export default function RulesDoc({ deck, onToggleRule, onClose }) {
                 </tr>
               </thead>
               <tbody>
-                {RULES.map((r) => (
-                  <tr key={r.id} className={r.status !== 'verified' ? 'unchecked' : undefined}>
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={isRuleEnabled(r.id, ruleOverrides)}
-                        disabled={readOnly}
-                        onChange={(e) => onToggleRule(r.id, e.target.checked)}
-                        aria-label={r.id}
-                      />
-                    </td>
-                    <td><code>{r.id}</code></td>
-                    <td>{t(`rules.${r.id}.doc`)}</td>
-                    <td>{t(`rules.severity.${r.severity}`)}</td>
-                    <td><StatusChip status={r.status} t={t} /></td>
-                    <td><a href={r.source} target="_blank" rel="noreferrer">{t('docs.sourceLink')}</a></td>
-                    <td><a className="linklike" href={reportRuleUrl(r.id)} target="_blank" rel="noreferrer">{t('rules.report')}</a></td>
-                  </tr>
-                ))}
+                {RULES.map((r) => {
+                  const ref = refText(t, r);
+                  return (
+                    <tr key={r.id} className={r.status !== 'verified' ? 'unchecked' : undefined}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={isRuleEnabled(r.id, ruleOverrides)}
+                          disabled={readOnly}
+                          onChange={(e) => onToggleRule(r.id, e.target.checked)}
+                          aria-label={r.id}
+                        />
+                      </td>
+                      <td><code>{r.id}</code></td>
+                      <td>
+                        {t(`rules.${r.id}.doc`)}
+                        {ref && (
+                          <>
+                            {' '}
+                            <a className="linklike" href={COE} target="_blank" rel="noreferrer">{ref}</a>
+                          </>
+                        )}
+                      </td>
+                      <td>{t(`rules.severity.${r.severity}`)}</td>
+                      <td><StatusChip status={r.status} t={t} /></td>
+                      <td><a href={r.source} target="_blank" rel="noreferrer">{t('docs.sourceLink')}</a></td>
+                      <td><a className="linklike" href={reportRuleUrl(r.id)} target="_blank" rel="noreferrer">{t('rules.report')}</a></td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

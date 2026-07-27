@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { SIDES } from '../web/src/lib/rules/sides.js';
 import { LENGTHS } from '../web/src/lib/rules/formats.js';
-import { localize, copiesText, poolText, playDeckText } from '../web/src/lib/rules/docText.js';
+import { localize, copiesText, poolText, playDeckText, refText } from '../web/src/lib/rules/docText.js';
+import { RULES } from '../web/src/lib/rules/catalog.js';
 
 // t stub: returns the key plus its params (when given) rather than translated
 // prose, so assertions below are about *which key was chosen with which
@@ -110,6 +111,31 @@ describe('four sides sanity (docText covers every side rendered by the doc page)
       expect(copiesText(stubT, side).length).toBeGreaterThan(0);
       expect(poolText(stubT, side.pool).length).toBeGreaterThan(0);
       expect(playDeckText(stubT, side.playDeck).length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('refText', () => {
+  it('renders one citation per cited clause', () => {
+    expect(refText(stubT, { ref: '1.3.2' })).toBe(stubT('rules.coeRef', { ref: '1.3.2' }));
+    expect(refText(stubT, { refs: ['1.4', '1.4.F1'] })).toBe(
+      `${stubT('rules.coeRef', { ref: '1.4' })}, ${stubT('rules.coeRef', { ref: '1.4.F1' })}`
+    );
+  });
+
+  it('renders nothing for a house rule', () => {
+    expect(refText(stubT, { house: true })).toBe('');
+  });
+
+  it('notes the printed clause number when the source has a typo', () => {
+    const r = { refs: ['1.3.F6'], printedAs: { '1.3.F6': '1.5.F6' } };
+    expect(refText(stubT, r)).toContain(stubT('rules.coeRefPrinted', { ref: '1.5.F6' }));
+  });
+
+  it('every non-house rule produces a non-empty citation', () => {
+    for (const r of RULES) {
+      if (r.house) continue;
+      expect(refText(stubT, r).length).toBeGreaterThan(0);
     }
   });
 });

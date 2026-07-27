@@ -7,6 +7,8 @@
 // Kept alongside validate.js/sides.js/formats.js since these functions are
 // the doc-page's read layer over that same data.
 
+import { ruleRefs } from './catalog.js';
+
 // Same fallback-safe localization DeckPanel's localizeParams uses for raw
 // data values: keep the untranslated value rather than show a raw i18n key
 // when a translation doesn't exist yet.
@@ -46,4 +48,22 @@ export function poolText(t, pool) {
 // budgets") -- say so rather than showing a blank.
 export function playDeckText(t, playDeck) {
   return playDeck ? t('docs.playDeck.range', { min: playDeck.min, max: playDeck.max }) : t('status.unverified');
+}
+
+// "CoE section 1.3.2" (rules.coeRef) per cited clause -- the section-sign
+// glyph lives only in the i18n dictionary, never as a literal byte here.
+// House advisories cite nothing -- they are ours, not the source's
+// (ruleRefs already returns [] for those). When the printed page numbers a
+// clause wrongly (the Fallen-wizard ban list is printed 1.5.F6 for 1.3.F6)
+// both are shown, so a player searching the page still finds it.
+export function refText(t, rule) {
+  const refs = ruleRefs(rule);
+  if (refs.length === 0) return '';
+  return refs
+    .map((ref) => {
+      const printed = rule.printedAs && rule.printedAs[ref];
+      const base = t('rules.coeRef', { ref });
+      return printed ? `${base} (${t('rules.coeRefPrinted', { ref: printed })})` : base;
+    })
+    .join(', ');
 }

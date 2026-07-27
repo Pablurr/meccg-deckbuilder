@@ -225,6 +225,8 @@ export const translations = {
     'rules.severity.error': 'Erreur',
     'rules.severity.warning': 'Avertissement',
     'rules.severity.info': 'Info',
+    'rules.coeRef': 'CoE §{ref}',
+    'rules.coeRefPrinted': 'numérotée {ref} sur la page',
 
     // Rules documentation page (RulesDoc.jsx) — prose is hand-written;
     // the tables below it are generated from the rules/sides/formats/banned
@@ -517,6 +519,8 @@ export const translations = {
     'rules.severity.error': 'Error',
     'rules.severity.warning': 'Warning',
     'rules.severity.info': 'Info',
+    'rules.coeRef': 'CoE §{ref}',
+    'rules.coeRefPrinted': 'printed as {ref} on the page',
 
     // Rules documentation page (RulesDoc.jsx) — prose is hand-written;
     // the tables below it are generated from the rules/sides/formats/banned
@@ -818,6 +822,8 @@ export const translations = {
     'rules.severity.error': 'Error',
     'rules.severity.warning': 'Aviso',
     'rules.severity.info': 'Info',
+    'rules.coeRef': 'CoE §{ref}',
+    'rules.coeRefPrinted': 'numerada {ref} en la página',
 
     // Rules documentation page (RulesDoc.jsx) — prose is hand-written;
     // the tables below it are generated from the rules/sides/formats/banned
