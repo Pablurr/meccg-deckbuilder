@@ -1,7 +1,7 @@
 // Pure deck validator. Emits translatable descriptors, never sentences.
 // A rule that is disabled (per-deck override, or unverified by default)
 // is not evaluated at all. The app advises; it never blocks.
-import { SIDES, raceAllowed } from './sides.js';
+import { SIDES, GENERAL, raceAllowed } from './sides.js';
 import { LENGTHS } from './formats.js';
 import { resolveBanned } from './banned.js';
 import { backGroupForType } from '../deck.js';
@@ -106,6 +106,19 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
       }
     }
   }
+
+  // --- agents (1.3.2) ---
+  // "The total mind of all agent cards in the entirety of a player's deck
+  // (i.e. their play deck, sideboard, and pool combined) cannot exceed 36."
+  // Counts agent cards however a side later classifies them (character for
+  // Ringwraith/Fallen-wizard, hazard for Wizard/Balrog), so it needs no role
+  // derivation -- attributes.agent is enough.
+  let agentMind = 0;
+  for (const e of entries) {
+    const a = e.card.attributes || {};
+    if (a.agent === true) agentMind += (toInt(a.mind) || 0) * e.count;
+  }
+  if (agentMind > GENERAL.agentMindMax) emit('AGENT-MIND', { total: agentMind, max: GENERAL.agentMindMax });
 
   // --- deck sizes ---
   let playCount = 0, locationCount = 0;

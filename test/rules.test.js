@@ -428,6 +428,37 @@ describe('validateDeck', () => {
     const out = validateDeck({ ...base, side: 'fallen-wizard', quantities: { [saruman.id]: 1, [gandalfSpecific.id]: 1 } });
     expect(byId(out, 'SPECIFIC-AVATAR')).toHaveLength(1);
   });
+  it('AGENT-MIND: total mind of all agent cards over 36 fires (1.3.2)', () => {
+    // Golodhros 9 + Baduila 8 + Elerina 8 + The Grimburgoth 8 = 33, plus
+    // Dror 4 = 37, one over the limit.
+    const over = { 'DM-14': 1, 'DM-2': 1, 'DM-7': 1, 'DM-15': 1, 'DM-6': 1 };
+    const out = validateDeck({
+      side: 'ringwraith', length: 'standard', tournament: true,
+      quantities: over, cardsById: index,
+    });
+    const hit = out.filter((w) => w.ruleId === 'AGENT-MIND');
+    expect(hit).toHaveLength(1);
+    expect(hit[0].params).toEqual({ total: 37, max: 36 });
+    expect(hit[0].severity).toBe('error');
+
+    // Bill Ferny (mind 3) instead of Dror (4) lands exactly on 36 -- legal.
+    const exact = { 'DM-14': 1, 'DM-2': 1, 'DM-7': 1, 'DM-15': 1, 'DM-3': 1 };
+    const ok = validateDeck({
+      side: 'ringwraith', length: 'standard', tournament: true,
+      quantities: exact, cardsById: index,
+    });
+    expect(ok.filter((w) => w.ruleId === 'AGENT-MIND')).toEqual([]);
+  });
+
+  it('AGENT-MIND counts agents in the sideboard and pool too (1.3.2)', () => {
+    const out = validateDeck({
+      side: 'ringwraith', length: 'standard', tournament: true,
+      quantities: { 'DM-14': 1, 'DM-2': 1 },
+      zones: { sideboard: { 'DM-7': 1, 'DM-15': 1 }, pool: { 'DM-6': 1 } },
+      cardsById: index,
+    });
+    expect(out.find((w) => w.ruleId === 'AGENT-MIND').params.total).toBe(37);
+  });
   it('BANNED is enabled by default and fires for a banned card; ruleOverrides can turn it off', () => {
     // "Old Road" (TW-294) is in BANNED['fallen-wizard'] and is Hero-alignment,
     // so it is otherwise perfectly legal for a fallen-wizard deck except for the ban.

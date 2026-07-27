@@ -61,6 +61,13 @@ function buildFixture(code) {
       const saruman = firstWhere((c) => c.attributes.avatar && c.alignment === 'Fallen-wizard' && (c.name.en || '').includes('Saruman'));
       return { ...base, side: 'fallen-wizard', quantities: { [saruman.id]: 1, [gandalfSpecific.id]: 1 } };
     }
+    case 'AGENT-MIND':
+      // Golodhros 9 + Baduila 8 + Elerina 8 + The Grimburgoth 8 + Dror 4 = 37,
+      // one over the 36 limit (1.3.2). Same fixture as test/rules.test.js.
+      return {
+        ...base, side: 'ringwraith',
+        quantities: { 'DM-14': 1, 'DM-2': 1, 'DM-7': 1, 'DM-15': 1, 'DM-6': 1 },
+      };
     case 'COPIES-LIMIT': {
       const hero = firstWhere((c) => c.alignment === 'Hero' && c.type === 'Resource' && !c.attributes.unique);
       return { ...base, side: 'wizard', quantities: { [wizardAvatar.id]: 1, [hero.id]: 4 } };

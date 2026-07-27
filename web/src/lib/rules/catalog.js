@@ -28,6 +28,7 @@ export const RULES = [
   // The Fallen-wizard list is printed as 1.5.F6, a numbering typo for 1.3.F6.
   { id: 'BANNED', severity: 'error', status: 'verified', refs: ['1.3.F6', '1.3.B5'], printedAs: { '1.3.F6': '1.5.F6' }, source: COE },
   { id: 'SPECIFIC-AVATAR', severity: 'error', status: 'verified', ref: '1.3.4', source: COE },
+  { id: 'AGENT-MIND', severity: 'error', status: 'verified', ref: '1.3.2', source: COE },
 
   // -- copy caps, hard-enforced from lot 1b --
   { id: 'COPIES-LIMIT', severity: 'error', status: 'verified', refs: ['1.3.1', '1.3.F1'], hard: true, source: COE },
