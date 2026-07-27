@@ -920,6 +920,22 @@ describe('play-deck budgets (1.5)', () => {
     const out = validateDeck({ side: 'wizard', length: 'standard', tournament: true, quantities, cardsById: index });
     expect(out.find((w) => w.ruleId === 'CREATURE-MIN').params.count).toBe(11);
   });
+
+  it('CREATURE-MIN: halves summed to exactly the minimum do not fire (1.5.1)', () => {
+    // 11 full creatures + two distinct halves = 11 + 1.0 = 12.0 -> meets the minimum.
+    const cre = cards.filter((c) => (c.attributes || {}).subtype === 'Creature' && !(c.attributes || {}).unique).slice(0, 11);
+    const quantities = { ...Object.fromEntries(cre.map((c) => [c.id, 1])), 'TW-86': 1, 'DM-110': 1 };
+    const out = validateDeck({ side: 'wizard', length: 'standard', tournament: true, quantities, cardsById: index });
+    expect(out.filter((w) => w.ruleId === 'CREATURE-MIN')).toEqual([]);
+  });
+
+  it('CREATURE-MIN: halves rounded down past the minimum do not fire (1.5.1)', () => {
+    // 11 full creatures + three distinct halves = 11 + 1.5 = 12.5 -> floors to 12.
+    const cre = cards.filter((c) => (c.attributes || {}).subtype === 'Creature' && !(c.attributes || {}).unique).slice(0, 11);
+    const quantities = { ...Object.fromEntries(cre.map((c) => [c.id, 1])), 'TW-86': 1, 'DM-110': 1, 'TW-2': 1 };
+    const out = validateDeck({ side: 'wizard', length: 'standard', tournament: true, quantities, cardsById: index });
+    expect(out.filter((w) => w.ruleId === 'CREATURE-MIN')).toEqual([]);
+  });
 });
 
 describe('avatar rules (1.5, 1.6, 1.6.2)', () => {

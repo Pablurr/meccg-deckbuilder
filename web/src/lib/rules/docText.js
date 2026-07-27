@@ -8,6 +8,7 @@
 // the doc-page's read layer over that same data.
 
 import { ruleRefs, RULE_BY_ID } from './catalog.js';
+import { GENERAL } from './sides.js';
 
 // Same fallback-safe localization DeckPanel's localizeParams uses for raw
 // data values: keep the untranslated value rather than show a raw i18n key
@@ -43,11 +44,17 @@ export function poolText(t, pool) {
   return parts.join(' · ');
 }
 
-// playDeck is null for sides whose min/max haven't been sourced yet (see the
-// per-side comments in sides.js, e.g. "1.5 lands in lot 2 as four separate
-// budgets") -- say so rather than showing a blank.
-export function playDeckText(t, playDeck) {
-  return playDeck ? t('docs.playDeck.range', { min: playDeck.min, max: playDeck.max }) : t('status.unverified');
+// 1.5 / 1.5.1 -- four budgets, not a range. Side-independent, so no profile
+// argument: every side reads the same numbers from GENERAL.playDeck.
+export function playDeckText(t) {
+  const pd = GENERAL.playDeck;
+  return [
+    t('docs.playDeck.resources', { min: pd.resourcesMin, max: pd.resourcesMax }),
+    t('docs.playDeck.hazards'),
+    t('docs.playDeck.characters', { n: pd.maxCharacters }),
+    t('docs.playDeck.avatars', { n: GENERAL.avatarMaxInPlayDeck, d: GENERAL.avatarMaxDistinct }),
+    t('docs.playDeck.creatures', { n: pd.minCreatures }),
+  ].join(' · ');
 }
 
 // "CoE section 1.3.2" (rules.coeRef) per cited clause -- the section-sign

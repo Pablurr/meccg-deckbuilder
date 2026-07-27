@@ -29,17 +29,15 @@ describe('copiesText', () => {
 });
 
 describe('playDeckText', () => {
-  // 1.5 lands as GENERAL.playDeck (see the describe block below) because the
-  // four budgets it specifies -- resources, hazards, non-avatar characters,
-  // creatures -- are camp-independent, not a per-side min/max range. No side
-  // profile carries its own playDeck, so the per-side doc-table column still
-  // falls back to status.unverified for every side.
-  it('wizard: falls back to status.unverified (no per-side playDeck)', () => {
-    expect(playDeckText(stubT, SIDES.wizard.playDeck)).toBe('status.unverified');
-  });
-
-  it('ringwraith: falls back to status.unverified (no per-side playDeck)', () => {
-    expect(playDeckText(stubT, SIDES.ringwraith.playDeck)).toBe('status.unverified');
+  // 1.5 / 1.5.1 -- four budgets, not a min/max range, and camp-independent:
+  // every side reads the same GENERAL.playDeck numbers, so the helper takes
+  // no per-side profile argument at all.
+  it('playDeckText states all four budgets', () => {
+    const s = playDeckText(makeT('en'));
+    expect(s).toContain('30');
+    expect(s).toContain('50');
+    expect(s).toContain('10');
+    expect(s).toContain('12');
   });
 });
 
@@ -119,10 +117,10 @@ describe('four sides sanity (docText covers every side rendered by the doc page)
     for (const side of Object.values(SIDES)) {
       expect(() => copiesText(stubT, side)).not.toThrow();
       expect(() => poolText(stubT, side.pool)).not.toThrow();
-      expect(() => playDeckText(stubT, side.playDeck)).not.toThrow();
+      expect(() => playDeckText(stubT)).not.toThrow();
       expect(copiesText(stubT, side).length).toBeGreaterThan(0);
       expect(poolText(stubT, side.pool).length).toBeGreaterThan(0);
-      expect(playDeckText(stubT, side.playDeck).length).toBeGreaterThan(0);
+      expect(playDeckText(stubT).length).toBeGreaterThan(0);
     }
   });
 });

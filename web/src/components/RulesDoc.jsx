@@ -135,7 +135,7 @@ export default function RulesDoc({ deck, onToggleRule, onClose }) {
                       <td>{t(`side.${sid}`)}</td>
                       <td>{p.alignments.map((a) => localize(t, 'alignment', a)).join(', ')}</td>
                       <td>{copiesText(t, p)}</td>
-                      <td>{playDeckText(t, p.playDeck)}</td>
+                      <td>{playDeckText(t)}</td>
                       <td>{poolText(t, p.pool)}</td>
                     </tr>
                   );
