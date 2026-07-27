@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { cardName, cardThumbSrc, cardImageEn } from '../lib/lang.js';
 import ProxyStamp from './ProxyStamp.jsx';
 import { useT } from '../i18n.jsx';
+import { capTitle } from '../lib/rules/docText.js';
 
 // One selected card, shown as a compact version of a browser grid cell: same
 // thumbnail + same −/count/+ control. Clicking the image asks for confirmation
 // before removing the card, so a stray click can't silently empty the deck.
 // Hover shows the shared full-size preview so the card stays readable at any zoom.
-export default function MiniCard({ card, qty, lang, thumbW, onChangeQty, onToggle, trackPointer, hidePreview, isMobile, onPreview, proxyMode, zone = 'deck' }) {
+export default function MiniCard({ card, qty, lang, thumbW, onChangeQty, onToggle, trackPointer, hidePreview, isMobile, onPreview, proxyMode, zone = 'deck', room = { remaining: Infinity, ruleId: null } }) {
   const t = useT();
   const [confirming, setConfirming] = useState(false);
   const name = cardName(card, lang);
@@ -51,6 +52,8 @@ export default function MiniCard({ card, qty, lang, thumbW, onChangeQty, onToggl
         <div className="qty-ctrl">
           <button
             className="qty-btn"
+            disabled={room.remaining <= 0}
+            title={capTitle(t, room.ruleId, room.remaining)}
             onClick={() => onChangeQty(card.id, +1)}
             aria-label={t('browser.addCopy')}
           >+</button>

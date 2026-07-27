@@ -6,23 +6,39 @@ import ProxyStamp from './ProxyStamp.jsx';
 import { useT } from '../i18n.jsx';
 import { zonesFor } from '../lib/rules/zones.js';
 import { isLegalForSide } from '../lib/rules/sides.js';
+import { remainingCopies } from '../lib/rules/copies.js';
+import { capTitle } from '../lib/rules/docText.js';
 
 const CAP = 600; // safety cap on rendered cells
 
 // Deckbuilding-only zone controls for one card cell. State is local to this
 // component instance so expanding one card's extra zones never affects any
 // other cell in the grid.
-function ZoneCtrls({ card, zones, quantities, changeZoneQty, t }) {
+function ZoneCtrls({ card, zones, quantities, changeZoneQty, t, capCtx }) {
   const [expanded, setExpanded] = useState(false);
   const z = zonesFor(card);
   const zoneQty = (zone) => (zone === 'deck' ? (quantities[card.id] || 0) : (zones[zone][card.id] || 0));
+  const room = (zone) => (capCtx
+    ? remainingCopies(card, zone, { quantities, zones }, capCtx)
+    : { remaining: Infinity, ruleId: null });
   return (
     <div className="zone-ctrls">
       <div className="qty-ctrl zoned">
         <span className="zlbl">{t(`zoneShort.${z.primary}`)}</span>
         <button className="qty-btn" onClick={() => changeZoneQty(z.primary, card.id, -1)} aria-label={t('browser.removeCopy')}>−</button>
         <span className="qty-count">{zoneQty(z.primary)}</span>
-        <button className="qty-btn" onClick={() => changeZoneQty(z.primary, card.id, +1)} aria-label={t('browser.addCopy')}>+</button>
+        {(() => {
+          const r = room(z.primary);
+          return (
+            <button
+              className="qty-btn"
+              disabled={r.remaining <= 0}
+              title={capTitle(t, r.ruleId, r.remaining)}
+              onClick={() => changeZoneQty(z.primary, card.id, +1)}
+              aria-label={t('browser.addCopy')}
+            >+</button>
+          );
+        })()}
       </div>
       {z.extra.length > 0 && !expanded && (
         <button className="zone-expander" onClick={() => setExpanded(true)}>
@@ -34,14 +50,25 @@ function ZoneCtrls({ card, zones, quantities, changeZoneQty, t }) {
           <span className="zlbl">{t(`zoneShort.${zn}`)}</span>
           <button className="qty-btn" onClick={() => changeZoneQty(zn, card.id, -1)} aria-label={t('browser.removeCopy')}>−</button>
           <span className="qty-count">{zoneQty(zn)}</span>
-          <button className="qty-btn" onClick={() => changeZoneQty(zn, card.id, +1)} aria-label={t('browser.addCopy')}>+</button>
+          {(() => {
+            const r = room(zn);
+            return (
+              <button
+                className="qty-btn"
+                disabled={r.remaining <= 0}
+                title={capTitle(t, r.ruleId, r.remaining)}
+                onClick={() => changeZoneQty(zn, card.id, +1)}
+                aria-label={t('browser.addCopy')}
+              >+</button>
+            );
+          })()}
         </div>
       ))}
     </div>
   );
 }
 
-export default function CardBrowser({ cards, filters, quantities, lang, onChangeQty, onToggle, onSelectAll, isMobile, onPreview, proxyMode, deckMode, side, zones, changeZoneQty }) {
+export default function CardBrowser({ cards, filters, quantities, lang, onChangeQty, onToggle, onSelectAll, isMobile, onPreview, proxyMode, deckMode, side, zones, changeZoneQty, capCtx }) {
   const t = useT();
   const [showAll, setShowAll] = useState(false);
   const filtered = useMemo(() => filterCards(cards, filters), [cards, filters]);
@@ -104,7 +131,7 @@ export default function CardBrowser({ cards, filters, quantities, lang, onChange
               />
               <ProxyStamp card={c} lang={lang} on={proxyMode} src={cardThumbSrc(c, lang)} />
               {deckbuilding ? (
-                <ZoneCtrls card={c} zones={zones} quantities={quantities} changeZoneQty={changeZoneQty} t={t} />
+                <ZoneCtrls card={c} zones={zones} quantities={quantities} changeZoneQty={changeZoneQty} t={t} capCtx={capCtx} />
               ) : (
                 qty > 0 && (
                   <div className="qty-ctrl">

@@ -63,6 +63,13 @@ export const translations = {
     'browser.addCopy': 'Ajouter une copie',
     'browser.removeCopy': 'Retirer une copie',
     'browser.showAll': 'Afficher les cartes illégales',
+    // Tooltip on a disabled + button (docText.js capTitle) -- why this copy
+    // cap stops the click, one string per rule that can produce one.
+    'cap.COPIES-LIMIT': 'Nombre maximum d’exemplaires atteint, toutes zones confondues.',
+    'cap.UNIQUE-LIMIT': 'Carte unique — un seul exemplaire dans tout le deck.',
+    'cap.SITE-COPIES': 'Un seul exemplaire de ce lieu.',
+    'cap.AVATAR-COPIES': 'Maximum de 3 exemplaires de cet avatar dans tout le deck.',
+    'cap.AVATAR-SIDEBOARD': 'Un seul exemplaire de chaque avatar en réserve.',
     'zoneShort.deck': 'Deck',
     'zoneShort.sideboard': 'Rés',
     'zoneShort.pool': 'Pool',
@@ -362,6 +369,13 @@ export const translations = {
     'browser.addCopy': 'Add a copy',
     'browser.removeCopy': 'Remove a copy',
     'browser.showAll': 'Show illegal cards',
+    // Tooltip on a disabled + button (docText.js capTitle) -- why this copy
+    // cap stops the click, one string per rule that can produce one.
+    'cap.COPIES-LIMIT': 'Maximum copies reached, counting every zone.',
+    'cap.UNIQUE-LIMIT': 'Unique card — one copy in the whole deck.',
+    'cap.SITE-COPIES': 'One copy of this site.',
+    'cap.AVATAR-COPIES': 'Maximum 3 copies of this avatar in the whole deck.',
+    'cap.AVATAR-SIDEBOARD': 'One copy of each avatar in the sideboard.',
     'zoneShort.deck': 'Deck',
     'zoneShort.sideboard': 'SB',
     'zoneShort.pool': 'Pool',
@@ -661,6 +675,13 @@ export const translations = {
     'browser.addCopy': 'Añadir una copia',
     'browser.removeCopy': 'Quitar una copia',
     'browser.showAll': 'Mostrar cartas ilegales',
+    // Tooltip on a disabled + button (docText.js capTitle) -- why this copy
+    // cap stops the click, one string per rule that can produce one.
+    'cap.COPIES-LIMIT': 'Máximo de copias alcanzado, contando todas las zonas.',
+    'cap.UNIQUE-LIMIT': 'Carta única — una copia en el mazo completo.',
+    'cap.SITE-COPIES': 'Una copia de este lugar.',
+    'cap.AVATAR-COPIES': 'Máximo de 3 copias de este avatar en el mazo completo.',
+    'cap.AVATAR-SIDEBOARD': 'Una copia de cada avatar en la reserva.',
     'zoneShort.deck': 'Mazo',
     'zoneShort.sideboard': 'SB',
     'zoneShort.pool': 'Res',

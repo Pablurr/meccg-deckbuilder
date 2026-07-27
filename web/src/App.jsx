@@ -222,7 +222,7 @@ export default function App() {
     <div className="app">
       <FilterBar facets={derivedFacets} filters={filters} onChange={setFilters} lang={uiLang} onLangChange={setUiLang} isMobile={isMobile} proxyMode={proxyMode} onProxyChange={setProxyMode} onOpenDocs={() => setShowDocs(true)} />
       <div className="main-row">
-        <CardBrowser cards={cards} filters={filters} quantities={quantities} lang={uiLang} onChangeQty={changeQty} onToggle={toggleCard} onSelectAll={selectAll} isMobile={isMobile} onPreview={setPreviewCard} proxyMode={proxyMode} deckMode={deck.mode} side={deck.mode === 'deckbuilding' ? deck.ruleset?.side ?? null : null} zones={zones} changeZoneQty={changeZoneQty} />
+        <CardBrowser cards={cards} filters={filters} quantities={quantities} lang={uiLang} onChangeQty={changeQty} onToggle={toggleCard} onSelectAll={selectAll} isMobile={isMobile} onPreview={setPreviewCard} proxyMode={proxyMode} deckMode={deck.mode} side={deck.mode === 'deckbuilding' ? deck.ruleset?.side ?? null : null} zones={zones} changeZoneQty={changeZoneQty} capCtx={capCtx} />
         {hasSelection && !isMobile && (
           <DeckPanel
             cardsById={cardsById}
@@ -246,6 +246,7 @@ export default function App() {
             onToggle={toggleCard}
             onChangeNote={changeNote}
             proxyMode={proxyMode}
+            capCtx={capCtx}
           />
         )}
       </div>
@@ -273,6 +274,7 @@ export default function App() {
           onPreview={setPreviewCard}
           onClose={() => setDeckSheetOpen(false)}
           proxyMode={proxyMode}
+          capCtx={capCtx}
         />
       )}
       <DeckDrawer
@@ -339,6 +341,9 @@ export default function App() {
           onChangeQty={changeQty}
           onClose={() => setPreviewCard(null)}
           proxyMode={proxyMode}
+          room={previewCard && capCtx
+            ? remainingCopies(previewCard, 'deck', { quantities, zones }, capCtx)
+            : { remaining: Infinity, ruleId: null }}
         />
       )}
     </div>

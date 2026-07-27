@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { SIDES } from '../web/src/lib/rules/sides.js';
 import { LENGTHS } from '../web/src/lib/rules/formats.js';
-import { localize, copiesText, poolText, playDeckText, refText } from '../web/src/lib/rules/docText.js';
+import { localize, copiesText, poolText, playDeckText, refText, capTitle } from '../web/src/lib/rules/docText.js';
 import { RULES } from '../web/src/lib/rules/catalog.js';
+import { makeT } from '../web/src/lib/i18n.js';
 
 // t stub: returns the key plus its params (when given) rather than translated
 // prose, so assertions below are about *which key was chosen with which
@@ -137,6 +138,22 @@ describe('refText', () => {
       if (r.house) continue;
       expect(refText(stubT, r).length).toBeGreaterThan(0);
     }
+  });
+});
+
+// Real translations (not stubT) so the assertions below check actual
+// rendered prose -- the same convention test/i18n-rules-contract.test.js
+// uses when a test needs to see genuine wording rather than an echoed key.
+describe('capTitle', () => {
+  const t = makeT('en');
+  it('names the rule that blocks and cites it', () => {
+    const s = capTitle(t, 'COPIES-LIMIT', 0);
+    expect(s).toContain('CoE');
+    expect(s.length).toBeGreaterThan(0);
+  });
+  it('is empty when there is room', () => {
+    expect(capTitle(t, 'COPIES-LIMIT', 2)).toBe('');
+    expect(capTitle(t, null, Infinity)).toBe('');
   });
 });
 

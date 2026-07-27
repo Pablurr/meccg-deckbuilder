@@ -7,7 +7,7 @@
 // Kept alongside validate.js/sides.js/formats.js since these functions are
 // the doc-page's read layer over that same data.
 
-import { ruleRefs } from './catalog.js';
+import { ruleRefs, RULE_BY_ID } from './catalog.js';
 
 // Same fallback-safe localization DeckPanel's localizeParams uses for raw
 // data values: keep the untranslated value rather than show a raw i18n key
@@ -66,4 +66,15 @@ export function refText(t, rule) {
       return printed ? `${base} (${t('rules.coeRefPrinted', { ref: printed })})` : base;
     })
     .join(', ');
+}
+
+// Tooltip for a disabled + button: what stops it, and which clause says so.
+// Empty when there is room, so the caller can spread it straight into JSX
+// (title="") rather than branching on whether to render the attribute at all.
+export function capTitle(t, ruleId, remaining) {
+  if (remaining > 0 || !ruleId) return '';
+  const rule = RULE_BY_ID.get(ruleId);
+  const ref = rule ? refText(t, rule) : '';
+  const reason = t(`cap.${ruleId}`);
+  return ref ? `${reason} (${ref})` : reason;
 }

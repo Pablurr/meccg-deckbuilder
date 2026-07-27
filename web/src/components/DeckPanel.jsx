@@ -13,6 +13,7 @@ import { buildGroups } from '../lib/deckList.js';
 import { REPORT_ISSUES_URL } from '../lib/constants.js';
 import { COE, RULE_BY_ID } from '../lib/rules/catalog.js';
 import { refText } from '../lib/rules/docText.js';
+import { remainingCopies } from '../lib/rules/copies.js';
 
 const SEV_ICON = { error: '⛔', warning: '⚠', info: 'ℹ' };
 
@@ -54,10 +55,6 @@ export function localizeParams(w, { cardsById, lang, t }) {
     const localized = t(`race.${p.race}`);
     p.race = localized === `race.${p.race}` ? p.race : localized;
   }
-  // UNIQUE-LIMIT/SITE-COPIES: validate.js reports the raw count against an
-  // implicit limit of 1; compute how many copies to remove here rather than
-  // widening the validator's param shape for two single-purpose numbers.
-  if (w.ruleId === 'UNIQUE-LIMIT' || w.ruleId === 'SITE-COPIES') p.excess = p.count - 1;
   if (w.ruleId === 'SIDEBOARD-MAX' || w.ruleId === 'POOL-CHARS' || w.ruleId === 'POOL-ITEMS') p.over = p.count - p.max;
   return p;
 }
@@ -124,6 +121,7 @@ export default function DeckPanel({
   isMobile = false,
   onPreview,
   proxyMode = false,
+  capCtx = null,
 }) {
   const t = useT();
   const { previewRef, previewImgRef, stampRef, trackPointer, hidePreview } = useCardPreview(lang, proxyMode);
@@ -358,6 +356,9 @@ export default function DeckPanel({
                       onPreview={onPreview}
                       proxyMode={proxyMode}
                       zone={activeZone}
+                      room={capCtx
+                        ? remainingCopies(card, activeZone, { quantities, zones }, capCtx)
+                        : { remaining: Infinity, ruleId: null }}
                     />
                   ))}
                 </div>

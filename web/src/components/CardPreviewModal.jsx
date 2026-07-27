@@ -2,12 +2,13 @@ import React from 'react';
 import { cardName, cardImageSrc, cardImageEn } from '../lib/lang.js';
 import ProxyStamp from './ProxyStamp.jsx';
 import { useT } from '../i18n.jsx';
+import { capTitle } from '../lib/rules/docText.js';
 
 // Full-screen card preview for touch (desktop uses the hover CardPreview).
 // The image is constrained to fit ENTIRELY within the viewport (see styles):
 // the wrapper takes the space above the control bar and the img uses
 // object-fit:contain, so the whole card is always visible without scrolling.
-export default function CardPreviewModal({ card, qty, lang, onChangeQty, onClose, proxyMode }) {
+export default function CardPreviewModal({ card, qty, lang, onChangeQty, onClose, proxyMode, room = { remaining: Infinity, ruleId: null } }) {
   const t = useT();
   if (!card) return null;
   const name = cardName(card, lang);
@@ -41,6 +42,8 @@ export default function CardPreviewModal({ card, qty, lang, onChangeQty, onClose
           <button
             className="qty-btn big"
             onClick={() => onChangeQty(card.id, +1)}
+            disabled={room.remaining <= 0}
+            title={capTitle(t, room.ruleId, room.remaining)}
             aria-label={t('browser.addCopy')}
           >+</button>
           <button className="btn" onClick={onClose}>{t('common.done')}</button>
