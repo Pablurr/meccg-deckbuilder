@@ -265,14 +265,18 @@ describe('banned lists', () => {
     expect(bySide['fallen-wizard'].has('test-different-name')).toBe(false);
   });
 
-  it('folds typographic apostrophes so a name pasted from the CoE page resolves', () => {
-    // The card data spells exactly one name with an ASCII apostrophe
-    // (DM-107 "Durin's Bane"); every other name uses U+2019. A ban list
-    // pasted from councilofelrond.org uses U+2019 throughout.
+  it('folds typographic apostrophes in both directions via the injected lists param', () => {
+    // Side key "wizard" doesn't exist in the real BANNED object, so a pre-fix
+    // single-arg resolveBanned that ignores its second parameter would fall
+    // back to module-level BANNED and leave bySide.wizard undefined -- this
+    // test cannot pass by accident. DM-107's name.en uses an ASCII apostrophe
+    // while TW-247's uses U+2019; each ban entry below is spelled with the
+    // OPPOSITE apostrophe, so both fold directions get exercised.
     const { bySide } = resolveBanned(cards, {
-      balrog: { names: ['Durin' + '’' + 's Bane'] },
+      wizard: { names: ['Durin\u2019s Bane', "Gollum's Fate"] },
     });
-    expect([...bySide.balrog]).toContain('DM-107');
+    expect([...bySide.wizard]).toContain('DM-107');
+    expect([...bySide.wizard]).toContain('TW-247');
   });
 });
 
