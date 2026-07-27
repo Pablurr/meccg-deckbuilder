@@ -61,6 +61,12 @@ function buildFixture(code) {
       const saruman = firstWhere((c) => c.attributes.avatar && c.alignment === 'Fallen-wizard' && (c.name.en || '').includes('Saruman'));
       return { ...base, side: 'fallen-wizard', quantities: { [saruman.id]: 1, [gandalfSpecific.id]: 1 } };
     }
+    case 'SPECIFIC-SIDE': {
+      // BA-4 Bolg: Character/Minion, specific "Balrog" -- its alignment is
+      // legal for a Ringwraith, so only 1.3.4 (SPECIFIC-SIDE) catches it.
+      const balrogSpecific = firstWhere((c) => c.attributes.specific === 'Balrog' && !c.attributes.avatar);
+      return { ...base, side: 'ringwraith', quantities: { [balrogSpecific.id]: 1 } };
+    }
     case 'AGENT-MIND':
       // Golodhros 9 + Baduila 8 + Elerina 8 + The Grimburgoth 8 + Dror 4 = 37,
       // one over the 36 limit (1.3.2). Same fixture as test/rules.test.js.
@@ -79,6 +85,10 @@ function buildFixture(code) {
     case 'SITE-COPIES': {
       const nonHavenSite = firstWhere((c) => c.type === 'Site' && ['Hero', 'Neutral'].includes(c.alignment));
       return { ...base, side: 'wizard', quantities: { [wizardAvatar.id]: 1, [nonHavenSite.id]: 2 } };
+    }
+    case 'REGION-EXCLUDED': {
+      const region = firstWhere((c) => c.type === 'Region');
+      return { ...base, side: 'wizard', quantities: { [region.id]: 1 } };
     }
     case 'BALROG-RACE': {
       const balrogAvatar = firstWhere((c) => c.attributes.avatar && c.alignment === 'Balrog');

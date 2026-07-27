@@ -1,7 +1,7 @@
 // Pure deck validator. Emits translatable descriptors, never sentences.
 // A rule that is disabled (per-deck override, or unverified by default)
 // is not evaluated at all. The app advises; it never blocks.
-import { SIDES, GENERAL, raceAllowed } from './sides.js';
+import { SIDES, GENERAL, SPECIFIC_TO_SIDES, raceAllowed } from './sides.js';
 import { LENGTHS } from './formats.js';
 import { resolveBanned } from './banned.js';
 import { backGroupForType } from '../deck.js';
@@ -78,6 +78,17 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
     if (!a.avatar && !balrogExempt && !profile.alignments.includes(c.alignment)) {
       emit('ALIGN-LEGAL', { id: e.id, name: name(c), alignment: c.alignment, side });
     }
+
+    // 1.3.4 -- a card specific to an avatar this side cannot declare at all.
+    // Distinct from SPECIFIC-AVATAR, which is the finer per-avatar check for a
+    // side that *can* declare the named avatar.
+    if (a.specific && !(SPECIFIC_TO_SIDES[a.specific] || []).includes(side)) {
+      emit('SPECIFIC-SIDE', { id: e.id, name: name(c), specific: a.specific, side });
+    }
+
+    // 1.4 -- "no region cards, which are generally replaced with a map for
+    // tournament play".
+    if (c.type === 'Region') emit('REGION-EXCLUDED', { id: e.id, name: name(c) });
 
     if (profile.specificMode === 'avatar-match' && a.specific && a.specific !== 'Balrog' && avatarName && !avatarName.includes(a.specific)) {
       emit('SPECIFIC-AVATAR', { id: e.id, name: name(c), wizard: a.specific, avatar: avatarName, avatarId });

@@ -428,6 +428,47 @@ describe('validateDeck', () => {
     const out = validateDeck({ ...base, side: 'fallen-wizard', quantities: { [saruman.id]: 1, [gandalfSpecific.id]: 1 } });
     expect(byId(out, 'SPECIFIC-AVATAR')).toHaveLength(1);
   });
+  it('SPECIFIC-SIDE: a Balrog-specific card is illegal in a Ringwraith deck (1.3.4)', () => {
+    // BA-4 Bolg: Character/Minion, specific "Balrog". Its alignment is legal
+    // for a Ringwraith, so only 1.3.4 catches it.
+    const out = validateDeck({
+      side: 'ringwraith', length: 'standard', tournament: true,
+      quantities: { 'BA-4': 1 }, cardsById: index,
+    });
+    const hit = out.filter((w) => w.ruleId === 'SPECIFIC-SIDE');
+    expect(hit).toHaveLength(1);
+    expect(hit[0].params.specific).toBe('Balrog');
+  });
+
+  it('SPECIFIC-SIDE: the same card is fine in a Balrog deck', () => {
+    const out = validateDeck({
+      side: 'balrog', length: 'standard', tournament: true,
+      quantities: { 'BA-4': 1 }, cardsById: index,
+    });
+    expect(out.filter((w) => w.ruleId === 'SPECIFIC-SIDE')).toEqual([]);
+  });
+
+  it('SPECIFIC-SIDE: a wizard-specific Stage card is fine for a Fallen-wizard', () => {
+    // WH-90-style Stage resources naming a wizard are Fallen-wizard territory;
+    // pick any Stage card carrying `specific`.
+    const stage = cards.find((c) => c.alignment === 'Stage' && (c.attributes || {}).specific);
+    const out = validateDeck({
+      side: 'fallen-wizard', length: 'standard', tournament: true,
+      quantities: { [stage.id]: 1 }, cardsById: index,
+    });
+    expect(out.filter((w) => w.ruleId === 'SPECIFIC-SIDE')).toEqual([]);
+  });
+
+  it('REGION-EXCLUDED: a Region card in the deck fires (1.4)', () => {
+    const region = cards.find((c) => c.type === 'Region');
+    const out = validateDeck({
+      side: 'wizard', length: 'standard', tournament: true,
+      quantities: { [region.id]: 1 }, cardsById: index,
+    });
+    const hit = out.filter((w) => w.ruleId === 'REGION-EXCLUDED');
+    expect(hit).toHaveLength(1);
+    expect(hit[0].params.id).toBe(region.id);
+  });
   it('AGENT-MIND: total mind of all agent cards over 36 fires (1.3.2)', () => {
     // Golodhros 9 + Baduila 8 + Elerina 8 + The Grimburgoth 8 = 33, plus
     // Dror 4 = 37, one over the limit.
