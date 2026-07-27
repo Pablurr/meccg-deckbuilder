@@ -41,8 +41,9 @@ export function poolText(t, pool) {
   return parts.join(' · ');
 }
 
-// playDeck is null for sides whose min/max haven't been sourced yet (see
-// sides.js "// unverified" comments) -- say so rather than showing a blank.
+// playDeck is null for sides whose min/max haven't been sourced yet (see the
+// per-side comments in sides.js, e.g. "1.5 lands in lot 2 as four separate
+// budgets") -- say so rather than showing a blank.
 export function playDeckText(t, playDeck) {
   return playDeck ? t('docs.playDeck.range', { min: playDeck.min, max: playDeck.max }) : t('status.unverified');
 }

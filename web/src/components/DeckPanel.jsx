@@ -19,7 +19,7 @@ const SEV_ICON = { error: '⛔', warning: '⚠', info: 'ℹ' };
 // for the multi-name/avatar-reference cases, an `ids`/`avatarId`), look the
 // card(s) back up here and swap in the localized name so every row names
 // cards in the viewer's language, never a mix of English and translated.
-function localizeParams(w, { cardsById, lang, t }) {
+export function localizeParams(w, { cardsById, lang, t }) {
   const p = { ...w.params };
   if (p.id) {
     const c = cardsById.get(p.id);
@@ -55,8 +55,8 @@ function localizeParams(w, { cardsById, lang, t }) {
   // UNIQUE-LIMIT/SITE-COPIES: validate.js reports the raw count against an
   // implicit limit of 1; compute how many copies to remove here rather than
   // widening the validator's param shape for two single-purpose numbers.
-  if (w.code === 'UNIQUE-LIMIT' || w.code === 'SITE-COPIES') p.excess = p.count - 1;
-  if (w.code === 'SIDEBOARD-MAX' || w.code === 'POOL-CHARS' || w.code === 'POOL-ITEMS') p.over = p.count - p.max;
+  if (w.ruleId === 'UNIQUE-LIMIT' || w.ruleId === 'SITE-COPIES') p.excess = p.count - 1;
+  if (w.ruleId === 'SIDEBOARD-MAX' || w.ruleId === 'POOL-CHARS' || w.ruleId === 'POOL-ITEMS') p.over = p.count - p.max;
   return p;
 }
 

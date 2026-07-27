@@ -139,7 +139,7 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
     else if (c.type === 'Resource') poolItems += n;
   }
   if (poolChars > profile.pool.maxCharacters) emit('POOL-CHARS', { count: poolChars, max: profile.pool.maxCharacters, side });
-  if (poolItems > profile.pool.maxMinorItems) emit('POOL-ITEMS', { count: poolItems, max: profile.pool.maxMinorItems }, 'POOL-ITEMS.count');
+  if (poolItems > profile.pool.maxMinorItems) emit('POOL-ITEMS', { count: poolItems, max: profile.pool.maxMinorItems, side }, 'POOL-ITEMS.count');
 
   const rank = { error: 0, warning: 1, info: 2 };
   return out.sort((a, b) => rank[a.severity] - rank[b.severity]);

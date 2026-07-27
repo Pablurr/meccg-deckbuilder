@@ -189,7 +189,6 @@ export const translations = {
     'rules.POOL-CHARS': 'Le pool de départ a {count} personnages ; {side} en autorise {max}. Sors-en {over} vers le talon ou la réserve.',
     'rules.POOL-ITEMS.count': 'Le pool de départ a {count} objets mineurs ; {side} en autorise {max}. Sors-en {over}.',
     'rules.POOL-ELIGIBLE.type': "{name} ne peut pas être dans le pool de départ — seuls les personnages et les objets mineurs de départ y ont leur place. Déplace-la vers le talon ou la réserve.",
-    'rules.POOL-ELIGIBLE.race': '{name} ({race}) ne peut pas être dans le pool de départ — ce camp exclut cette race du pool. Déplace-la vers le talon ou la réserve.',
     // Data values interpolated into the messages above ({alignment}, {race}):
     // localized so a sentence never mixes an English data value with
     // translated prose. Values are those that actually occur (see sides.js
@@ -287,7 +286,7 @@ export const translations = {
     'rules.SIDEBOARD-MAX.doc': 'La taille de la réserve est plafonnée selon la longueur de partie.',
     'rules.POOL-CHARS.doc': 'Le nombre de personnages du pool de départ est plafonné par camp.',
     'rules.POOL-ITEMS.doc': 'Les objets mineurs du pool de départ sont plafonnés par camp.',
-    'rules.POOL-ELIGIBLE.doc': 'Seuls les personnages éligibles et les objets mineurs de départ peuvent être dans le pool de départ ; certaines races sont exclues selon le camp.',
+    'rules.POOL-ELIGIBLE.doc': 'Signale une carte dont le type ne peut pas occuper le pool de départ.',
   },
 
   en: {
@@ -467,7 +466,6 @@ export const translations = {
     'rules.POOL-CHARS': 'Starting pool has {count} characters; {side} allows {max}. Move {over} out to the play deck or sideboard.',
     'rules.POOL-ITEMS.count': 'Starting pool has {count} minor items; {side} allows {max}. Move {over} out.',
     'rules.POOL-ELIGIBLE.type': '{name} cannot sit in the starting pool — only characters and starting minor items are pool-eligible. Move it to the play deck or sideboard.',
-    'rules.POOL-ELIGIBLE.race': "{name} ({race}) cannot sit in the starting pool — this side excludes that race from the pool. Move it to the play deck or sideboard.",
     // Data values interpolated above ({alignment}, {race}): English keys are
     // identity mappings (the raw data values already read as English), kept
     // here so the lookup path in DeckPanel's localizeParams is the same for
@@ -565,7 +563,7 @@ export const translations = {
     'rules.SIDEBOARD-MAX.doc': 'Sideboard size is capped by the game length.',
     'rules.POOL-CHARS.doc': 'Starting pool character count is capped per side.',
     'rules.POOL-ITEMS.doc': 'Starting pool minor items are capped per side.',
-    'rules.POOL-ELIGIBLE.doc': 'Only pool-eligible characters and starting minor items may sit in the starting pool; some races are excluded per side.',
+    'rules.POOL-ELIGIBLE.doc': 'Reports a card whose type cannot occupy the starting pool.',
   },
 
   // Groundwork only — partial by design. Missing keys resolve through the
@@ -755,7 +753,6 @@ export const translations = {
     'rules.POOL-CHARS': 'La reserva inicial tiene {count} personajes; {side} permite {max}. Saca {over} hacia el mazo de juego o el sideboard.',
     'rules.POOL-ITEMS.count': 'La reserva inicial tiene {count} objetos menores; {side} permite {max}. Saca {over}.',
     'rules.POOL-ELIGIBLE.type': '{name} no puede estar en la reserva inicial — solo caben personajes y objetos menores iniciales. Muévela al mazo de juego o al sideboard.',
-    'rules.POOL-ELIGIBLE.race': '{name} ({race}) no puede estar en la reserva inicial — este bando excluye esa raza de la reserva. Muévela al mazo de juego o al sideboard.',
     // Data values interpolated above ({alignment}, {race}), localized for the
     // same reason as the fr/en blocks: never mix a raw English data value
     // into a translated sentence.
@@ -852,7 +849,7 @@ export const translations = {
     'rules.SIDEBOARD-MAX.doc': 'El tamaño del sideboard está limitado según la duración de la partida.',
     'rules.POOL-CHARS.doc': 'El número de personajes de la reserva inicial está limitado por bando.',
     'rules.POOL-ITEMS.doc': 'Los objetos menores de la reserva inicial están limitados por bando.',
-    'rules.POOL-ELIGIBLE.doc': 'Solo los personajes elegibles y los objetos menores iniciales pueden estar en la reserva inicial; algunas razas quedan excluidas según el bando.',
+    'rules.POOL-ELIGIBLE.doc': 'Informa de una carta cuyo tipo no puede ocupar la reserva inicial.',
   },
 };
 
