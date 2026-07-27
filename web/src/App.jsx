@@ -5,6 +5,8 @@ import { baseOptions } from './lib/tags.js';
 import { I18nProvider } from './i18n.jsx';
 import { makeT } from './lib/i18n.js';
 import { validateDeck } from './lib/rules/validate.js';
+import { remainingCopies } from './lib/rules/copies.js';
+import { bumpCount, applyDelta, applyToggle, applySelectAll } from './lib/deckMutations.js';
 import FilterBar from './components/FilterBar.jsx';
 import CardBrowser from './components/CardBrowser.jsx';
 import DeckDrawer from './components/DeckDrawer.jsx';
@@ -76,56 +78,58 @@ export default function App() {
     };
   }, [facets, cards]);
 
-  // delta is +1 / -1; only the floor is clamped. Copy limits are reported by
-  // the deckbuilding validator, never enforced by the counter.
-  function changeQty(id, delta) {
-    setQuantities((prev) => {
-      const next = Math.max(0, (prev[id] || 0) + delta);
-      const out = { ...prev };
-      if (next <= 0) delete out[id];
-      else out[id] = next;
-      return out;
+  // Copy caps are hard limits in deckbuilding mode and absent in freeform.
+  // Computed inside each updater from `prev`, never from a captured render
+  // value, so rapid clicks cannot race past a cap.
+  const capCtx = deck.mode === 'deckbuilding' && deck.ruleset
+    ? { side: deck.ruleset.side, ruleOverrides: deck.ruleset.ruleOverrides || {} }
+    : null;
+
+  // How many more copies of `id` may enter `zone`. Infinity in freeform, and
+  // for an id we have no card for.
+  function roomFor(id, zone, quantitiesMap, zonesMap) {
+    if (!capCtx) return Infinity;
+    const card = cardsById.get(id);
+    if (!card) return Infinity;
+    return remainingCopies(card, zone, { quantities: quantitiesMap, zones: zonesMap }, capCtx).remaining;
+  }
+
+  // delta is +1 / -1. `enforce: false` is used only by moveCopy, which cannot
+  // raise a total.
+  function changeQty(id, delta, { enforce = true } = {}) {
+    setQuantities((prev) => applyDelta(prev, id, delta, enforce ? roomFor(id, 'deck', prev, zones) : Infinity));
+  }
+
+  // zone is 'deck' | 'sideboard' | 'pool'; 'deck' routes to the existing
+  // quantities map rather than being a zone of its own.
+  function changeZoneQty(zone, id, delta, { enforce = true } = {}) {
+    if (zone === 'deck') return changeQty(id, delta, { enforce });
+    setZones((prev) => {
+      const room = enforce ? roomFor(id, zone, quantities, prev) : Infinity;
+      if (delta > 0 && !(room > 0)) return prev;
+      return { ...prev, [zone]: bumpCount(prev[zone], id, delta) };
     });
   }
 
-  // Zone-aware quantity helper shared by sideboard/pool. Mirrors changeQty's
-  // floor-at-0-and-delete-the-key semantics; deliberately uncapped like it.
-  function bump(map, id, delta) {
-    const next = Math.max(0, (map[id] || 0) + delta);
-    const out = { ...map };
-    if (next <= 0) delete out[id]; else out[id] = next;
-    return out;
-  }
-  // zone is 'deck' | 'sideboard' | 'pool'; 'deck' routes to the existing
-  // quantities map rather than being a zone of its own.
-  function changeZoneQty(zone, id, delta) {
-    if (zone === 'deck') return changeQty(id, delta);
-    setZones((prev) => ({ ...prev, [zone]: bump(prev[zone], id, delta) }));
-  }
   // Move one copy between zones (including 'deck'); no-op if fromZone === toZone.
+  // The destination increment is NOT cap-checked: -1 then +1 leaves the total
+  // untouched, and gating it would break dragging a card that sits at its cap --
+  // exactly when a player most wants to move one. A zone sub-cap (1.6.2's one
+  // avatar copy in the sideboard) can therefore be exceeded by a drag, and is
+  // reported by AVATAR-SIDEBOARD instead: a drag that silently does nothing has
+  // nowhere to explain itself, while the + button does.
   function moveCopy(id, fromZone, toZone) {
     if (fromZone === toZone) return;
     changeZoneQty(fromZone, id, -1);
-    changeZoneQty(toZone, id, +1);
+    changeZoneQty(toZone, id, +1, { enforce: false });
   }
 
-  // First click selects (1 copy), second click deselects.
   function toggleCard(id) {
-    setQuantities((prev) => {
-      const out = { ...prev };
-      if (out[id]) delete out[id];
-      else out[id] = 1;
-      return out;
-    });
+    setQuantities((prev) => applyToggle(prev, id, roomFor(id, 'deck', prev, zones)));
   }
 
-  // Add one copy of every currently-filtered card that isn't selected yet.
   function selectAll(ids) {
-    setQuantities((prev) => {
-      const out = { ...prev };
-      for (const id of ids) if (!out[id]) out[id] = 1;
-      return out;
-    });
+    setQuantities((prev) => applySelectAll(prev, ids, (id, working) => roomFor(id, 'deck', working, zones)));
   }
 
   // Replace the current selection with an imported { quantities, zones, notes }

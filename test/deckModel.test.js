@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { normalizeDeck } from '../web/src/lib/deck.js';
 import { createDeckStore } from '../web/src/lib/deckStore.js';
+import { bumpCount, applyDelta, applyToggle, applySelectAll } from '../web/src/lib/deckMutations.js';
 
 function memStorage() {
   const m = new Map();
@@ -52,6 +53,40 @@ describe('normalizeDeck', () => {
       ruleset: { side: 'balrog', length: 'long', tournament: true, ruleOverrides: restoredOverrides },
     });
     expect(backToDeckbuilding.ruleset.ruleOverrides).toEqual({ 'BALROG-MIND': false });
+  });
+});
+
+describe('deck mutation cores', () => {
+  it('bumpCount floors at zero and deletes the key', () => {
+    expect(bumpCount({}, 'a', +1)).toEqual({ a: 1 });
+    expect(bumpCount({ a: 2 }, 'a', -1)).toEqual({ a: 1 });
+    expect(bumpCount({ a: 1 }, 'a', -1)).toEqual({});
+    expect(bumpCount({ a: 1 }, 'a', -5)).toEqual({});
+    // never mutates the input
+    const src = { a: 1 };
+    bumpCount(src, 'a', +1);
+    expect(src).toEqual({ a: 1 });
+  });
+
+  it('applyDelta refuses an increment with no room, and always allows a decrement', () => {
+    expect(applyDelta({ a: 3 }, 'a', +1, 0)).toEqual({ a: 3 });   // blocked
+    expect(applyDelta({ a: 3 }, 'a', +1, 1)).toEqual({ a: 4 });   // room
+    expect(applyDelta({ a: 3 }, 'a', +1, Infinity)).toEqual({ a: 4 });
+    // A count already over its cap is never reduced: room is 0 but -1 works.
+    expect(applyDelta({ a: 5 }, 'a', -1, 0)).toEqual({ a: 4 });
+  });
+
+  it('applyToggle honours the cap when adding but never when removing', () => {
+    expect(applyToggle({}, 'a', 1)).toEqual({ a: 1 });
+    expect(applyToggle({}, 'a', 0)).toEqual({});        // no room -> no copy
+    expect(applyToggle({ a: 2 }, 'a', 0)).toEqual({});  // removal always works
+  });
+
+  it('applySelectAll skips cards with no room and consults the accumulating map', () => {
+    const roomFor = (id, map) => (Object.keys(map).length >= 2 ? 0 : 1);
+    expect(applySelectAll({}, ['a', 'b', 'c'], roomFor)).toEqual({ a: 1, b: 1 });
+    // Already-present cards are left alone, not incremented.
+    expect(applySelectAll({ a: 4 }, ['a'], () => 1)).toEqual({ a: 4 });
   });
 });
 
