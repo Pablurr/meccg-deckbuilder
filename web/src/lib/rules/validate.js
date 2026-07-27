@@ -6,37 +6,10 @@ import { LENGTHS } from './formats.js';
 import { resolveBanned } from './banned.js';
 import { backGroupForType } from '../deck.js';
 import { zonesFor } from './zones.js';
+import { RULES, RULE_BY_ID, isRuleEnabled } from './catalog.js';
 
-const SRC = 'https://councilofelrond.org/'; // stub source; refined per rule during sourcing
-
-export const RULES = [
-  { id: 'AVATAR-PRESENT',  severity: 'warning', status: 'verified',   source: 'https://meccg.com/rules/' },
-  { id: 'AVATAR-UNIQUE',   severity: 'error',   status: 'verified',   source: 'https://meccg.com/rules/' },
-  { id: 'AVATAR-SIDE',     severity: 'error',   status: 'verified',   source: 'https://meccg.com/rules/' },
-  { id: 'ALIGN-LEGAL',     severity: 'error',   status: 'verified',   source: 'https://meccg.com/rules/' },
-  { id: 'BANNED',          severity: 'error',   status: 'unverified', source: SRC },
-  { id: 'COPIES-LIMIT',    severity: 'error',   status: 'verified',   source: 'https://meccg.com/rules/' },
-  { id: 'UNIQUE-LIMIT',    severity: 'error',   status: 'unverified', source: SRC },
-  { id: 'SITE-COPIES',     severity: 'error',   status: 'verified',   source: 'https://meccg.com/rules/' },
-  { id: 'SPECIFIC-AVATAR', severity: 'error',   status: 'verified',   source: SRC },
-  { id: 'BALROG-RACE',     severity: 'error',   status: 'unverified', source: SRC },
-  { id: 'BALROG-MIND',     severity: 'error',   status: 'unverified', source: SRC },
-  { id: 'DECKSIZE-PLAY',   severity: 'warning', status: 'verified',   source: 'https://meccg.com/rules/' },
-  { id: 'DECKSIZE-LOCATION', severity: 'warning', status: 'unverified', source: SRC },
-  { id: 'SIDEBOARD-MAX',   severity: 'warning', status: 'verified',   source: 'https://meccg.com/rules/' },
-  { id: 'POOL-CHARS',      severity: 'warning', status: 'verified',   source: 'https://meccg.com/rules/' },
-  { id: 'POOL-MIND',       severity: 'warning', status: 'unverified', source: SRC },
-  { id: 'POOL-ITEMS',      severity: 'warning', status: 'unverified', source: SRC },
-  { id: 'POOL-ELIGIBLE',   severity: 'error',   status: 'verified',   source: 'https://meccg.com/rules/' },
-].map((r) => ({ ...r, defaultEnabled: r.status === 'verified' }));
-
-const RULE_BY_ID = new Map(RULES.map((r) => [r.id, r]));
-
-export function isRuleEnabled(ruleId, ruleOverrides = {}) {
-  const rule = RULE_BY_ID.get(ruleId);
-  if (!rule) return false; // unknown / retired ids are ignored
-  return ruleOverrides[ruleId] ?? rule.defaultEnabled;
-}
+// Re-exported so importers keep one entry point into the rules layer.
+export { RULES, isRuleEnabled };
 
 const toInt = (v) => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : null; };
 

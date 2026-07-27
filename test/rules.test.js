@@ -6,6 +6,7 @@ import { SIDES, isLegalForSide } from '../web/src/lib/rules/sides.js';
 import { LENGTHS } from '../web/src/lib/rules/formats.js';
 import { BANNED, resolveBanned } from '../web/src/lib/rules/banned.js';
 import { RULES, validateDeck, isRuleEnabled } from '../web/src/lib/rules/validate.js';
+import { COE, ruleRefs } from '../web/src/lib/rules/catalog.js';
 import { isDropAllowed, resolveDropTarget } from '../web/src/lib/rules/dropTargets.js';
 import { racesOf, singularize, matchesRace } from '../web/src/lib/rules/races.js';
 import { buildGroups, TYPE_ORDER } from '../web/src/lib/deckList.js';
@@ -322,23 +323,6 @@ describe('validateDeck', () => {
     expect(byId(out, 'AVATAR-PRESENT')).toHaveLength(1);
     expect(byId(out, 'AVATAR-PRESENT')[0].severity).toBe('warning');
   });
-  it('AVATAR-UNIQUE: fires on 3 copies of a single avatar (copy count, not distinct-card count)', () => {
-    const out = validateDeck({ ...base, quantities: { [wizardAvatar.id]: 3 } });
-    const hits = byId(out, 'AVATAR-UNIQUE');
-    expect(hits).toHaveLength(1);
-    expect(hits[0].params.count).toBe(3);
-    expect(hits[0].params.names).toEqual([wizardAvatar.name.en || Object.values(wizardAvatar.name)[0]]);
-  });
-  it('AVATAR-UNIQUE: fires on two different avatar cards', () => {
-    const otherWizardAvatar = cards.find(
-      (c) => c.attributes.avatar && c.alignment === 'Hero' && c.id !== wizardAvatar.id
-    );
-    expect(otherWizardAvatar).toBeTruthy();
-    const out = validateDeck({ ...base, quantities: { [wizardAvatar.id]: 1, [otherWizardAvatar.id]: 1 } });
-    const hits = byId(out, 'AVATAR-UNIQUE');
-    expect(hits).toHaveLength(1);
-    expect(hits[0].params.count).toBe(2);
-  });
   it('AVATAR-SIDE: an avatar whose alignment does not match the side fires', () => {
     const rwAvatar = firstWhere((c) => c.attributes.avatar && c.alignment === 'Minion');
     const out = validateDeck({ ...base, side: 'wizard', quantities: { [rwAvatar.id]: 1 } });
@@ -375,12 +359,25 @@ describe('validateDeck', () => {
     const out = validateDeck({ ...base, side: 'fallen-wizard', quantities: { [saruman.id]: 1, [gandalfSpecific.id]: 1 } });
     expect(byId(out, 'SPECIFIC-AVATAR')).toHaveLength(1);
   });
-  it('BANNED is disabled by default (unverified) and emits nothing without an override', () => {
+  it('BANNED is enabled by default and fires for a banned card; ruleOverrides can turn it off', () => {
     // "Old Road" (TW-294) is in BANNED['fallen-wizard'] and is Hero-alignment,
-    // so it is otherwise perfectly legal for a fallen-wizard deck.
+    // so it is otherwise perfectly legal for a fallen-wizard deck except for the ban.
     const bannedCard = firstWhere((c) => (c.name.en || '') === 'Old Road');
     const out = validateDeck({ ...base, side: 'fallen-wizard', quantities: { [bannedCard.id]: 1 } });
-    expect(byId(out, 'BANNED')).toHaveLength(0);
+    expect(byId(out, 'BANNED')).toHaveLength(1);
+    expect(byId(out, 'BANNED')[0].severity).toBe('error');
+    expect(byId(out, 'BANNED')[0].params.id).toBe(bannedCard.id);
+
+    // The override mechanism still works in the other direction: a rule that
+    // is on by default can be silenced per-deck even though the deck still
+    // violates it.
+    const disabled = validateDeck({
+      ...base,
+      side: 'fallen-wizard',
+      ruleOverrides: { BANNED: false },
+      quantities: { [bannedCard.id]: 1 },
+    });
+    expect(byId(disabled, 'BANNED')).toHaveLength(0);
   });
   it('banned cards are errors once BANNED is enabled via ruleOverrides', () => {
     const bannedCard = firstWhere((c) => (c.name.en || '') === 'Old Road');
@@ -482,13 +479,6 @@ describe('validateDeck', () => {
     });
     expect(byId(wrongSide, 'SITE-COPIES').some((w) => w.params.id === dolGuldur.id)).toBe(true);
   });
-  it('DECKSIZE-PLAY: play-deck count below the side minimum fires', () => {
-    const out = validateDeck({ ...base, quantities: { [wizardAvatar.id]: 1 } });
-    const hits = byId(out, 'DECKSIZE-PLAY');
-    expect(hits).toHaveLength(1);
-    expect(hits[0].params.count).toBe(1);
-    expect(hits[0].params.min).toBe(25);
-  });
   it('POOL-CHARS: pool character count above the side max fires', () => {
     const poolChar = firstWhere((c) => c.type === 'Character' && ['Hero', 'Neutral'].includes(c.alignment) && !c.attributes.avatar);
     const out = validateDeck({
@@ -513,14 +503,11 @@ describe('validateDeck', () => {
     expect(hits[0].params.reason).toBe('type');
     expect(hits[0].params.id).toBe(hazard.id);
   });
-  it('BALROG-MIND: a non-exempt Balrog-side character at/above the per-character mind limit fires once the unverified rule is enabled', () => {
+  it('BALROG-MIND: a non-exempt Balrog-side character at/above the per-character mind limit fires by default', () => {
     const balrogAvatar = firstWhere((c) => c.attributes.avatar && c.alignment === 'Balrog');
     const bigMindChar = firstWhere((c) => c.type === 'Character' && !c.attributes.avatar && c.attributes.specific !== 'Balrog' && parseInt(c.attributes.mind, 10) >= 9);
-    const disabled = validateDeck({ ...base, side: 'balrog', quantities: { [balrogAvatar.id]: 1, [bigMindChar.id]: 1 } });
-    expect(byId(disabled, 'BALROG-MIND')).toHaveLength(0); // unverified rule, off by default
-
     const out = validateDeck({
-      ...base, side: 'balrog', ruleOverrides: { 'BALROG-MIND': true },
+      ...base, side: 'balrog',
       quantities: { [balrogAvatar.id]: 1, [bigMindChar.id]: 1 },
     });
     const hits = byId(out, 'BALROG-MIND');
@@ -541,15 +528,12 @@ describe('validateDeck', () => {
     }
   });
 
-  it('BALROG-RACE: a non-Orc/Troll, non-exempt Balrog-side character fires once the unverified rule is enabled', () => {
+  it('BALROG-RACE: a non-Orc/Troll, non-exempt Balrog-side character fires by default', () => {
     const balrogAvatar = firstWhere((c) => c.attributes.avatar && c.alignment === 'Balrog');
     const wrongRaceChar = firstWhere((c) => c.type === 'Character' && !c.attributes.avatar && c.attributes.specific !== 'Balrog'
       && c.attributes.race && !String(c.attributes.race).includes('Orc') && !String(c.attributes.race).includes('Troll'));
-    const disabled = validateDeck({ ...base, side: 'balrog', quantities: { [balrogAvatar.id]: 1, [wrongRaceChar.id]: 1 } });
-    expect(byId(disabled, 'BALROG-RACE')).toHaveLength(0); // unverified rule, off by default
-
     const out = validateDeck({
-      ...base, side: 'balrog', ruleOverrides: { 'BALROG-RACE': true },
+      ...base, side: 'balrog',
       quantities: { [balrogAvatar.id]: 1, [wrongRaceChar.id]: 1 },
     });
     const hits = byId(out, 'BALROG-RACE');
@@ -557,18 +541,11 @@ describe('validateDeck', () => {
     expect(hits[0].params.id).toBe(wrongRaceChar.id);
   });
 
-  it('POOL-ITEMS: starting minor items above the per-side max fire once the unverified rule is enabled', () => {
+  it('POOL-ITEMS: starting minor items above the per-side max fire by default', () => {
     const minorItem = firstWhere((c) => c.type === 'Resource' && c.attributes.playableAsStartingMinorItem === true);
-    const disabled = validateDeck({
+    const out = validateDeck({
       ...base, quantities: { [wizardAvatar.id]: 1 },
       zones: { sideboard: {}, pool: { [minorItem.id]: 3 } }, // wizard pool.maxMinorItems = 2
-    });
-    expect(byId(disabled, 'POOL-ITEMS')).toHaveLength(0); // unverified rule, off by default
-
-    const out = validateDeck({
-      ...base, ruleOverrides: { 'POOL-ITEMS': true },
-      quantities: { [wizardAvatar.id]: 1 },
-      zones: { sideboard: {}, pool: { [minorItem.id]: 3 } },
     });
     const hits = byId(out, 'POOL-ITEMS');
     expect(hits).toHaveLength(1);
@@ -576,13 +553,10 @@ describe('validateDeck', () => {
     expect(hits[0].params.max).toBe(2);
   });
 
-  it('UNIQUE-LIMIT: exactly 2+ copies of a unique non-avatar card fire once the unverified rule is enabled; 1 copy never does', () => {
+  it('UNIQUE-LIMIT: exactly 2+ copies of a unique non-avatar card fire by default; 1 copy never does', () => {
     const uniqueCard = firstWhere((c) => c.attributes.unique === true && !c.attributes.avatar && c.type !== 'Site');
-    const disabled = validateDeck({ ...base, quantities: { [wizardAvatar.id]: 1, [uniqueCard.id]: 2 } });
-    expect(byId(disabled, 'UNIQUE-LIMIT')).toHaveLength(0); // unverified rule, off by default
-
     const oneCopy = validateDeck({
-      ...base, ruleOverrides: { 'UNIQUE-LIMIT': true },
+      ...base,
       quantities: { [wizardAvatar.id]: 1, [uniqueCard.id]: 1 },
     });
     // Pins the implicit limit at 1 copy: DeckPanel.jsx's localizeParams computes
@@ -591,7 +565,7 @@ describe('validateDeck', () => {
     expect(byId(oneCopy, 'UNIQUE-LIMIT')).toHaveLength(0);
 
     const twoCopies = validateDeck({
-      ...base, ruleOverrides: { 'UNIQUE-LIMIT': true },
+      ...base,
       quantities: { [wizardAvatar.id]: 1, [uniqueCard.id]: 2 },
     });
     const hits = byId(twoCopies, 'UNIQUE-LIMIT');
@@ -601,12 +575,9 @@ describe('validateDeck', () => {
     expect(hits[0].params.count - 1).toBe(1); // matches DeckPanel.jsx's hardcoded excess = count - 1
   });
 
-  it('DECKSIZE-LOCATION: play-deck cards with zero location-deck cards fire once the unverified rule is enabled', () => {
-    const disabled = validateDeck({ ...base, quantities: { [wizardAvatar.id]: 1 } });
-    expect(byId(disabled, 'DECKSIZE-LOCATION')).toHaveLength(0); // unverified rule, off by default
-
+  it('DECKSIZE-LOCATION: play-deck cards with zero location-deck cards fire by default', () => {
     const out = validateDeck({
-      ...base, ruleOverrides: { 'DECKSIZE-LOCATION': true },
+      ...base,
       quantities: { [wizardAvatar.id]: 1 }, // a Character only: play count > 0, location count 0
     });
     const hits = byId(out, 'DECKSIZE-LOCATION');
@@ -649,15 +620,46 @@ describe('validateDeck', () => {
     expect(isRuleEnabled('ALIGN-LEGAL', { 'ALIGN-LEGAL': false })).toBe(false);
     expect(isRuleEnabled('NO-SUCH-RULE', { 'NO-SUCH-RULE': true })).toBe(false); // unknown ids ignored
   });
-  it('every rule has unique id and required metadata', () => {
-    const ids = RULES.map((r) => r.id);
-    expect(new Set(ids).size).toBe(ids.length);
+  it('every rule has a unique id and required metadata', () => {
+    const seen = new Set();
     for (const r of RULES) {
+      expect(seen.has(r.id)).toBe(false);
+      seen.add(r.id);
+      expect(typeof r.id).toBe('string');
       expect(['error', 'warning', 'info']).toContain(r.severity);
-      expect(['verified', 'unverified', 'disputed']).toContain(r.status);
+      expect(['verified', 'unverified']).toContain(r.status);
       expect(typeof r.source).toBe('string');
-      expect(r.defaultEnabled).toBe(r.status === 'verified');
     }
+  });
+
+  it('every rule either cites CoE section 1 or is explicitly a house rule', () => {
+    for (const r of RULES) {
+      if (r.house) {
+        // A house advisory must not pretend to come from the source.
+        expect(r.ref).toBeUndefined();
+        expect(r.refs).toBeUndefined();
+        continue;
+      }
+      const refs = ruleRefs(r);
+      expect(refs.length).toBeGreaterThan(0);
+      for (const ref of refs) expect(ref).toMatch(/^1\.[0-9]+(\.[A-Z]?[0-9]+)?$/);
+      expect(r.source).toBe(COE);
+    }
+  });
+
+  it('ruleRefs normalises single- and multi-clause rules', () => {
+    expect(ruleRefs({ ref: '1.3.2' })).toEqual(['1.3.2']);
+    expect(ruleRefs({ refs: ['1.4', '1.4.F1'] })).toEqual(['1.4', '1.4.F1']);
+    expect(ruleRefs({ house: true })).toEqual([]);
+    expect(ruleRefs(null)).toEqual([]);
+  });
+
+  it('the two rules that contradict section 1 ship disabled until lot 2 replaces them', () => {
+    // AVATAR-UNIQUE fires on any total > 1, but 1.5 allows up to three
+    // avatars. DECKSIZE-PLAY applies one 25-50 range to every play-deck card,
+    // but 1.5 is four separate budgets. Both report legal decks as illegal.
+    expect(isRuleEnabled('AVATAR-UNIQUE', {})).toBe(false);
+    expect(isRuleEnabled('DECKSIZE-PLAY', {})).toBe(false);
   });
 });
 

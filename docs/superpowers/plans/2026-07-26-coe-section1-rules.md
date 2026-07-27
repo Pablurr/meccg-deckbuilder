@@ -590,6 +590,29 @@ These assert rules that contradict section 1 and are now disabled, so they fail.
 - `it('AVATAR-UNIQUE: fires on two different avatar cards', ...)`
 - `it('DECKSIZE-PLAY: play-deck count below the side minimum fires', ...)`
 
+- [ ] **Step 5b: Rewrite the six tests that assert the pre-sourcing `unverified` state**
+
+**Plan gap, found during execution.** The Traceability section says the status flip to
+`verified` turns these rules on by default — but this step was missing, so six
+tests written in the stub era still assert they are *off*. They now fail.
+
+**Rewrite, do not delete.** Each one covers real rule behaviour; only the
+"enable it via `ruleOverrides` first" harness is obsolete. Drop the override and
+assert the rule fires by default, keeping every other assertion:
+
+- `it('BANNED is disabled by default (unverified) and emits nothing without an override', ...)`
+  → becomes: BANNED is enabled by default and a banned card emits an error.
+- `it('BALROG-MIND: a non-exempt Balrog-side character at/above the per-character mind limit fires once the unverified rule is enabled', ...)`
+- `it('BALROG-RACE: a non-Orc/Troll, non-exempt Balrog-side character fires once the unverified rule is enabled', ...)`
+- `it('POOL-ITEMS: starting minor items above the per-side max fire once the unverified rule is enabled', ...)`
+- `it('UNIQUE-LIMIT: exactly 2+ copies of a unique non-avatar card fire once the unverified rule is enabled; 1 copy never does', ...)`
+- `it('DECKSIZE-LOCATION: play-deck cards with zero location-deck cards fire once the unverified rule is enabled', ...)`
+
+Rename each to drop "once the unverified rule is enabled". Keep the
+`ruleOverrides: { X: false }` direction covered somewhere — a rule the user
+switches off must still emit nothing — so that the override mechanism itself
+stays under test after the flip.
+
 - [ ] **Step 6: Run the whole suite**
 
 Run: `npm test`
