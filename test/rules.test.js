@@ -5,7 +5,7 @@ import { zonesFor } from '../web/src/lib/rules/zones.js';
 import { SIDES, GENERAL, SPECIFIC_TO_SIDES, isLegalForSide, raceAllowed } from '../web/src/lib/rules/sides.js';
 import { LENGTHS } from '../web/src/lib/rules/formats.js';
 import { BANNED, resolveBanned } from '../web/src/lib/rules/banned.js';
-import { RULES, validateDeck, isRuleEnabled } from '../web/src/lib/rules/validate.js';
+import { RULES, validateDeck, isRuleEnabled, bucketCounts } from '../web/src/lib/rules/validate.js';
 import { COE, ruleRefs } from '../web/src/lib/rules/catalog.js';
 import { isDropAllowed, resolveDropTarget } from '../web/src/lib/rules/dropTargets.js';
 import { racesOf, singularize, matchesRace } from '../web/src/lib/rules/races.js';
@@ -764,13 +764,26 @@ describe('validateDeck', () => {
     const out = validateDeck({ ...base, side: 'constructor', quantities: {} });
     expect(out).toEqual([]);
   });
-  it('isRuleEnabled: unverified rules default off, overrides can flip them, unknown ids are ignored', () => {
-    const unverified = RULES.find((r) => r.status === 'unverified');
-    expect(unverified.defaultEnabled).toBe(false);
-    expect(isRuleEnabled(unverified.id, {})).toBe(false);
-    expect(isRuleEnabled(unverified.id, { [unverified.id]: true })).toBe(true);
+  it('isRuleEnabled: no rule ships unverified any more, overrides flip a rule in both directions, and unknown/retired ids are ignored', () => {
+    // Every rule in the catalogue now cites Council of Elrond section 1 (see
+    // "every rule either cites CoE section 1..." below) or is an explicit
+    // house rule, and every one of those is `status: 'verified'`. There is
+    // no longer an unverified rule left in the catalogue to use as a
+    // fixture for "unverified rules default off," so that half of this test
+    // is unfixturable -- and that is a milestone, not a gap. It is pinned
+    // here as a direct assertion instead: the day a rule ships unverified
+    // again, this fails loudly, which is exactly when the old
+    // defaultEnabled-false coverage should be restored.
+    expect(RULES.some((r) => r.status === 'unverified')).toBe(false);
+
+    // The override-flips-both-ways and unknown/retired-id-ignored behaviours
+    // don't need an unverified fixture -- exercise them against ALIGN-LEGAL,
+    // a verified (default-enabled) rule, plus a retired id (DECKSIZE-PLAY).
+    expect(isRuleEnabled('ALIGN-LEGAL', {})).toBe(true);
     expect(isRuleEnabled('ALIGN-LEGAL', { 'ALIGN-LEGAL': false })).toBe(false);
-    expect(isRuleEnabled('NO-SUCH-RULE', { 'NO-SUCH-RULE': true })).toBe(false); // unknown ids ignored
+    expect(isRuleEnabled('ALIGN-LEGAL', { 'ALIGN-LEGAL': true })).toBe(true);
+    expect(isRuleEnabled('NO-SUCH-RULE', { 'NO-SUCH-RULE': true })).toBe(false); // unknown id ignored
+    expect(isRuleEnabled('DECKSIZE-PLAY', { 'DECKSIZE-PLAY': true })).toBe(false); // retired id ignored
   });
   it('every rule has a unique id and required metadata', () => {
     const seen = new Set();
@@ -818,16 +831,76 @@ describe('validateDeck', () => {
     expect(ruleRefs(null)).toEqual([]);
   });
 
-  it('the two rules that contradict section 1 ship disabled until lot 2 replaces them', () => {
-    // AVATAR-UNIQUE was retired in a previous task (replaced by four
-    // avatar-specific rules that cite 1.5/1.6 instead); isRuleEnabled
-    // returns false for it now simply because unknown/retired ids are
-    // ignored (see catalog.js), not because it ships disabled. DECKSIZE-PLAY
-    // still contradicts 1.5 -- it applies one 25-50 range to every play-deck
-    // card, but 1.5 is four separate budgets -- and still ships disabled
-    // until lot 2 replaces it.
+  it('AVATAR-UNIQUE and DECKSIZE-PLAY stay retired: both contradicted section 1 and were replaced, not revived', () => {
+    // Both ids used to name real, catalogued rules that contradicted
+    // section 1 and shipped disabled pending a fix ("lot 2"). Both fixes
+    // have since landed: AVATAR-UNIQUE was replaced by four avatar-specific
+    // rules (AVATAR-COUNT, AVATAR-MULTIPLES, AVATAR-SIDE, AVATAR-COPIES),
+    // and this task replaced DECKSIZE-PLAY with the three play-deck budget
+    // rules (DECKSIZE-RESOURCES, DECKSIZE-HAZARDS, DECKSIZE-CHARS) that
+    // split 1.5's single 25-50 range into the four separate budgets it
+    // actually describes. Neither id names a catalogue entry any more, so
+    // isRuleEnabled returns false only because RULE_BY_ID has nothing to
+    // find for them (see catalog.js) -- not because a contradictory rule
+    // ships disabled. This pins that retirement rather than testing the
+    // now-nonexistent disabled-contradictory-rule behaviour the old test
+    // name described.
+    expect(RULES.find((r) => r.id === 'AVATAR-UNIQUE')).toBeUndefined();
+    expect(RULES.find((r) => r.id === 'DECKSIZE-PLAY')).toBeUndefined();
     expect(isRuleEnabled('AVATAR-UNIQUE', {})).toBe(false);
     expect(isRuleEnabled('DECKSIZE-PLAY', {})).toBe(false);
+  });
+});
+
+describe('play-deck budgets (1.5)', () => {
+  // 30 distinct non-unique Hero resources, one copy each, is the smallest legal
+  // resource block; matching hazards make the deck legal.
+  const pick = (fn, n) => cards.filter(fn).slice(0, n);
+  const heroRes = pick((c) => c.type === 'Resource' && c.alignment === 'Hero' && !(c.attributes || {}).unique, 30);
+  const haz = pick((c) => c.type === 'Hazard' && !(c.attributes || {}).unique && (c.attributes || {}).subtype === 'Creature', 30);
+  const q = (list) => Object.fromEntries(list.map((c) => [c.id, 1]));
+  const V = (quantities) => validateDeck({ side: 'wizard', length: 'standard', tournament: true, quantities, cardsById: index });
+  const of = (out, id) => out.filter((w) => w.ruleId === id);
+
+  it('DECKSIZE-RESOURCES: 29 resources fires, 30 does not', () => {
+    expect(of(V({ ...q(heroRes.slice(0, 29)), ...q(haz.slice(0, 29)) }), 'DECKSIZE-RESOURCES')).toHaveLength(1);
+    expect(of(V({ ...q(heroRes), ...q(haz) }), 'DECKSIZE-RESOURCES')).toEqual([]);
+  });
+
+  it('DECKSIZE-HAZARDS: hazards must exactly equal resources', () => {
+    const out = V({ ...q(heroRes), ...q(haz.slice(0, 29)) });
+    const hit = of(out, 'DECKSIZE-HAZARDS');
+    expect(hit).toHaveLength(1);
+    expect(hit[0].params).toEqual({ hazards: 29, resources: 30 });
+    expect(of(V({ ...q(heroRes), ...q(haz) }), 'DECKSIZE-HAZARDS')).toEqual([]);
+  });
+
+  it('DECKSIZE-CHARS: eleven non-avatar characters fire, ten do not', () => {
+    const chars = pick((c) => c.type === 'Character' && c.alignment === 'Hero' && !(c.attributes || {}).avatar, 11);
+    expect(of(V({ ...q(heroRes), ...q(haz), ...q(chars) }), 'DECKSIZE-CHARS')).toHaveLength(1);
+    expect(of(V({ ...q(heroRes), ...q(haz), ...q(chars.slice(0, 10)) }), 'DECKSIZE-CHARS')).toEqual([]);
+  });
+
+  it('a flexible hazard is counted whichever way keeps the deck legal (1.3.3)', () => {
+    // 29 plain resources + 1 hazard-playable-as-resource + 30 hazards: counting
+    // the flexible card as a resource satisfies both 30 resources and equality.
+    const quantities = { ...q(heroRes.slice(0, 29)), 'TW-104': 1, ...q(haz) };
+    const out = V(quantities);
+    expect(of(out, 'DECKSIZE-RESOURCES')).toEqual([]);
+    expect(of(out, 'DECKSIZE-HAZARDS')).toEqual([]);
+  });
+
+  it('a Wizard\'s agents count as hazards, not characters (1.3.W2)', () => {
+    const { characters, hazards } = bucketCounts({ 'DM-3': 1 }, index, 'wizard');
+    expect(characters).toBe(0);
+    expect(hazards).toBe(1);
+    const rw = bucketCounts({ 'DM-3': 1 }, index, 'ringwraith');
+    expect(rw.characters).toBe(1);
+    expect(rw.hazards).toBe(0);
+  });
+
+  it('DECKSIZE-PLAY is retired', () => {
+    expect(RULES.find((r) => r.id === 'DECKSIZE-PLAY')).toBeUndefined();
   });
 });
 

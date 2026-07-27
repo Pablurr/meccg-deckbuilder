@@ -16,7 +16,7 @@ export const DRAGON_MANIFESTATIONS = new Set([
   'TD-38', 'TD-43', 'TD-44', 'TD-61', 'TD-62', 'TD-64', 'TD-65', 'TD-70', 'TD-71',
 ]);
 
-const BALROG_TROLL_ORC = ['Orc', 'Troll'];
+const ORC_TROLL_RACES = ['Orc', 'Troll'];
 
 // 1.5.1, evaluated in this order so nothing is counted twice.
 function creatureWeight(card, bucket) {
@@ -71,7 +71,7 @@ export function roleFor(card, sideId) {
   // but lot 3's copy table keys on effectiveAlignment.
   let effectiveAlignment = card.alignment;
   if (side.heroTreatment && bucket === 'character'
-      && !BALROG_TROLL_ORC.some((r) => matchesRace(a.race, r))) {
+      && !ORC_TROLL_RACES.some((r) => matchesRace(a.race, r))) {
     effectiveAlignment = 'Hero';
   }
 

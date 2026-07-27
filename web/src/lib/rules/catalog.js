@@ -47,8 +47,12 @@ export const RULES = [
   { id: 'BALROG-MIND', severity: 'error', status: 'verified', ref: '1.3.B4', source: COE },
 
   // -- deck sizes --
-  // Contradicts 1.5. Disabled here, retired in lot 2.
-  { id: 'DECKSIZE-PLAY', severity: 'warning', status: 'unverified', house: true, source: COE },
+  // 1.5 -- the play deck's four independent budgets: resources, hazards
+  // (exactly matching resources), non-avatar characters, avatars. Replaces
+  // DECKSIZE-PLAY, which wrongly applied one 25-50 range to every card.
+  { id: 'DECKSIZE-RESOURCES', severity: 'error', status: 'verified', ref: '1.5', source: COE },
+  { id: 'DECKSIZE-HAZARDS', severity: 'error', status: 'verified', ref: '1.5', source: COE },
+  { id: 'DECKSIZE-CHARS', severity: 'error', status: 'verified', ref: '1.5', source: COE },
   { id: 'DECKSIZE-LOCATION', severity: 'warning', status: 'verified', house: true, source: COE },
   { id: 'SIDEBOARD-MAX', severity: 'error', status: 'verified', ref: '1.6.1', source: COE },
 

@@ -8,11 +8,60 @@ import { backGroupForType } from '../deck.js';
 import { zonesFor } from './zones.js';
 import { RULES, RULE_BY_ID, isRuleEnabled } from './catalog.js';
 import { copyCaps } from './copies.js';
+import { roleFor } from './roles.js';
 
 // Re-exported so importers keep one entry point into the rules layer.
 export { RULES, isRuleEnabled };
 
 const toInt = (v) => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : null; };
+
+// 1.5 -- the play deck's four budgets, over disjoint buckets derived from
+// roleFor (so a Wizard's agents land in `hazards`, not `characters`).
+//
+// Flexible cards (1.3.3: playable as resource or hazard) are assigned the way
+// that keeps the deck legal, rather than asking the user to declare each one.
+// Only 6 cards carry the flags, so a linear scan over the possible splits is
+// ample. 1.3.F2 caps how many copies of each may count as a resource.
+export function bucketCounts(quantities, cardsById, side) {
+  const counts = { resources: 0, hazards: 0, characters: 0, avatars: 0, flexAssignedToResource: 0 };
+  const flex = []; // { count, maxAsResource, minAsResource }
+  for (const [id, n] of Object.entries(quantities)) {
+    const c = cardsById.get(id); if (!c) continue;
+    const r = roleFor(c, side);
+    if (r.bucket === 'site' || r.bucket === 'region') continue;
+    if (r.bucket === 'avatar') { counts.avatars += n; continue; }
+    if (r.bucket === 'character') { counts.characters += n; continue; }
+    if (r.flexible) {
+      const cap = r.flexible.maxAsAlt == null ? n : Math.min(n, r.flexible.maxAsAlt);
+      // `alt` is the bucket the card may move TO; the rest stay in `bucket`.
+      if (r.flexible.alt === 'resource') flex.push({ count: n, maxAsResource: cap, minAsResource: 0 });
+      else flex.push({ count: n, maxAsResource: n, minAsResource: n - cap });
+      continue;
+    }
+    if (r.bucket === 'resource') counts.resources += n;
+    else counts.hazards += n;
+  }
+  const flexTotal = flex.reduce((s, f) => s + f.count, 0);
+  const minR = flex.reduce((s, f) => s + f.minAsResource, 0);
+  const maxR = flex.reduce((s, f) => s + f.maxAsResource, 0);
+  const { resourcesMin, resourcesMax } = GENERAL.playDeck;
+  let best = null;
+  for (let r = minR; r <= maxR; r++) {
+    const resources = counts.resources + r;
+    const hazards = counts.hazards + (flexTotal - r);
+    const violation = (resources < resourcesMin ? resourcesMin - resources : 0)
+      + (resources > resourcesMax ? resources - resourcesMax : 0)
+      + Math.abs(hazards - resources);
+    if (best === null || violation < best.violation) best = { r, resources, hazards, violation };
+    if (violation === 0) break;
+  }
+  if (best) {
+    counts.resources = best.resources;
+    counts.hazards = best.hazards;
+    counts.flexAssignedToResource = best.r;
+  }
+  return counts;
+}
 
 // resolveBanned walks all 1683 cards; validateDeck runs on every deck edit, so
 // cache the resolution against the card index identity (a Map built once in App).
@@ -165,13 +214,20 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
   if (agentMind > GENERAL.agentMindMax) emit('AGENT-MIND', { total: agentMind, max: GENERAL.agentMindMax });
 
   // --- deck sizes ---
-  let playCount = 0, locationCount = 0;
+  let locationCount = 0;
+  let playCount = 0;
   for (const [id, n] of Object.entries(quantities)) {
     const c = cardsById.get(id); if (!c) continue;
     if (backGroupForType(c.type) === 'locationdeck') locationCount += n; else playCount += n;
   }
-  if (profile.playDeck && (playCount < profile.playDeck.min || playCount > profile.playDeck.max)) {
-    emit('DECKSIZE-PLAY', { count: playCount, min: profile.playDeck.min, max: profile.playDeck.max, side });
+  const b = bucketCounts(quantities, cardsById, side);
+  const pd = GENERAL.playDeck;
+  if (playCount > 0) {
+    if (b.resources < pd.resourcesMin || b.resources > pd.resourcesMax) {
+      emit('DECKSIZE-RESOURCES', { count: b.resources, min: pd.resourcesMin, max: pd.resourcesMax });
+    }
+    if (b.hazards !== b.resources) emit('DECKSIZE-HAZARDS', { hazards: b.hazards, resources: b.resources });
+    if (b.characters > pd.maxCharacters) emit('DECKSIZE-CHARS', { count: b.characters, max: pd.maxCharacters });
   }
   if (locationCount === 0 && playCount > 0) emit('DECKSIZE-LOCATION', { count: locationCount, min: 1 });
 

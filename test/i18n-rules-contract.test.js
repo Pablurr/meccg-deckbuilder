@@ -133,12 +133,39 @@ function buildFixture(code) {
       const bigMindChar = firstWhere((c) => c.type === 'Character' && !c.attributes.avatar && c.attributes.specific !== 'Balrog' && parseInt(c.attributes.mind, 10) >= 9);
       return { ...base, side: 'balrog', quantities: { [balrogAvatar.id]: 1, [bigMindChar.id]: 1 } };
     }
-    // DECKSIZE-PLAY: every side's `playDeck` is null in sides.js today, and
-    // validate.js only emits DECKSIZE-PLAY when `profile.playDeck` is truthy
-    // -- so this rule cannot be triggered against real data. Not a gap in
-    // the fixture, a gap in the rule's sourcing (see sides.js).
-    case 'DECKSIZE-PLAY':
-      return null;
+    // 1.5 -- the play deck's four budgets. 29 distinct non-unique Hero
+    // resources (one short of the 30 minimum) triggers DECKSIZE-RESOURCES;
+    // pairing them with 30 hazards (one more than resources) also triggers
+    // DECKSIZE-HAZARDS in the same fixture.
+    case 'DECKSIZE-RESOURCES': {
+      const heroRes = cards.filter((c) => c.type === 'Resource' && c.alignment === 'Hero' && !c.attributes.unique).slice(0, 29);
+      expect(heroRes.length).toBe(29);
+      return { ...base, side: 'wizard', quantities: Object.fromEntries(heroRes.map((c) => [c.id, 1])) };
+    }
+    case 'DECKSIZE-HAZARDS': {
+      const heroRes = cards.filter((c) => c.type === 'Resource' && c.alignment === 'Hero' && !c.attributes.unique).slice(0, 30);
+      const haz = cards.filter((c) => c.type === 'Hazard' && !c.attributes.unique && c.attributes.subtype === 'Creature').slice(0, 29);
+      expect(heroRes.length).toBe(30);
+      expect(haz.length).toBe(29);
+      return {
+        ...base, side: 'wizard',
+        quantities: { ...Object.fromEntries(heroRes.map((c) => [c.id, 1])), ...Object.fromEntries(haz.map((c) => [c.id, 1])) },
+      };
+    }
+    case 'DECKSIZE-CHARS': {
+      const heroRes = cards.filter((c) => c.type === 'Resource' && c.alignment === 'Hero' && !c.attributes.unique).slice(0, 30);
+      const haz = cards.filter((c) => c.type === 'Hazard' && !c.attributes.unique && c.attributes.subtype === 'Creature').slice(0, 30);
+      const chars = cards.filter((c) => c.type === 'Character' && c.alignment === 'Hero' && !c.attributes.avatar).slice(0, 11);
+      expect(chars.length).toBe(11);
+      return {
+        ...base, side: 'wizard',
+        quantities: {
+          ...Object.fromEntries(heroRes.map((c) => [c.id, 1])),
+          ...Object.fromEntries(haz.map((c) => [c.id, 1])),
+          ...Object.fromEntries(chars.map((c) => [c.id, 1])),
+        },
+      };
+    }
     case 'DECKSIZE-LOCATION':
       return { ...base, side: 'wizard', quantities: { [wizardAvatar.id]: 1 } };
     case 'SIDEBOARD-MAX': {
@@ -218,11 +245,12 @@ describe('i18n rule-message placeholder contract', () => {
   }
 
   it('every rule template code is either triggered by a fixture or explicitly accounted for', () => {
-    // DECKSIZE-PLAY is the one rule this suite cannot reach: every side's
-    // playDeck is null (sides.js), so validate.js's `profile.playDeck &&`
-    // guard can never pass with today's data. If that ever changes, add a
-    // fixture above and this list should shrink back to empty.
-    expect(uncoveredCodes).toEqual(['DECKSIZE-PLAY']);
+    // Every catalogue rule now has a fixture that genuinely triggers it
+    // against real card data -- DECKSIZE-PLAY (the previously-unreachable
+    // rule) is retired, replaced by DECKSIZE-RESOURCES/HAZARDS/CHARS, all
+    // three reachable. If a future rule becomes unreachable, add it here
+    // deliberately rather than letting this list grow silently.
+    expect(uncoveredCodes).toEqual([]);
   });
 
   const coveredEntries = entries.filter((e) => finalParamsByCode[e.code]);
