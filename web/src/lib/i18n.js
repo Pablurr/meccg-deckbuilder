@@ -173,7 +173,11 @@ export const translations = {
 
     // Rule warnings (deckbuilding mode — DeckPanel, validateDeck)
     'rules.AVATAR-PRESENT': "Pas encore d'avatar — ajoute ton avatar {side} au deck.",
-    'rules.AVATAR-UNIQUE': "{count} cartes avatar ({names}) — un deck ne joue qu'un seul avatar. Retire les cartes en trop.",
+    'rules.AVATAR-COPIES': '{name} — {count} exemplaires dans le deck entier, au-delà du maximum de {max}. Les plafonds se cumulent sur le deck de jeu, la réserve et le pool.',
+    'rules.AVATAR-SIDEBOARD': '{name} — {count} exemplaires en réserve, alors qu’un seul exemplaire de chaque avatar y est autorisé.',
+    'rules.AVATAR-COUNT.total': 'Le deck de jeu contient {count} exemplaires d’avatar, au-delà du maximum de {max}.',
+    'rules.AVATAR-COUNT.distinct': 'Le deck de jeu contient {distinct} avatars différents — deux au maximum (trois avatars différents sont interdits).',
+    'rules.AVATAR-MULTIPLES': '{count} avatars sont présents en plusieurs exemplaires entre le deck de jeu et la réserve — un seul avatar peut l’être.',
     'rules.AVATAR-SIDE': "{name} n'est pas un avatar {side}. Remplace-la, ou change le camp du deck.",
     'rules.ALIGN-LEGAL': "{name} ({alignment}) n'est pas jouable dans un deck {side}. Retire-la, ou garde-la en connaissance de cause.",
     'rules.BANNED': '{name} est bannie pour {side}. Retire-la.',
@@ -274,7 +278,10 @@ export const translations = {
     // Short factual doc string per rule (RulesDoc table) — distinct from the
     // warning message above, which is written for a specific violation.
     'rules.AVATAR-PRESENT.doc': 'Le deck doit inclure un avatar.',
-    'rules.AVATAR-UNIQUE.doc': 'Un seul avatar au total, en comptant tous les exemplaires.',
+    'rules.AVATAR-COPIES.doc': 'Un avatar est limité à 3 exemplaires sur l’ensemble du deck (deck de jeu + réserve + pool).',
+    'rules.AVATAR-SIDEBOARD.doc': 'La réserve accepte autant d’avatars différents que voulu, mais un seul exemplaire de chacun.',
+    'rules.AVATAR-COUNT.doc': 'Le deck de jeu accepte jusqu’à 3 exemplaires d’avatar, en toute combinaison sauf trois avatars différents.',
+    'rules.AVATAR-MULTIPLES.doc': 'Un seul avatar peut apparaître en plusieurs exemplaires sur le total deck de jeu + réserve.',
     'rules.AVATAR-SIDE.doc': "L'alignement de l'avatar doit correspondre à celui du camp.",
     'rules.ALIGN-LEGAL.doc': "L'alignement de chaque carte non-avatar doit être légal pour le camp.",
     'rules.BANNED.doc': 'La carte ne doit pas figurer sur la liste des cartes bannies de ce camp.',
@@ -456,7 +463,11 @@ export const translations = {
 
     // Rule warnings (deckbuilding mode — DeckPanel, validateDeck)
     'rules.AVATAR-PRESENT': 'No avatar yet — add your {side} avatar to the deck.',
-    'rules.AVATAR-UNIQUE': '{count} avatar cards ({names}) — a deck plays exactly one avatar. Remove the extras.',
+    'rules.AVATAR-COPIES': '{name} — {count} copies in the whole deck, over the maximum of {max}. Copy caps add up across play deck, sideboard and pool.',
+    'rules.AVATAR-SIDEBOARD': '{name} — {count} copies in the sideboard, where only one copy of each avatar is allowed.',
+    'rules.AVATAR-COUNT.total': 'The play deck holds {count} avatar copies, over the maximum of {max}.',
+    'rules.AVATAR-COUNT.distinct': 'The play deck holds {distinct} different avatars — two at most (three different avatars are not allowed).',
+    'rules.AVATAR-MULTIPLES': '{count} avatars have multiple copies across the play deck and sideboard — only one avatar may.',
     'rules.AVATAR-SIDE': "{name} is not a {side} avatar. Replace it, or change the deck's side.",
     'rules.ALIGN-LEGAL': '{name} ({alignment}) is not playable in a {side} deck. Remove it, or keep it knowingly.',
     'rules.BANNED': '{name} is banned for {side}. Remove it.',
@@ -557,7 +568,10 @@ export const translations = {
     // Short factual doc string per rule (RulesDoc table) — distinct from the
     // warning message above, which is written for a specific violation.
     'rules.AVATAR-PRESENT.doc': 'Deck must include an avatar.',
-    'rules.AVATAR-UNIQUE.doc': 'Only one avatar total, counting all copies.',
+    'rules.AVATAR-COPIES.doc': 'An avatar is limited to 3 copies across the whole deck (play deck + sideboard + pool).',
+    'rules.AVATAR-SIDEBOARD.doc': 'The sideboard takes any number of different avatars, but only one copy of each.',
+    'rules.AVATAR-COUNT.doc': 'A play deck takes up to 3 avatar copies, in any combination except three different avatars.',
+    'rules.AVATAR-MULTIPLES.doc': 'Only one avatar may have multiple copies across the play deck and sideboard combined.',
     'rules.AVATAR-SIDE.doc': "The avatar's alignment must match the side's avatar alignment.",
     'rules.ALIGN-LEGAL.doc': "Every non-avatar card's alignment must be legal for the side.",
     'rules.BANNED.doc': "The card must not be on this side's banned list.",
@@ -749,7 +763,11 @@ export const translations = {
 
     // Rule warnings (deckbuilding mode — DeckPanel, validateDeck)
     'rules.AVATAR-PRESENT': 'Todavía no hay avatar — añade tu avatar {side} al mazo.',
-    'rules.AVATAR-UNIQUE': '{count} cartas de avatar ({names}) — un mazo juega exactamente un avatar. Retira las sobrantes.',
+    'rules.AVATAR-COPIES': '{name} — {count} copias en el mazo completo, por encima del máximo de {max}. Los límites de copias se suman entre mazo de juego, reserva y reserva inicial.',
+    'rules.AVATAR-SIDEBOARD': '{name} — {count} copias en la reserva, donde solo se permite una copia de cada avatar.',
+    'rules.AVATAR-COUNT.total': 'El mazo de juego contiene {count} copias de avatar, por encima del máximo de {max}.',
+    'rules.AVATAR-COUNT.distinct': 'El mazo de juego contiene {distinct} avatares distintos — dos como máximo (tres avatares distintos no se permiten).',
+    'rules.AVATAR-MULTIPLES': '{count} avatares tienen varias copias entre el mazo de juego y la reserva — solo uno puede tenerlas.',
     'rules.AVATAR-SIDE': '{name} no es un avatar {side}. Reemplázala, o cambia el bando del mazo.',
     'rules.ALIGN-LEGAL': '{name} ({alignment}) no se puede jugar en un mazo {side}. Retírala, o consérvala a sabiendas.',
     'rules.BANNED': '{name} está prohibida para {side}. Retírala.',
@@ -849,7 +867,10 @@ export const translations = {
     // Short factual doc string per rule (RulesDoc table) — distinct from the
     // warning message above, which is written for a specific violation.
     'rules.AVATAR-PRESENT.doc': 'El mazo debe incluir un avatar.',
-    'rules.AVATAR-UNIQUE.doc': 'Solo un avatar en total, contando todas las copias.',
+    'rules.AVATAR-COPIES.doc': 'Un avatar se limita a 3 copias en el mazo completo (mazo de juego + reserva + reserva inicial).',
+    'rules.AVATAR-SIDEBOARD.doc': 'La reserva admite cualquier número de avatares distintos, pero solo una copia de cada uno.',
+    'rules.AVATAR-COUNT.doc': 'Un mazo de juego admite hasta 3 copias de avatar, en cualquier combinación salvo tres avatares distintos.',
+    'rules.AVATAR-MULTIPLES.doc': 'Solo un avatar puede tener varias copias en el total de mazo de juego + reserva.',
     'rules.AVATAR-SIDE.doc': 'La alineación del avatar debe coincidir con la del bando.',
     'rules.ALIGN-LEGAL.doc': 'La alineación de cada carta que no sea avatar debe ser legal para el bando.',
     'rules.BANNED.doc': 'La carta no debe estar en la lista de prohibidas de este bando.',

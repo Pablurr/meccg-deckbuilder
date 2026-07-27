@@ -36,12 +36,44 @@ function buildFixture(code) {
   switch (code) {
     case 'AVATAR-PRESENT':
       return { ...base, side: 'wizard', quantities: {} };
-    case 'AVATAR-UNIQUE': {
-      const avatars = cards.filter((c) => c.attributes.avatar && c.alignment === 'Hero');
-      expect(avatars.length).toBeGreaterThan(1);
+    case 'AVATAR-COPIES': {
+      // Gandalf x3 in the play deck + 1 more in the sideboard = 4, over the
+      // whole-deck cap of 3 (1.5 + 1.6).
       return {
-        ...base, side: 'wizard', ruleOverrides: { 'AVATAR-UNIQUE': true },
-        quantities: { [avatars[0].id]: 1, [avatars[1].id]: 1 },
+        ...base, side: 'wizard', quantities: { [wizardAvatar.id]: 3 },
+        zones: { sideboard: { [wizardAvatar.id]: 1 }, pool: {} },
+      };
+    }
+    case 'AVATAR-SIDEBOARD': {
+      // Two copies of the same avatar in the sideboard, over the 1-copy cap (1.6.2).
+      return {
+        ...base, side: 'wizard', quantities: {},
+        zones: { sideboard: { [wizardAvatar.id]: 2 }, pool: {} },
+      };
+    }
+    case 'AVATAR-COUNT.total': {
+      // 3 Gandalf + 1 Saruman = 4 avatar copies in the play deck, over the
+      // 1.5 cap of 3.
+      const saruman = firstWhere((c) => c.attributes.avatar && c.alignment === 'Hero' && c.id !== wizardAvatar.id);
+      return { ...base, side: 'wizard', quantities: { [wizardAvatar.id]: 3, [saruman.id]: 1 } };
+    }
+    case 'AVATAR-COUNT.distinct': {
+      // Three different avatars in the play deck, one copy each -- 1.5 caps
+      // distinct avatars at two.
+      const others = cards.filter((c) => c.attributes.avatar && c.alignment === 'Hero' && c.id !== wizardAvatar.id);
+      expect(others.length).toBeGreaterThanOrEqual(2);
+      return {
+        ...base, side: 'wizard',
+        quantities: { [wizardAvatar.id]: 1, [others[0].id]: 1, [others[1].id]: 1 },
+      };
+    }
+    case 'AVATAR-MULTIPLES': {
+      // Two avatars each split 1 in the play deck + 1 in the sideboard --
+      // 1.6.2 allows only one avatar to have multiple copies.
+      const saruman = firstWhere((c) => c.attributes.avatar && c.alignment === 'Hero' && c.id !== wizardAvatar.id);
+      return {
+        ...base, side: 'wizard', quantities: { [wizardAvatar.id]: 1, [saruman.id]: 1 },
+        zones: { sideboard: { [wizardAvatar.id]: 1, [saruman.id]: 1 }, pool: {} },
       };
     }
     case 'AVATAR-SIDE': {

@@ -10,6 +10,14 @@ export const GENERAL = {
   copiesDefault: 3, // 1.3.1 -- copies of a non-unique card
   uniqueMax: 1,     // 1.3.1 -- copies of a unique non-avatar card
   siteMax: 1,       // 1.4   -- copies of a non-haven site
+  // Avatars are exempt from the unique rule (1.3.1 says "each unique
+  // NON-avatar card"). 1.5 allows three in the play deck; 1.6's "across the
+  // whole deck" clause makes three the whole-deck maximum per avatar.
+  avatarMaxCopies: 3,        // 1.5 + 1.6, cumulative across every zone
+  avatarMaxDistinct: 2,      // 1.5 -- "except for three different avatars"
+  avatarMaxInSideboard: 1,   // 1.6.2 -- one copy of each avatar, any number of avatars
+  avatarMaxWithMultiples: 1, // 1.6.2 -- at most one avatar with multiple copies
+  avatarMaxInPlayDeck: 3,    // 1.5
 };
 
 // 1.3.4 -- which sides may declare the avatar a "specific" card names. Each of

@@ -9,8 +9,7 @@
 //
 // Severity follows the citation: section 1 is hard deck-construction
 // legality, so any rule citing a clause is `error`. House advisories are our
-// own judgement calls rather than the source's, so they stay `warning`
-// (except AVATAR-UNIQUE, which is disabled and pinned).
+// own judgement calls rather than the source's, so they stay `warning`.
 // Casual mode already downgrades every severity one notch (see validate.js),
 // so that's the soft path -- no separate warning-vs-error toggle is needed.
 export const COE = 'https://www.councilofelrond.org/rules/#Section1';
@@ -18,9 +17,15 @@ export const COE = 'https://www.councilofelrond.org/rules/#Section1';
 export const RULES = [
   // -- avatars --
   { id: 'AVATAR-PRESENT', severity: 'warning', status: 'verified', house: true, source: COE },
-  // Contradicts 1.5 (up to three avatars, any combination but three different).
-  // Disabled here, retired in lot 2 in favour of AVATAR-COUNT / AVATAR-COPIES.
-  { id: 'AVATAR-UNIQUE', severity: 'error', status: 'unverified', house: true, source: COE },
+  // 1.5 + 1.6 -- per-avatar copy cap, cumulative across every zone. Hard.
+  { id: 'AVATAR-COPIES', severity: 'error', status: 'verified', refs: ['1.5', '1.6'], hard: true, source: COE },
+  // 1.6.2 -- one copy of each avatar in the sideboard, on top of the total
+  // cap above. Owner's reading (2026-07-26); stricter than the printed
+  // sentence, which permits two copies of one avatar there.
+  { id: 'AVATAR-SIDEBOARD', severity: 'error', status: 'verified', ref: '1.6.2', hard: true, interpretation: true, source: COE },
+  // 1.5 -- play-deck composition: a sum over different cards, not a copy cap.
+  { id: 'AVATAR-COUNT', severity: 'error', status: 'verified', ref: '1.5', source: COE },
+  { id: 'AVATAR-MULTIPLES', severity: 'error', status: 'verified', ref: '1.6.2', source: COE },
   { id: 'AVATAR-SIDE', severity: 'error', status: 'verified', refs: ['1.3.W1', '1.3.R1', '1.3.F3', '1.3.B1'], source: COE },
 
   // -- card legality --

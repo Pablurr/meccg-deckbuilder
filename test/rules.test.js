@@ -170,7 +170,15 @@ describe('sides data', () => {
   });
 
   it('GENERAL carries the side-independent limits', () => {
-    expect(GENERAL).toEqual({ agentMindMax: 36, copiesDefault: 3, uniqueMax: 1, siteMax: 1 });
+    expect(GENERAL.agentMindMax).toBe(36);
+    expect(GENERAL.copiesDefault).toBe(3);
+    expect(GENERAL.uniqueMax).toBe(1);
+    expect(GENERAL.siteMax).toBe(1);
+    expect(GENERAL.avatarMaxCopies).toBe(3);
+    expect(GENERAL.avatarMaxDistinct).toBe(2);
+    expect(GENERAL.avatarMaxInSideboard).toBe(1);
+    expect(GENERAL.avatarMaxWithMultiples).toBe(1);
+    expect(GENERAL.avatarMaxInPlayDeck).toBe(3);
   });
 
   it('raceAllowed uses race normalisation, not substring matching (1.3.B4)', () => {
@@ -456,6 +464,18 @@ describe('validateDeck', () => {
       side: 'fallen-wizard', length: 'standard', tournament: true,
       quantities: { [stage.id]: 1 }, cardsById: index,
     });
+    expect(out.filter((w) => w.ruleId === 'SPECIFIC-SIDE')).toEqual([]);
+  });
+
+  it('SPECIFIC-SIDE: BA-3 (the Balrog avatar) in a Wizard deck emits AVATAR-SIDE but not SPECIFIC-SIDE', () => {
+    // BA-3 The Balrog is the one avatar carrying attributes.specific ("Balrog").
+    // Without the !a.avatar guard, SPECIFIC-SIDE fires redundantly alongside
+    // AVATAR-SIDE, which already reports the same mismatch better.
+    const out = validateDeck({
+      side: 'wizard', length: 'standard', tournament: true,
+      quantities: { 'BA-3': 1 }, cardsById: index,
+    });
+    expect(out.filter((w) => w.ruleId === 'AVATAR-SIDE')).toHaveLength(1);
     expect(out.filter((w) => w.ruleId === 'SPECIFIC-SIDE')).toEqual([]);
   });
 
@@ -756,6 +776,81 @@ describe('validateDeck', () => {
     // but 1.5 is four separate budgets. Both report legal decks as illegal.
     expect(isRuleEnabled('AVATAR-UNIQUE', {})).toBe(false);
     expect(isRuleEnabled('DECKSIZE-PLAY', {})).toBe(false);
+  });
+});
+
+describe('avatar rules (1.5, 1.6, 1.6.2)', () => {
+  const V = (quantities, zones = {}) => validateDeck({
+    side: 'wizard', length: 'standard', tournament: true,
+    quantities, zones, cardsById: index,
+  });
+  const ids = (out, ruleId) => out.filter((w) => w.ruleId === ruleId);
+
+  it('three copies of one avatar in the play deck is legal', () => {
+    const out = V({ 'TW-156': 3 }); // Gandalf
+    expect(ids(out, 'AVATAR-COUNT')).toEqual([]);
+    expect(ids(out, 'AVATAR-COPIES')).toEqual([]);
+    expect(ids(out, 'AVATAR-MULTIPLES')).toEqual([]);
+  });
+
+  it('two different avatars, one duplicated, is legal', () => {
+    const out = V({ 'TW-156': 2, 'TW-181': 1 }); // 2 Gandalf + 1 Saruman
+    expect(ids(out, 'AVATAR-COUNT')).toEqual([]);
+  });
+
+  it('AVATAR-COUNT.distinct: three different avatars in the play deck fires', () => {
+    const out = V({ 'TW-156': 1, 'TW-181': 1, 'TW-178': 1 });
+    const hit = ids(out, 'AVATAR-COUNT');
+    expect(hit).toHaveLength(1);
+    expect(hit[0].code).toBe('AVATAR-COUNT.distinct');
+    expect(hit[0].params.distinct).toBe(3);
+  });
+
+  it('AVATAR-COUNT.total: four avatar copies in the play deck fires', () => {
+    const out = V({ 'TW-156': 3, 'TW-181': 1 });
+    const codes = ids(out, 'AVATAR-COUNT').map((w) => w.code);
+    expect(codes).toContain('AVATAR-COUNT.total');
+  });
+
+  it('AVATAR-COPIES: a fourth copy across play deck and sideboard fires (1.6)', () => {
+    // Caps are cumulative: 3 in the play deck leaves nothing for the sideboard.
+    const out = V({ 'TW-156': 3 }, { sideboard: { 'TW-156': 1 }, pool: {} });
+    const hit = ids(out, 'AVATAR-COPIES');
+    expect(hit).toHaveLength(1);
+    expect(hit[0].params).toMatchObject({ id: 'TW-156', count: 4, max: 3 });
+  });
+
+  it('AVATAR-SIDEBOARD: two copies of one avatar in the sideboard fires (1.6.2)', () => {
+    const out = V({}, { sideboard: { 'TW-156': 2 }, pool: {} });
+    const hit = ids(out, 'AVATAR-SIDEBOARD');
+    expect(hit).toHaveLength(1);
+    expect(hit[0].params).toMatchObject({ id: 'TW-156', count: 2, max: 1 });
+  });
+
+  it('AVATAR-SIDEBOARD: any number of distinct avatars in the sideboard is legal', () => {
+    const out = V({}, { sideboard: { 'TW-156': 1, 'TW-181': 1, 'TW-178': 1, 'TW-117': 1 }, pool: {} });
+    expect(ids(out, 'AVATAR-SIDEBOARD')).toEqual([]);
+    expect(ids(out, 'AVATAR-COUNT')).toEqual([]); // 1.5 is play-deck-scoped
+  });
+
+  it('AVATAR-MULTIPLES: two avatars each split across play deck and sideboard fires', () => {
+    // Gandalf 1+1 = multiples; Saruman 1+1 = multiples. Only one is allowed.
+    const out = V(
+      { 'TW-156': 1, 'TW-181': 1 },
+      { sideboard: { 'TW-156': 1, 'TW-181': 1 }, pool: {} },
+    );
+    const hit = ids(out, 'AVATAR-MULTIPLES');
+    expect(hit).toHaveLength(1);
+    expect(hit[0].params.count).toBe(2);
+  });
+
+  it('AVATAR-MULTIPLES: one avatar with multiples is legal', () => {
+    const out = V({ 'TW-156': 2, 'TW-181': 1 }, { sideboard: { 'TW-181': 0 }, pool: {} });
+    expect(ids(out, 'AVATAR-MULTIPLES')).toEqual([]);
+  });
+
+  it('AVATAR-UNIQUE is retired', () => {
+    expect(RULES.find((r) => r.id === 'AVATAR-UNIQUE')).toBeUndefined();
   });
 });
 

@@ -53,19 +53,58 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
   const entries = [...totals.entries()].map(([id, count]) => ({ id, count, card: cardsById.get(id) }));
   const name = (c) => (c.name && (c.name.en || Object.values(c.name)[0])) || c.id;
 
-  // --- avatar ---
-  const avatars = entries.filter((e) => (e.card.attributes || {}).avatar === true);
-  if (avatars.length === 0) emit('AVATAR-PRESENT', { side });
-  const avatarCount = avatars.reduce((s, e) => s + e.count, 0);
-  // Fires on total copies, not distinct avatar cards: 3 copies of one avatar
-  // is exactly as illegal as 2 different avatars. `names` is left as an
-  // array -- joining into a sentence is a UI/i18n concern, not this layer's.
-  if (avatarCount > 1) emit('AVATAR-UNIQUE', { count: avatarCount, names: avatars.map((e) => name(e.card)), ids: avatars.map((e) => e.id) });
-  for (const e of avatars) {
+  // --- avatars ---
+  const avatarEntries = entries.filter((e) => (e.card.attributes || {}).avatar === true);
+  if (avatarEntries.length === 0) emit('AVATAR-PRESENT', { side });
+  for (const e of avatarEntries) {
     if (e.card.alignment !== profile.avatarAlignment) emit('AVATAR-SIDE', { id: e.id, name: name(e.card), side });
   }
-  const avatarName = avatars.length === 1 ? name(avatars[0].card) : null;
-  const avatarId = avatars.length === 1 ? avatars[0].id : null;
+
+  // 1.5 + 1.6 -- three copies of one avatar across the whole deck. Cumulative:
+  // `entries` already sums deck + sideboard + pool.
+  for (const e of avatarEntries) {
+    if (e.count > GENERAL.avatarMaxCopies) {
+      emit('AVATAR-COPIES', { id: e.id, name: name(e.card), count: e.count, max: GENERAL.avatarMaxCopies });
+    }
+    // 1.6.2 -- and at most one of those copies may sit in the sideboard.
+    const inSb = sb[e.id] || 0;
+    if (inSb > GENERAL.avatarMaxInSideboard) {
+      emit('AVATAR-SIDEBOARD', { id: e.id, name: name(e.card), count: inSb, max: GENERAL.avatarMaxInSideboard });
+    }
+  }
+
+  // 1.5 -- the PLAY DECK holds up to three avatars, "any combination allowed
+  // except for three different avatars". Scoped to `quantities`; the sideboard
+  // has its own allowance (1.6.2).
+  const playAvatars = avatarEntries
+    .map((e) => ({ e, count: quantities[e.id] || 0 }))
+    .filter((x) => x.count > 0);
+  const playNames = playAvatars.map((x) => name(x.e.card));
+  const playIds = playAvatars.map((x) => x.e.id);
+  const playTotal = playAvatars.reduce((s, x) => s + x.count, 0);
+  if (playTotal > GENERAL.avatarMaxInPlayDeck) {
+    emit('AVATAR-COUNT', { count: playTotal, max: GENERAL.avatarMaxInPlayDeck, names: playNames, ids: playIds }, 'AVATAR-COUNT.total');
+  }
+  if (playAvatars.length > GENERAL.avatarMaxDistinct) {
+    emit('AVATAR-COUNT', { distinct: playAvatars.length, max: GENERAL.avatarMaxDistinct, names: playNames, ids: playIds }, 'AVATAR-COUNT.distinct');
+  }
+
+  // 1.6.2 -- at most one avatar may have multiple copies across the play deck
+  // and the sideboard combined. With the sideboard capped at one copy, the
+  // allowance is spent either by an avatar held 2-3x in the play deck or by the
+  // same avatar appearing once in each zone.
+  const multiples = avatarEntries.filter((e) => (quantities[e.id] || 0) + (sb[e.id] || 0) >= 2);
+  if (multiples.length > GENERAL.avatarMaxWithMultiples) {
+    emit('AVATAR-MULTIPLES', {
+      count: multiples.length, max: GENERAL.avatarMaxWithMultiples,
+      names: multiples.map((e) => name(e.card)), ids: multiples.map((e) => e.id),
+    });
+  }
+
+  // SPECIFIC-AVATAR needs "the" declared avatar, which is only unambiguous
+  // when the deck names exactly one distinct avatar card.
+  const avatarName = avatarEntries.length === 1 ? name(avatarEntries[0].card) : null;
+  const avatarId = avatarEntries.length === 1 ? avatarEntries[0].id : null;
 
   // --- per-card checks ---
   const bannedSet = bannedFor(cardsById, side);
@@ -81,8 +120,10 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
 
     // 1.3.4 -- a card specific to an avatar this side cannot declare at all.
     // Distinct from SPECIFIC-AVATAR, which is the finer per-avatar check for a
-    // side that *can* declare the named avatar.
-    if (a.specific && !(SPECIFIC_TO_SIDES[a.specific] || []).includes(side)) {
+    // side that *can* declare the named avatar. Avatars are excluded: BA-3
+    // (the Balrog avatar) is the only avatar carrying `specific`, and a
+    // mismatched avatar is already reported, more clearly, by AVATAR-SIDE.
+    if (a.specific && !a.avatar && !(SPECIFIC_TO_SIDES[a.specific] || []).includes(side)) {
       emit('SPECIFIC-SIDE', { id: e.id, name: name(c), specific: a.specific, side });
     }
 
