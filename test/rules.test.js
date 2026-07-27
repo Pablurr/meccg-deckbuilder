@@ -7,6 +7,7 @@ import { LENGTHS } from '../web/src/lib/rules/formats.js';
 import { BANNED, resolveBanned } from '../web/src/lib/rules/banned.js';
 import { RULES, validateDeck, isRuleEnabled } from '../web/src/lib/rules/validate.js';
 import { isDropAllowed, resolveDropTarget } from '../web/src/lib/rules/dropTargets.js';
+import { racesOf, singularize, matchesRace } from '../web/src/lib/rules/races.js';
 import { buildGroups, TYPE_ORDER } from '../web/src/lib/deckList.js';
 
 const { cards, index } = parseCards(raw);
@@ -656,6 +657,52 @@ describe('validateDeck', () => {
       expect(['verified', 'unverified', 'disputed']).toContain(r.status);
       expect(typeof r.source).toBe('string');
       expect(r.defaultEnabled).toBe(r.status === 'verified');
+    }
+  });
+});
+
+describe('races', () => {
+  it('splits comma-joined race values', () => {
+    expect(racesOf('Animals,Men,Bears')).toEqual(['Animals', 'Men', 'Bears']);
+    expect(racesOf('Orcs, Men')).toEqual(['Orcs', 'Men']);
+    expect(racesOf('')).toEqual([]);
+    expect(racesOf(undefined)).toEqual([]);
+  });
+
+  it('singularises the plural forms the card data actually uses', () => {
+    // Regular -s
+    expect(singularize('Orcs')).toBe('orc');
+    expect(singularize('Trolls')).toBe('troll');
+    expect(singularize('Animals')).toBe('animal');
+    expect(singularize('Spiders')).toBe('spider');
+    // -ves, the case a substring match gets wrong
+    expect(singularize('Wolves')).toBe('wolf');
+    expect(singularize('Elves')).toBe('elf');
+    expect(singularize('Dwarves')).toBe('dwarf');
+    // Irregular
+    expect(singularize('Men')).toBe('man');
+    expect(singularize('Dúnedain')).toBe('dunadan');
+    // Already singular, and accent folding
+    expect(singularize('Orc')).toBe('orc');
+    expect(singularize('Dúnadan')).toBe('dunadan');
+  });
+
+  it('matches a wanted race against any of a compound value', () => {
+    expect(matchesRace('Wolves', 'Wolf')).toBe(true);
+    expect(matchesRace('Orcs,Men', 'Orc')).toBe(true);
+    expect(matchesRace('Orcs,Men', 'Man')).toBe(true);
+    expect(matchesRace('Balrog,Spawn', 'Balrog')).toBe(true);
+    expect(matchesRace('Man', 'Orc')).toBe(false);
+    expect(matchesRace('', 'Orc')).toBe(false);
+    // "Wose" must not be swallowed by a naive plural rule
+    expect(matchesRace('Wose', 'Wose')).toBe(true);
+  });
+
+  it('every race value in the card data singularises without throwing', () => {
+    for (const c of cards) {
+      const v = (c.attributes || {}).race;
+      if (v === undefined) continue;
+      for (const r of racesOf(v)) expect(typeof singularize(r)).toBe('string');
     }
   });
 });
