@@ -264,6 +264,16 @@ describe('banned lists', () => {
     expect(bySide.balrog.has('test-different-name')).toBe(false);
     expect(bySide['fallen-wizard'].has('test-different-name')).toBe(false);
   });
+
+  it('folds typographic apostrophes so a name pasted from the CoE page resolves', () => {
+    // The card data spells exactly one name with an ASCII apostrophe
+    // (DM-107 "Durin's Bane"); every other name uses U+2019. A ban list
+    // pasted from councilofelrond.org uses U+2019 throughout.
+    const { bySide } = resolveBanned(cards, {
+      balrog: { names: ['Durin' + '’' + 's Bane'] },
+    });
+    expect([...bySide.balrog]).toContain('DM-107');
+  });
 });
 
 const byId = (list, ruleId) => list.filter((w) => w.ruleId === ruleId);

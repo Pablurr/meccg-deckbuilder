@@ -31,9 +31,18 @@ export const BANNED = {
 
 // NOTE: explicit \u escapes (not the literal combining-diacritics characters)
 // so this survives copy/paste intact -- see task-7 known traps.
-const fold = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+// Apostrophes are folded too: the card data spells one name with ASCII "'"
+// (DM-107 "Durin's Bane") and 82 with U+2019, while names pasted from the CoE
+// page always use U+2019. Without this, such an entry resolves to nothing and
+// fails silently.
+const fold = (s) => String(s || '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/['\u2019\u02bc\u00b4]/g, "'")
+  .toLowerCase()
+  .trim();
 
-export function resolveBanned(cards) {
+export function resolveBanned(cards, lists = BANNED) {
   const byName = new Map();
   for (const c of cards) {
     const k = fold(c.name && c.name.en);
@@ -43,7 +52,7 @@ export function resolveBanned(cards) {
   }
   const bySide = {};
   const unresolved = [];
-  for (const [side, entry] of Object.entries(BANNED)) {
+  for (const [side, entry] of Object.entries(lists)) {
     bySide[side] = new Set();
     for (const name of entry.names) {
       const ids = byName.get(fold(name));
