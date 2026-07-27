@@ -16,6 +16,15 @@
 - Validators emit **translatable descriptors** (`{ ruleId, code, severity, params }`), never sentences.
 - The app **advises**; the only hard blocking allowed is per-card copy caps in deckbuilding mode (lot 1b). Freeform mode has no rules at all.
 - Existing counts are **never** silently reduced. Caps gate increments only; `−` is never disabled.
+- **Severity policy** (was only in the spec; a reviewer flagged it as an undocumented
+  behaviour change during Task 4): §1 is hard legality, so **every CoE-cited rule has
+  severity `error`**, and the **house advisories keep `warning`**. That is why
+  `SIDEBOARD-MAX`, `POOL-CHARS` and `POOL-ITEMS` move from `warning` to `error` while
+  `AVATAR-PRESENT` and `DECKSIZE-LOCATION` stay `warning`. Casual mode already softens
+  every severity by one notch, so the soft path needs no separate mechanism.
+  One exception exists today: `AVATAR-UNIQUE` is `house` **and** `error`. It is disabled
+  and gets retired in Task 9, so only the half that holds unconditionally is pinned by
+  test — CoE-cited implies `error`. Tighten the house half once Task 9 has landed.
 - Every i18n key must be added to all three language blocks in `web/src/lib/i18n.js` (`fr` ≈ line 180, `en` ≈ line 464, `es` ≈ line 758). A missing key renders as the raw key.
 - Accented/typographic characters in source code use explicit `\u` escapes so copy/paste cannot corrupt them.
 - Commit after every task with a `feat:`/`fix:`/`refactor:`/`test:` prefix.
@@ -639,6 +648,15 @@ git commit -m "refactor: extract rule catalogue with CoE section 1 citations"
 - Modify: `web/src/lib/rules/docText.js:37-52` (`poolText`)
 - Modify: `web/src/lib/i18n.js` (remove 6 keys × 3 languages)
 - Test: `test/rules.test.js`
+- Test: `test/docText.test.js` — **plan gap found during execution.** `poolText`'s
+  contract changes here (three branches removed), and four tests in this file assert
+  the old shape. Three follow directly from the pool fields going away. The fourth
+  asserts the Wizard row renders a `{min:25,max:50}` play-deck range: that stub was
+  marked `verified` yet contradicts 1.5 (four budgets, not one range over every card),
+  which is exactly why Task 4 disabled `DECKSIZE-PLAY`. Setting `playDeck: null` is
+  therefore deliberate — `playDeckText` already falls back to the "unverified" label,
+  and lot 2 Task 19 replaces it with the four budgets from `GENERAL.playDeck`. Update
+  the test to assert that placeholder rather than restoring the stub range.
 
 **Interfaces:**
 - Consumes: `matchesRace` (Task 3), `RULES`/`isRuleEnabled` (Task 4).
