@@ -11,6 +11,7 @@ import { isDropAllowed, resolveDropTarget } from '../web/src/lib/rules/dropTarge
 import { racesOf, singularize, matchesRace } from '../web/src/lib/rules/races.js';
 import { buildGroups, TYPE_ORDER } from '../web/src/lib/deckList.js';
 import { copyCaps, remainingCopies } from '../web/src/lib/rules/copies.js';
+import { roleFor, DRAGON_MANIFESTATIONS } from '../web/src/lib/rules/roles.js';
 
 const { cards, index } = parseCards(raw);
 
@@ -729,9 +730,10 @@ describe('validateDeck', () => {
       ...base,
       quantities: { [wizardAvatar.id]: 1, [uniqueCard.id]: 1 },
     });
-    // Pins the implicit limit at 1 copy: DeckPanel.jsx's localizeParams computes
-    // `excess = count - 1` for this code without the validator emitting a
-    // `limit` param, so the "1" is an assumption this test locks down.
+    // The limit is GENERAL.uniqueMax (1). copies.js's copyCaps supplies it
+    // explicitly and validate.js echoes it into the warning's params as
+    // limit/max/excess -- DeckPanel.jsx no longer derives excess itself, it
+    // just spreads params through localizeParams.
     expect(byId(oneCopy, 'UNIQUE-LIMIT')).toHaveLength(0);
 
     const twoCopies = validateDeck({
@@ -742,7 +744,9 @@ describe('validateDeck', () => {
     expect(hits).toHaveLength(1);
     expect(hits[0].params.id).toBe(uniqueCard.id);
     expect(hits[0].params.count).toBe(2);
-    expect(hits[0].params.count - 1).toBe(1); // matches DeckPanel.jsx's hardcoded excess = count - 1
+    expect(hits[0].params.limit).toBe(1);
+    expect(hits[0].params.max).toBe(1);
+    expect(hits[0].params.excess).toBe(1); // validate.js: excess = used - cap.limit
   });
 
   it('DECKSIZE-LOCATION: play-deck cards with zero location-deck cards fire by default', () => {
@@ -1072,6 +1076,86 @@ describe('cap/warning agreement', () => {
         expect(remainingCopies(c, 'deck', { quantities: { [c.id]: limit }, zones: {} }, ctx).remaining).toBe(0);
         // One over: exactly the rule that produced the cap reports.
         expect(capWarns(over).length).toBeGreaterThan(0);
+      }
+    }
+  });
+});
+
+describe('roleFor (1.3.W2/R2/B2, 1.3.F2, 1.3.F5, 1.5.1)', () => {
+  it('an agent character is a hazard for Wizard and Balrog, a character for the others', () => {
+    const agent = index.get('DM-3'); // Bill Ferny, Character/Minion, agent
+    expect(roleFor(agent, 'wizard').bucket).toBe('hazard');
+    expect(roleFor(agent, 'balrog').bucket).toBe('hazard');
+    expect(roleFor(agent, 'ringwraith').bucket).toBe('character');
+    expect(roleFor(agent, 'fallen-wizard').bucket).toBe('character');
+  });
+
+  it('an agent counting as a hazard is worth half a creature (1.5.1)', () => {
+    const agent = index.get('DM-3');
+    expect(roleFor(agent, 'wizard').creatureWeight).toBe(0.5);
+    expect(roleFor(agent, 'ringwraith').creatureWeight).toBe(0);
+  });
+
+  it('the two Hazard-type agents stay hazards on every side', () => {
+    // 1.3.R2 speaks of agent CHARACTER cards; DM-28 and DM-29 are hazards.
+    for (const side of ['wizard', 'ringwraith', 'fallen-wizard', 'balrog']) {
+      expect(roleFor(index.get('DM-28'), side).bucket).toBe('hazard');
+    }
+  });
+
+  it('creature weights follow 1.5.1 without double counting', () => {
+    const w = (id, side = 'wizard') => roleFor(index.get(id), side).creatureWeight;
+    expect(w('DM-107')).toBe(1);    // Durin's Bane, subtype "Creature"
+    expect(w('TW-86')).toBe(0.5);   // Shelob, Creature/Permanent-event
+    expect(w('DM-110')).toBe(0.5);  // Spider of the Morlat, Creature/Permanent-event + spawn
+    expect(w('TW-12')).toBe(0.5);   // Balrog of Moria, Permanent-event + spawn
+    expect(w('TD-1')).toBe(0.5);    // Agburanar Ahunt
+    expect(w('TD-2')).toBe(0.5);    // Agburanar at Home
+    expect(w('TD-143')).toBe(0);    // "Not at Home" -- not a manifestation
+    expect(w('AS-71')).toBe(0);     // The Balrog, an Ally RESOURCE with Spawn
+  });
+
+  it('DRAGON_MANIFESTATIONS holds the 18 curated ids and excludes TD-143', () => {
+    expect(DRAGON_MANIFESTATIONS.size).toBe(18);
+    expect(DRAGON_MANIFESTATIONS.has('TD-143')).toBe(false);
+    for (const id of DRAGON_MANIFESTATIONS) expect(index.get(id)).toBeDefined();
+  });
+
+  it('a hazard playable as a resource is flexible, capped at two for Fallen-wizard (1.3.3, 1.3.F2)', () => {
+    const c = index.get('TW-104'); // Tookish Blood
+    expect(roleFor(c, 'wizard').flexible).toEqual({ alt: 'resource', maxAsAlt: null });
+    expect(roleFor(c, 'fallen-wizard').flexible).toEqual({ alt: 'resource', maxAsAlt: 2 });
+  });
+
+  it('a resource playable as a hazard is flexible with no Fallen-wizard cap', () => {
+    // 1.3.F2 constrains only hazards playable as resources.
+    expect(roleFor(index.get('LE-235'), 'fallen-wizard').flexible).toEqual({ alt: 'hazard', maxAsAlt: null });
+  });
+
+  it('Fallen-wizard non-Orc, non-Troll characters read as Hero (1.3.F5)', () => {
+    const troll = index.get('AS-1');  // Burat, race Troll, Minion
+    const other = cards.find((c) => c.type === 'Character' && c.alignment === 'Minion'
+      && !(c.attributes || {}).avatar
+      && !['Orc', 'Troll'].some((r) => matchesRace((c.attributes || {}).race, r)));
+    expect(roleFor(troll, 'fallen-wizard').effectiveAlignment).toBe('Minion');
+    expect(roleFor(other, 'fallen-wizard').effectiveAlignment).toBe('Hero');
+    expect(roleFor(other, 'ringwraith').effectiveAlignment).toBe('Minion');
+  });
+
+  it('sites, regions and avatars get their own buckets', () => {
+    expect(roleFor(index.get('TW-421'), 'wizard').bucket).toBe('site');
+    expect(roleFor(cards.find((c) => c.type === 'Region'), 'wizard').bucket).toBe('region');
+    expect(roleFor(index.get('TW-156'), 'wizard').bucket).toBe('avatar');
+  });
+
+  it('never throws and always yields a bucket over every card and side', () => {
+    const buckets = new Set(['avatar', 'character', 'resource', 'hazard', 'site', 'region']);
+    for (const side of ['wizard', 'ringwraith', 'fallen-wizard', 'balrog']) {
+      for (const c of cards) {
+        const r = roleFor(c, side);
+        expect(buckets.has(r.bucket)).toBe(true);
+        expect([0, 0.5, 1]).toContain(r.creatureWeight);
+        expect(typeof r.effectiveAlignment).toBe('string');
       }
     }
   });

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { SIDES } from '../web/src/lib/rules/sides.js';
+import { SIDES, GENERAL } from '../web/src/lib/rules/sides.js';
 import { LENGTHS } from '../web/src/lib/rules/formats.js';
 import { localize, copiesText, poolText, playDeckText, refText, capTitle } from '../web/src/lib/rules/docText.js';
 import { RULES } from '../web/src/lib/rules/catalog.js';
@@ -29,17 +29,28 @@ describe('copiesText', () => {
 });
 
 describe('playDeckText', () => {
-  it('wizard: an unsourced (null) playDeck falls back to status.unverified', () => {
-    // 1.5 specifies four separate play-deck budgets (resources, hazards,
-    // non-avatar characters, avatars), not one min/max range -- SIDES.wizard.playDeck
-    // is deliberately null until that lands, same as every other side.
-    expect(SIDES.wizard.playDeck).toBeNull();
+  // 1.5 lands as GENERAL.playDeck (see the describe block below) because the
+  // four budgets it specifies -- resources, hazards, non-avatar characters,
+  // creatures -- are camp-independent, not a per-side min/max range. No side
+  // profile carries its own playDeck, so the per-side doc-table column still
+  // falls back to status.unverified for every side.
+  it('wizard: falls back to status.unverified (no per-side playDeck)', () => {
     expect(playDeckText(stubT, SIDES.wizard.playDeck)).toBe('status.unverified');
   });
 
-  it('ringwraith: an unsourced (null) playDeck falls back to status.unverified', () => {
-    expect(SIDES.ringwraith.playDeck).toBeNull();
+  it('ringwraith: falls back to status.unverified (no per-side playDeck)', () => {
     expect(playDeckText(stubT, SIDES.ringwraith.playDeck)).toBe('status.unverified');
+  });
+});
+
+describe('GENERAL.playDeck (1.5, 1.5.1 -- camp-independent play-deck budgets)', () => {
+  it('carries the resource range, character cap and creature minimum every camp shares', () => {
+    expect(GENERAL.playDeck).toEqual({
+      resourcesMin: 30,
+      resourcesMax: 50,
+      maxCharacters: 10,
+      minCreatures: 12,
+    });
   });
 });
 

@@ -18,6 +18,9 @@ export const GENERAL = {
   avatarMaxInSideboard: 1,   // 1.6.2 -- one copy of each avatar, any number of avatars
   avatarMaxWithMultiples: 1, // 1.6.2 -- at most one avatar with multiple copies
   avatarMaxInPlayDeck: 3,    // 1.5
+  // 1.5 / 1.5.1 -- play-deck composition. Not side-specific, so it lives here
+  // once rather than four times in SIDES.
+  playDeck: { resourcesMin: 30, resourcesMax: 50, maxCharacters: 10, minCreatures: 12 },
 };
 
 // 1.3.4 -- which sides may declare the avatar a "specific" card names. Each of
@@ -41,7 +44,9 @@ export const SIDES = {
     alignments: ['Hero', 'Neutral', 'Dual'],
     copies: { default: 3, byAlignment: {} },
     pool: { maxCharacters: 10, maxMinorItems: 2, balrogMindPerCharacterLimit: null, requireRaces: null },
-    playDeck: null, // 1.5 lands in lot 2 as four separate budgets
+    agents: { role: 'hazard' },   // 1.3.W2
+    flexMaxAsResource: null,      // 1.3.3 -- free choice
+    heroTreatment: false,
     specificMode: 'avatar-match',
   },
   ringwraith: {
@@ -49,7 +54,9 @@ export const SIDES = {
     alignments: ['Minion', 'Neutral', 'Dual'],
     copies: { default: 3, byAlignment: {} },
     pool: { maxCharacters: 10, maxMinorItems: 2, balrogMindPerCharacterLimit: null, requireRaces: null },
-    playDeck: null,
+    agents: { role: 'character' }, // 1.3.R2 (for deck-building requirements)
+    flexMaxAsResource: null,
+    heroTreatment: false,
     specificMode: 'avatar-match',
   },
   'fallen-wizard': {
@@ -58,7 +65,9 @@ export const SIDES = {
     // 1.3.F1 -- rekeyed onto (bucket, alignment) in lot 3 Task 20.
     copies: { default: 2, byAlignment: { Stage: 3 } },
     pool: { maxCharacters: 10, maxMinorItems: 2, balrogMindPerCharacterLimit: null, requireRaces: null },
-    playDeck: null,
+    agents: { role: 'character' }, // 1.3.F4
+    flexMaxAsResource: 2,          // 1.3.F2 -- the third copy counts as a hazard
+    heroTreatment: true,           // 1.3.F5
     specificMode: 'avatar-match',
   },
   balrog: {
@@ -68,7 +77,9 @@ export const SIDES = {
     // 1.3.B4 -- non-avatar characters must be Orc or Troll with mind < 9,
     // unless they are Balrog-specific.
     pool: { maxCharacters: 10, maxMinorItems: 2, balrogMindPerCharacterLimit: 9, requireRaces: ['Orc', 'Troll'] },
-    playDeck: null,
+    agents: { role: 'hazard' },   // 1.3.B2
+    flexMaxAsResource: null,
+    heroTreatment: false,
     specificMode: 'balrog-exempt',
   },
 };
