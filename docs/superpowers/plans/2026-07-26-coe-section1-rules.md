@@ -2594,6 +2594,16 @@ describe('roleFor (1.3.W2/R2/B2, 1.3.F2, 1.3.F5, 1.5.1)', () => {
 
 Run: `npx vitest run test/rules.test.js -t "roleFor"` → FAIL, module not found.
 
+**Plan gap found during execution.** Step 3 deletes `playDeck` from the four camp
+profiles because 1.5 is camp-independent and the budgets move to `GENERAL.playDeck`.
+Two assertions in `test/docText.test.js` — added by Task 5, which deliberately set
+`playDeck: null` — pin `SIDES.wizard.playDeck` and `SIDES.ringwraith.playDeck` to
+`null` and break once the field is gone. They are obsolete: replace them with an
+assertion that `GENERAL.playDeck` carries the four budgets, which is the fact that
+now matters. `validate.js`'s `DECKSIZE-PLAY` guard reads the same field and simply
+never fires with it undefined, exactly as it never fired with it null — that rule
+is retired in Task 17 regardless.
+
 - [ ] **Step 3: Extend `sides.js`**
 
 Add to `GENERAL`:
