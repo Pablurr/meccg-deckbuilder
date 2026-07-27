@@ -53,6 +53,9 @@ export const RULES = [
   { id: 'DECKSIZE-RESOURCES', severity: 'error', status: 'verified', ref: '1.5', source: COE },
   { id: 'DECKSIZE-HAZARDS', severity: 'error', status: 'verified', ref: '1.5', source: COE },
   { id: 'DECKSIZE-CHARS', severity: 'error', status: 'verified', ref: '1.5', source: COE },
+  // 1.5.1 -- the hazard portion must include at least 12 creatures, with
+  // several kinds of hazard worth half a creature each.
+  { id: 'CREATURE-MIN', severity: 'error', status: 'verified', ref: '1.5.1', source: COE },
   { id: 'DECKSIZE-LOCATION', severity: 'warning', status: 'verified', house: true, source: COE },
   { id: 'SIDEBOARD-MAX', severity: 'error', status: 'verified', ref: '1.6.1', source: COE },
 

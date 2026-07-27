@@ -902,6 +902,24 @@ describe('play-deck budgets (1.5)', () => {
   it('DECKSIZE-PLAY is retired', () => {
     expect(RULES.find((r) => r.id === 'DECKSIZE-PLAY')).toBeUndefined();
   });
+
+  it('CREATURE-MIN: twelve full creatures pass, eleven fire (1.5.1)', () => {
+    const cre = cards.filter((c) => (c.attributes || {}).subtype === 'Creature' && !(c.attributes || {}).unique).slice(0, 12);
+    const q = (n) => Object.fromEntries(cre.slice(0, n).map((c) => [c.id, 1]));
+    const V = (quantities) => validateDeck({ side: 'wizard', length: 'standard', tournament: true, quantities, cardsById: index });
+    expect(V(q(12)).filter((w) => w.ruleId === 'CREATURE-MIN')).toEqual([]);
+    const hit = V(q(11)).filter((w) => w.ruleId === 'CREATURE-MIN');
+    expect(hit).toHaveLength(1);
+    expect(hit[0].params).toEqual({ count: 11, min: 12 });
+  });
+
+  it('CREATURE-MIN: halves are summed then rounded down (1.5.1)', () => {
+    // 11 full creatures + one half = 11.5 -> 11, still short.
+    const cre = cards.filter((c) => (c.attributes || {}).subtype === 'Creature' && !(c.attributes || {}).unique).slice(0, 11);
+    const quantities = { ...Object.fromEntries(cre.map((c) => [c.id, 1])), 'TW-86': 1 };
+    const out = validateDeck({ side: 'wizard', length: 'standard', tournament: true, quantities, cardsById: index });
+    expect(out.find((w) => w.ruleId === 'CREATURE-MIN').params.count).toBe(11);
+  });
 });
 
 describe('avatar rules (1.5, 1.6, 1.6.2)', () => {

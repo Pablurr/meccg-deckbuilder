@@ -228,6 +228,17 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
     }
     if (b.hazards !== b.resources) emit('DECKSIZE-HAZARDS', { hazards: b.hazards, resources: b.resources });
     if (b.characters > pd.maxCharacters) emit('DECKSIZE-CHARS', { count: b.characters, max: pd.maxCharacters });
+
+    // 1.5.1 -- "The hazard portion of a play deck must include at least 12
+    // creatures", with the listed hazards worth half a creature each. The
+    // rounding applies to the summed halves, not to each card.
+    let creatureWeightSum = 0;
+    for (const [id, n] of Object.entries(quantities)) {
+      const c = cardsById.get(id); if (!c) continue;
+      creatureWeightSum += roleFor(c, side).creatureWeight * n;
+    }
+    const creatures = Math.floor(creatureWeightSum);
+    if (creatures < pd.minCreatures) emit('CREATURE-MIN', { count: creatures, min: pd.minCreatures });
   }
   if (locationCount === 0 && playCount > 0) emit('DECKSIZE-LOCATION', { count: locationCount, min: 1 });
 

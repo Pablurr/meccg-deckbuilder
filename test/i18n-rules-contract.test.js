@@ -166,6 +166,13 @@ function buildFixture(code) {
         },
       };
     }
+    // 1.5.1 -- eleven non-unique Creature-subtype cards is one short of the
+    // 12-creature minimum.
+    case 'CREATURE-MIN': {
+      const cre = cards.filter((c) => (c.attributes || {}).subtype === 'Creature' && !c.attributes.unique).slice(0, 11);
+      expect(cre.length).toBe(11);
+      return { ...base, side: 'wizard', quantities: Object.fromEntries(cre.map((c) => [c.id, 1])) };
+    }
     case 'DECKSIZE-LOCATION':
       return { ...base, side: 'wizard', quantities: { [wizardAvatar.id]: 1 } };
     case 'SIDEBOARD-MAX': {
