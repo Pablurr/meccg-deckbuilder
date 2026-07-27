@@ -27,9 +27,12 @@ describe('copiesText', () => {
 });
 
 describe('playDeckText', () => {
-  it('wizard: a sourced min/max range renders docs.playDeck.range', () => {
-    const text = playDeckText(stubT, SIDES.wizard.playDeck);
-    expect(text).toBe(`docs.playDeck.range::{"min":${SIDES.wizard.playDeck.min},"max":${SIDES.wizard.playDeck.max}}`);
+  it('wizard: an unsourced (null) playDeck falls back to status.unverified', () => {
+    // 1.5 specifies four separate play-deck budgets (resources, hazards,
+    // non-avatar characters, avatars), not one min/max range -- SIDES.wizard.playDeck
+    // is deliberately null until that lands, same as every other side.
+    expect(SIDES.wizard.playDeck).toBeNull();
+    expect(playDeckText(stubT, SIDES.wizard.playDeck)).toBe('status.unverified');
   });
 
   it('ringwraith: an unsourced (null) playDeck falls back to status.unverified', () => {
@@ -49,40 +52,37 @@ describe('poolText', () => {
     expect(text).not.toContain('docs.pool.requireRaces');
   });
 
-  it('ringwraith: a total mindCap (no per-character cap) plus forbidden races', () => {
+  it('ringwraith: only the universal character and minor-item caps (section 1 states no mind cap or race restriction for this side)', () => {
     const pool = SIDES.ringwraith.pool;
-    expect(pool.mindCap).not.toBeNull();
-    expect(pool.mindPerCharacterMax).toBeNull();
     expect(pool.balrogMindPerCharacterLimit).toBeNull();
+    expect(pool.requireRaces).toBeNull();
     const text = poolText(stubT, pool);
-    expect(text).toContain(`docs.pool.mindCap::{"n":${pool.mindCap}}`);
-    expect(text).not.toContain('docs.pool.mindPerCharacter');
-    expect(text).not.toContain('docs.pool.balrogMindBelow');
-    expect(text).toContain(`docs.pool.forbidRaces::{"races":"${pool.forbidRaces.join(', ')}"}`);
-    expect(text).not.toContain('docs.pool.requireRaces');
+    expect(text).toBe(
+      `docs.pool.maxCharacters::{"n":${pool.maxCharacters}} · docs.pool.maxMinorItems::{"n":${pool.maxMinorItems}}`
+    );
   });
 
-  it('fallen-wizard: a per-character mindPerCharacterMax (no total mindCap, no Balrog-only limit)', () => {
+  it('fallen-wizard: only the universal character and minor-item caps (section 1 states no mind cap or race restriction for this side)', () => {
     const pool = SIDES['fallen-wizard'].pool;
-    expect(pool.mindCap).toBeNull();
-    expect(pool.mindPerCharacterMax).not.toBeNull();
     expect(pool.balrogMindPerCharacterLimit).toBeNull();
+    expect(pool.requireRaces).toBeNull();
     const text = poolText(stubT, pool);
-    expect(text).not.toContain('docs.pool.mindCap::');
-    expect(text).toContain(`docs.pool.mindPerCharacter::{"n":${pool.mindPerCharacterMax}}`);
-    expect(text).not.toContain('docs.pool.balrogMindBelow');
+    expect(text).toBe(
+      `docs.pool.maxCharacters::{"n":${pool.maxCharacters}} · docs.pool.maxMinorItems::{"n":${pool.maxMinorItems}}`
+    );
   });
 
-  it('balrog: both the general mindPerCharacterMax (≤ n, POOL-MIND.char) and the stricter balrogMindPerCharacterLimit (< n, BALROG-MIND) render, plus required races', () => {
+  it('balrog: the universal caps plus the per-character mind-below-9 clause (1.3.B4) and the required-races clause', () => {
     const pool = SIDES.balrog.pool;
-    expect(pool.mindPerCharacterMax).not.toBeNull();
-    expect(pool.balrogMindPerCharacterLimit).not.toBeNull();
+    expect(pool.balrogMindPerCharacterLimit).toBe(9);
     expect(pool.requireRaces).toEqual(['Orc', 'Troll']);
     const text = poolText(stubT, pool);
-    expect(text).toContain(`docs.pool.mindPerCharacter::{"n":${pool.mindPerCharacterMax}}`);
-    expect(text).toContain(`docs.pool.balrogMindBelow::{"n":${pool.balrogMindPerCharacterLimit}}`);
-    expect(text).toContain(`docs.pool.requireRaces::{"races":"${pool.requireRaces.join(', ')}"}`);
-    expect(text).not.toContain('docs.pool.forbidRaces');
+    expect(text).toBe(
+      `docs.pool.maxCharacters::{"n":${pool.maxCharacters}} · ` +
+      `docs.pool.maxMinorItems::{"n":${pool.maxMinorItems}} · ` +
+      `docs.pool.balrogMindBelow::{"n":${pool.balrogMindPerCharacterLimit}} · ` +
+      `docs.pool.requireRaces::{"races":"${pool.requireRaces.join(', ')}"}`
+    );
   });
 });
 

@@ -46,7 +46,6 @@ export const RULES = [
 
   // -- starting pool --
   { id: 'POOL-CHARS', severity: 'error', status: 'verified', ref: '1.7', source: COE },
-  { id: 'POOL-MIND', severity: 'warning', status: 'unverified', house: true, source: COE },
   { id: 'POOL-ITEMS', severity: 'error', status: 'verified', ref: '1.7', source: COE },
   { id: 'POOL-ELIGIBLE', severity: 'error', status: 'verified', ref: '1.7', source: COE },
 ].map((r) => ({ ...r, defaultEnabled: r.status === 'verified' }));

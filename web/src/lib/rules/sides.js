@@ -1,44 +1,66 @@
-// Per-side deckbuilding profiles. STUB values seeded from the local rules KB;
-// every numeric/list value is to be confirmed against councilofelrond.org.
-// `specificMode` says how attributes.specific is read:
-//   'balrog-exempt'  — specific:"Balrog" cards escape race/mind restrictions
-//   'avatar-match'   — a card naming a fallen wizard is legal only in that wizard's deck
+// Per-side deckbuilding profiles, sourced from councilofelrond.org section 1.
+// specificMode says how attributes.specific is read:
+//   'balrog-exempt'  -- specific:"Balrog" cards escape race/mind restrictions
+//   'avatar-match'   -- a card naming an avatar is legal only in that avatar's deck
+import { matchesRace } from './races.js';
+
+// Side-independent limits (1.3.1, 1.3.2, 1.4).
+export const GENERAL = {
+  agentMindMax: 36, // 1.3.2 -- total mind of all agent cards in the whole deck
+  copiesDefault: 3, // 1.3.1 -- copies of a non-unique card
+  uniqueMax: 1,     // 1.3.1 -- copies of a unique non-avatar card
+  siteMax: 1,       // 1.4   -- copies of a non-haven site
+};
+
+// 1.3.4 -- which sides may declare the avatar a "specific" card names. Each of
+// the five wizard names exists as both a Wizard avatar (TW, Hero alignment) and
+// a Fallen-wizard avatar (WH), so both sides can declare them.
+export const SPECIFIC_TO_SIDES = {
+  Balrog: ['balrog'],
+  Alatar: ['wizard', 'fallen-wizard'],
+  Gandalf: ['wizard', 'fallen-wizard'],
+  Pallando: ['wizard', 'fallen-wizard'],
+  Radagast: ['wizard', 'fallen-wizard'],
+  Saruman: ['wizard', 'fallen-wizard'],
+};
+
+// 'Dual' is on every side's list: the four Dual cards (LE-245 Tidings of Death,
+// LE-419 Deadly Dart, WH-38 Beasts of the Wood, WH-40 Wild Hounds) are playable
+// by both hero and minion sides and section 1 never restricts them.
 export const SIDES = {
   wizard: {
     id: 'wizard', avatarAlignment: 'Hero',
-    alignments: ['Hero', 'Neutral'],
+    alignments: ['Hero', 'Neutral', 'Dual'],
     copies: { default: 3, byAlignment: {} },
-    // mindPerCharacterMax: general per-character pool cap (POOL-MIND.char, "≤ n").
-    // balrogMindPerCharacterLimit: Balrog-only stricter cap (BALROG-MIND, "< n").
-    // Two fields (not one) so each rule can be sourced independently — see
-    // task-7 finding #2: they used to share one field despite different
-    // comparators (> vs >=) and different doc wording (≤ vs <).
-    pool: { maxCharacters: 10, maxMinorItems: 2, mindCap: null, mindPerCharacterMax: null, balrogMindPerCharacterLimit: null, forbidRaces: [], requireRaces: null },
-    playDeck: { min: 25, max: 50 },
-    specificMode: null,
+    pool: { maxCharacters: 10, maxMinorItems: 2, balrogMindPerCharacterLimit: null, requireRaces: null },
+    playDeck: null, // 1.5 lands in lot 2 as four separate budgets
+    specificMode: 'avatar-match',
   },
   ringwraith: {
     id: 'ringwraith', avatarAlignment: 'Minion',
-    alignments: ['Minion', 'Neutral'],
+    alignments: ['Minion', 'Neutral', 'Dual'],
     copies: { default: 3, byAlignment: {} },
-    pool: { maxCharacters: 6, maxMinorItems: 2, mindCap: 20, mindPerCharacterMax: null, balrogMindPerCharacterLimit: null, forbidRaces: ['Ringwraith', 'Agent'], requireRaces: null },
-    playDeck: null, // unverified
-    specificMode: null,
+    pool: { maxCharacters: 10, maxMinorItems: 2, balrogMindPerCharacterLimit: null, requireRaces: null },
+    playDeck: null,
+    specificMode: 'avatar-match',
   },
   'fallen-wizard': {
     id: 'fallen-wizard', avatarAlignment: 'Fallen-wizard',
-    alignments: ['Hero', 'Minion', 'Neutral', 'Stage', 'Fallen-wizard'],
+    alignments: ['Hero', 'Minion', 'Neutral', 'Dual', 'Stage', 'Fallen-wizard'],
+    // 1.3.F1 -- rekeyed onto (bucket, alignment) in lot 3 Task 20.
     copies: { default: 2, byAlignment: { Stage: 3 } },
-    pool: { maxCharacters: 5, maxMinorItems: 2, mindCap: null, mindPerCharacterMax: 5, balrogMindPerCharacterLimit: null, forbidRaces: [], requireRaces: null },
-    playDeck: null, // unverified
+    pool: { maxCharacters: 10, maxMinorItems: 2, balrogMindPerCharacterLimit: null, requireRaces: null },
+    playDeck: null,
     specificMode: 'avatar-match',
   },
   balrog: {
     id: 'balrog', avatarAlignment: 'Balrog',
-    alignments: ['Minion', 'Neutral', 'Balrog'],
+    alignments: ['Minion', 'Neutral', 'Dual', 'Balrog'],
     copies: { default: 3, byAlignment: {} },
-    pool: { maxCharacters: 6, maxMinorItems: 2, mindCap: null, mindPerCharacterMax: 9, balrogMindPerCharacterLimit: 9, forbidRaces: [], requireRaces: ['Orc', 'Troll'] },
-    playDeck: null, // unverified
+    // 1.3.B4 -- non-avatar characters must be Orc or Troll with mind < 9,
+    // unless they are Balrog-specific.
+    pool: { maxCharacters: 10, maxMinorItems: 2, balrogMindPerCharacterLimit: 9, requireRaces: ['Orc', 'Troll'] },
+    playDeck: null,
     specificMode: 'balrog-exempt',
   },
 };
@@ -55,4 +77,13 @@ export function isLegalForSide(card, sideId) {
   if (a.avatar === true) return card.alignment === side.avatarAlignment;
   if (sideId === 'balrog' && a.specific === 'Balrog') return true;
   return side.alignments.includes(card.alignment);
+}
+
+// 1.3.B4 -- does this character's race satisfy the side's requirement?
+// Uses matchesRace rather than a substring test: the data writes "Wolves"
+// where the rule says "Wolf", and joins several races with commas.
+export function raceAllowed(card, sideId) {
+  const side = SIDES[sideId];
+  if (!side || !side.pool.requireRaces) return true;
+  return side.pool.requireRaces.some((r) => matchesRace((card.attributes || {}).race, r));
 }

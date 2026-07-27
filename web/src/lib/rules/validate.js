@@ -1,7 +1,7 @@
 // Pure deck validator. Emits translatable descriptors, never sentences.
 // A rule that is disabled (per-deck override, or unverified by default)
 // is not evaluated at all. The app advises; it never blocks.
-import { SIDES } from './sides.js';
+import { SIDES, raceAllowed } from './sides.js';
 import { LENGTHS } from './formats.js';
 import { resolveBanned } from './banned.js';
 import { backGroupForType } from '../deck.js';
@@ -31,10 +31,10 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
   const sb = zones.sideboard || {};
   const pool = zones.pool || {};
   const out = [];
-  // code defaults to ruleId; POOL-MIND and POOL-ELIGIBLE use distinct dotted
-  // codes for their message shapes (POOL-MIND: per-character vs pool total;
-  // POOL-ELIGIBLE: wrong card type vs forbidden race) while keeping one
-  // ruleId so a single checkbox governs both.
+  // code defaults to ruleId; POOL-ITEMS and POOL-ELIGIBLE use a dotted code
+  // for their message shape (POOL-ELIGIBLE currently fires only for the
+  // wrong-card-type reason) while keeping one ruleId so a single checkbox
+  // governs each.
   const emit = (ruleId, params = {}, code = ruleId) => {
     if (!isRuleEnabled(ruleId, ruleOverrides)) return;
     let severity = RULE_BY_ID.get(ruleId).severity;
@@ -59,7 +59,7 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
   const avatarCount = avatars.reduce((s, e) => s + e.count, 0);
   // Fires on total copies, not distinct avatar cards: 3 copies of one avatar
   // is exactly as illegal as 2 different avatars. `names` is left as an
-  // array — joining into a sentence is a UI/i18n concern, not this layer's.
+  // array -- joining into a sentence is a UI/i18n concern, not this layer's.
   if (avatarCount > 1) emit('AVATAR-UNIQUE', { count: avatarCount, names: avatars.map((e) => name(e.card)), ids: avatars.map((e) => e.id) });
   for (const e of avatars) {
     if (e.card.alignment !== profile.avatarAlignment) emit('AVATAR-SIDE', { id: e.id, name: name(e.card), side });
@@ -97,7 +97,7 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
 
     if (side === 'balrog' && c.type === 'Character' && !a.avatar && !balrogExempt) {
       const race = String(a.race || '');
-      if (profile.pool.requireRaces && !profile.pool.requireRaces.some((r) => race.includes(r))) {
+      if (profile.pool.requireRaces && !raceAllowed(c, side)) {
         emit('BALROG-RACE', { id: e.id, name: name(c), race });
       }
       const mind = toInt(a.mind);
@@ -123,36 +123,23 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
   if (sbCount > caps.sideboardMax) emit('SIDEBOARD-MAX', { count: sbCount, max: caps.sideboardMax, length });
 
   // --- pool ---
-  let poolChars = 0, poolItems = 0, poolMind = 0;
+  let poolChars = 0, poolItems = 0;
   for (const [id, n] of Object.entries(pool)) {
     const c = cardsById.get(id); if (!c) continue;
-    const a = c.attributes || {};
     // zonesFor (zones.js) is the single source of truth for what may sit in
-    // the pool — the same function Phase 3's drag-and-drop will consult —
-    // so eligibility is derived from it rather than re-decided here.
+    // the pool -- the same function drag-and-drop consults -- so eligibility
+    // is derived from it rather than re-decided here.
     const z = zonesFor(c);
     const poolEligible = z.primary === 'pool' || z.extra.includes('pool');
     if (!poolEligible) {
       emit('POOL-ELIGIBLE', { id, name: name(c), reason: 'type' }, 'POOL-ELIGIBLE.type');
       continue;
     }
-    if (c.type === 'Character') {
-      poolChars += n; poolMind += (toInt(a.mind) || 0) * n;
-      // Race exclusion is a separate rule concern from zone eligibility:
-      // a character can be pool-eligible by type yet still forbidden by race.
-      if (profile.pool.forbidRaces.some((r) => String(a.race || '').includes(r))) {
-        emit('POOL-ELIGIBLE', { id, name: name(c), reason: 'race', race: String(a.race || '') }, 'POOL-ELIGIBLE.race');
-      }
-      if (profile.pool.mindPerCharacterMax != null && (toInt(a.mind) || 0) > profile.pool.mindPerCharacterMax) {
-        emit('POOL-MIND', { id, name: name(c), mind: toInt(a.mind), limit: profile.pool.mindPerCharacterMax }, 'POOL-MIND.char');
-      }
-    } else if (c.type === 'Resource' && a.playableAsStartingMinorItem === true) {
-      poolItems += n;
-    }
+    if (c.type === 'Character') poolChars += n;
+    else if (c.type === 'Resource') poolItems += n;
   }
   if (poolChars > profile.pool.maxCharacters) emit('POOL-CHARS', { count: poolChars, max: profile.pool.maxCharacters, side });
-  if (profile.pool.mindCap != null && poolMind > profile.pool.mindCap) emit('POOL-MIND', { total: poolMind, max: profile.pool.mindCap }, 'POOL-MIND.total');
-  if (poolItems > profile.pool.maxMinorItems) emit('POOL-ITEMS', { count: poolItems, max: profile.pool.maxMinorItems, side });
+  if (poolItems > profile.pool.maxMinorItems) emit('POOL-ITEMS', { count: poolItems, max: profile.pool.maxMinorItems }, 'POOL-ITEMS.count');
 
   const rank = { error: 0, warning: 1, info: 2 };
   return out.sort((a, b) => rank[a.severity] - rank[b.severity]);

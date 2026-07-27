@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import raw from '../web/public/cards.json';
 import { parseCards } from '../web/src/lib/parseCards.js';
 import { zonesFor } from '../web/src/lib/rules/zones.js';
-import { SIDES, isLegalForSide } from '../web/src/lib/rules/sides.js';
+import { SIDES, GENERAL, SPECIFIC_TO_SIDES, isLegalForSide, raceAllowed } from '../web/src/lib/rules/sides.js';
 import { LENGTHS } from '../web/src/lib/rules/formats.js';
 import { BANNED, resolveBanned } from '../web/src/lib/rules/banned.js';
 import { RULES, validateDeck, isRuleEnabled } from '../web/src/lib/rules/validate.js';
@@ -115,6 +115,53 @@ describe('sides data', () => {
     expect(SIDES['fallen-wizard'].copies.default).toBe(2);
     expect(SIDES['fallen-wizard'].copies.byAlignment.Stage).toBe(3);
     expect(SIDES.wizard.alignments).toContain('Neutral');
+  });
+  it('every side allows Dual-alignment cards (1.3.W3/R3/F4/B3)', () => {
+    // LE-245, LE-419, WH-38, WH-40 are alignment "Dual" -- playable by both
+    // hero and minion sides. Section 1 never restricts them.
+    for (const side of ['wizard', 'ringwraith', 'fallen-wizard', 'balrog']) {
+      const out = validateDeck({
+        side, length: 'standard', tournament: true,
+        quantities: { 'LE-419': 1 }, cardsById: index,
+      });
+      expect(out.filter((w) => w.ruleId === 'ALIGN-LEGAL')).toEqual([]);
+      expect(isLegalForSide(index.get('LE-419'), side)).toBe(true);
+    }
+  });
+
+  it('the starting pool holds ten characters on every side (1.7)', () => {
+    for (const side of ['wizard', 'ringwraith', 'fallen-wizard', 'balrog']) {
+      expect(SIDES[side].pool.maxCharacters).toBe(10);
+      expect(SIDES[side].pool.maxMinorItems).toBe(2);
+    }
+  });
+
+  it('POOL-MIND is gone: section 1 states no pool mind cap', () => {
+    expect(RULES.find((r) => r.id === 'POOL-MIND')).toBeUndefined();
+    // An override for a retired id must be ignored, not resurrect the rule.
+    expect(isRuleEnabled('POOL-MIND', { 'POOL-MIND': true })).toBe(false);
+    for (const side of Object.values(SIDES)) {
+      expect(side.pool.mindCap).toBeUndefined();
+      expect(side.pool.mindPerCharacterMax).toBeUndefined();
+      expect(side.pool.forbidRaces).toBeUndefined();
+    }
+  });
+
+  it('GENERAL carries the side-independent limits', () => {
+    expect(GENERAL).toEqual({ agentMindMax: 36, copiesDefault: 3, uniqueMax: 1, siteMax: 1 });
+  });
+
+  it('raceAllowed uses race normalisation, not substring matching (1.3.B4)', () => {
+    // Only the Balrog side requires races; every other side accepts anyone.
+    expect(raceAllowed({ attributes: { race: 'Orcs' } }, 'balrog')).toBe(true);
+    expect(raceAllowed({ attributes: { race: 'Trolls' } }, 'balrog')).toBe(true);
+    expect(raceAllowed({ attributes: { race: 'Man' } }, 'balrog')).toBe(false);
+    expect(raceAllowed({ attributes: { race: 'Man' } }, 'wizard')).toBe(true);
+  });
+
+  it('SPECIFIC_TO_SIDES covers every specific value in the card data', () => {
+    const seen = new Set(cards.map((c) => (c.attributes || {}).specific).filter(Boolean));
+    for (const s of seen) expect(SPECIFIC_TO_SIDES[s]).toBeDefined();
   });
   it('legality: hero card illegal for ringwraith, legal for wizard and fallen-wizard', () => {
     const hero = cards.find((c) => c.alignment === 'Hero' && c.type === 'Resource');
@@ -410,43 +457,6 @@ describe('validateDeck', () => {
     expect(byId(strict, 'AVATAR-PRESENT')[0].severity).toBe('warning');
     expect(byId(casual, 'AVATAR-PRESENT')[0].severity).toBe('info');
   });
-  it('POOL-MIND: per-character mind limit over the cap uses the .char code', () => {
-    // BA-1 (Strider), Hero alignment, mind 8 > fallen-wizard's mindPerCharacter (5).
-    const bigMindChar = firstWhere((c) => c.id === 'BA-1');
-    const fwAvatar = firstWhere((c) => c.attributes.avatar && c.alignment === 'Fallen-wizard');
-    const disabled = validateDeck({
-      ...base, side: 'fallen-wizard',
-      quantities: { [fwAvatar.id]: 1 },
-      zones: { sideboard: {}, pool: { [bigMindChar.id]: 1 } },
-    });
-    expect(byId(disabled, 'POOL-MIND')).toHaveLength(0); // unverified rule, off by default
-
-    const enabled = validateDeck({
-      ...base, side: 'fallen-wizard', ruleOverrides: { 'POOL-MIND': true },
-      quantities: { [fwAvatar.id]: 1 },
-      zones: { sideboard: {}, pool: { [bigMindChar.id]: 1 } },
-    });
-    const poolMind = byId(enabled, 'POOL-MIND');
-    expect(poolMind).toHaveLength(1);
-    expect(poolMind[0].code).toBe('POOL-MIND.char');
-  });
-  it('POOL-MIND: pool total over the cap uses the .total code', () => {
-    // ringwraith mindCap = 20; four Minion/Neutral characters (mind 7+7+5+5=24) exceed it,
-    // but ringwraith has no per-character mind cap, so only the .total code should fire.
-    const rwAvatar = firstWhere((c) => c.attributes.avatar && c.alignment === 'Minion');
-    const azog = firstWhere((c) => c.id === 'BA-2');
-    const bolg = firstWhere((c) => c.id === 'BA-4');
-    const mauhur = firstWhere((c) => c.id === 'AS-2');
-    const perchen = firstWhere((c) => c.id === 'AS-4');
-    const out = validateDeck({
-      ...base, side: 'ringwraith', ruleOverrides: { 'POOL-MIND': true },
-      quantities: { [rwAvatar.id]: 1 },
-      zones: { sideboard: {}, pool: { [azog.id]: 1, [bolg.id]: 1, [mauhur.id]: 1, [perchen.id]: 1 } },
-    });
-    const poolMind = byId(out, 'POOL-MIND');
-    expect(poolMind.some((w) => w.code === 'POOL-MIND.total')).toBe(true);
-    expect(poolMind.some((w) => w.code === 'POOL-MIND.char')).toBe(false);
-  });
   it('SITE-COPIES: a non-haven site over 1 copy fires; the haven exemption suppresses it', () => {
     const nonHavenSite = firstWhere((c) => c.type === 'Site' && ['Hero', 'Neutral'].includes(c.alignment));
     const overCount = validateDeck({ ...base, quantities: { [wizardAvatar.id]: 1, [nonHavenSite.id]: 2 } });
@@ -587,28 +597,6 @@ describe('validateDeck', () => {
     expect(hits).toHaveLength(1);
     expect(hits[0].params.count).toBe(0);
     expect(hits[0].params.min).toBe(1);
-  });
-
-  it('POOL-ELIGIBLE.race: a pool character whose race the side forbids fires with reason "race" (verified, on by default)', () => {
-    // ringwraith's forbidRaces are ['Ringwraith', 'Agent'] (sides.js), but no
-    // real card in cards.json carries either race string (this dataset's
-    // Character races are Troll/Orc/Man/Dúnadan/Elf/Dwarf/Hobbit) — so, like
-    // the banned-list diacritic test above, a synthetic card is the only way
-    // to exercise this branch at all.
-    const forbiddenRaceChar = { id: 'test-agent-race', type: 'Character', alignment: 'Minion', attributes: { race: 'Agent', avatar: false }, name: { en: 'Test Agent Character' } };
-    const cardsWithSynthetic = new Map(cardsById);
-    cardsWithSynthetic.set(forbiddenRaceChar.id, forbiddenRaceChar);
-    const rwAvatar = firstWhere((c) => c.attributes.avatar && c.alignment === 'Minion');
-    const out = validateDeck({
-      ...base, side: 'ringwraith', cardsById: cardsWithSynthetic,
-      quantities: { [rwAvatar.id]: 1 },
-      zones: { sideboard: {}, pool: { [forbiddenRaceChar.id]: 1 } },
-    });
-    const hits = byId(out, 'POOL-ELIGIBLE');
-    const raceHit = hits.find((w) => w.code === 'POOL-ELIGIBLE.race');
-    expect(raceHit).toBeTruthy();
-    expect(raceHit.params.reason).toBe('race');
-    expect(raceHit.params.race).toBe('Agent');
   });
 
   it('a prototype-named side ("constructor") is rejected rather than treated as a profile', () => {
