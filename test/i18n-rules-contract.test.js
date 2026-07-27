@@ -153,6 +153,16 @@ function buildFixture(code) {
       const minorItem = firstWhere((c) => c.type === 'Resource' && c.attributes.playableAsStartingMinorItem === true);
       return { ...base, side: 'wizard', quantities: { [wizardAvatar.id]: 1 }, zones: { sideboard: {}, pool: { [minorItem.id]: 3 } } };
     }
+    case 'POOL-ITEMS.unique': {
+      const uniqueMinor = firstWhere((c) => (c.attributes || {}).subtype === 'Minor Item' && c.attributes.unique);
+      return { ...base, side: 'wizard', quantities: { [wizardAvatar.id]: 1 }, zones: { sideboard: {}, pool: { [uniqueMinor.id]: 1 } } };
+    }
+    case 'POOL-ITEMS.hoard': {
+      // AS-70 Jewel of Beleriand is a Minor Item keyworded "Hoard Item".
+      const hoardMinor = firstWhere((c) => (c.attributes || {}).subtype === 'Minor Item'
+        && ((c.attributes || {}).keywords || []).includes('Hoard Item') && !c.attributes.unique);
+      return { ...base, side: 'wizard', quantities: { [wizardAvatar.id]: 1 }, zones: { sideboard: {}, pool: { [hoardMinor.id]: 1 } } };
+    }
     case 'POOL-ELIGIBLE.type': {
       const hazard = firstWhere((c) => c.type === 'Hazard' && ['Hero', 'Neutral'].includes(c.alignment));
       return { ...base, side: 'wizard', quantities: { [wizardAvatar.id]: 1 }, zones: { sideboard: {}, pool: { [hazard.id]: 1 } } };

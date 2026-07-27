@@ -680,6 +680,48 @@ describe('validateDeck', () => {
     expect(hits[0].severity).toBe('error');
   });
 
+  it('POOL-ITEMS.unique: a unique minor item in the pool fires (1.7)', () => {
+    const uniq = cards.find((c) => (c.attributes || {}).subtype === 'Minor Item' && (c.attributes || {}).unique);
+    const out = validateDeck({
+      side: 'wizard', length: 'standard', tournament: true,
+      zones: { sideboard: {}, pool: { [uniq.id]: 1 } }, cardsById: index,
+    });
+    const hit = out.filter((w) => w.code === 'POOL-ITEMS.unique');
+    expect(hit).toHaveLength(1);
+    expect(hit[0].ruleId).toBe('POOL-ITEMS');
+  });
+
+  it('POOL-ITEMS.hoard: a hoard minor item in the pool fires (1.7)', () => {
+    // AS-70 Jewel of Beleriand is a Minor Item keyworded "Hoard Item".
+    const hoard = cards.find((c) => (c.attributes || {}).subtype === 'Minor Item'
+      && ((c.attributes || {}).keywords || []).includes('Hoard Item')
+      && !(c.attributes || {}).unique);
+    const out = validateDeck({
+      side: 'wizard', length: 'standard', tournament: true,
+      zones: { sideboard: {}, pool: { [hoard.id]: 1 } }, cardsById: index,
+    });
+    expect(out.filter((w) => w.code === 'POOL-ITEMS.hoard')).toHaveLength(1);
+  });
+
+  it('POOL-ITEMS.count: three pool items fire, two do not (1.7)', () => {
+    const ok = cards.filter((c) => (c.attributes || {}).subtype === 'Minor Item'
+      && !(c.attributes || {}).unique
+      && !((c.attributes || {}).keywords || []).includes('Hoard Item')
+      && c.alignment === 'Hero').slice(0, 3);
+    expect(ok.length).toBe(3); // guard: the data must actually offer three
+    const pool = Object.fromEntries(ok.map((c) => [c.id, 1]));
+    const out = validateDeck({
+      side: 'wizard', length: 'standard', tournament: true,
+      zones: { sideboard: {}, pool }, cardsById: index,
+    });
+    const hit = out.filter((w) => w.code === 'POOL-ITEMS.count');
+    expect(hit).toHaveLength(1);
+    // side is kept in the params (not just count/max) -- a previous task
+    // dropped it and shipped a warning that rendered a raw "{side}" token to
+    // the user, which is why the i18n contract test exists.
+    expect(hit[0].params).toEqual({ count: 3, max: 2, side: 'wizard' });
+  });
+
   it('UNIQUE-LIMIT: exactly 2+ copies of a unique non-avatar card fire by default; 1 copy never does', () => {
     const uniqueCard = firstWhere((c) => c.attributes.unique === true && !c.attributes.avatar && c.type !== 'Site');
     const oneCopy = validateDeck({
@@ -752,14 +794,15 @@ describe('validateDeck', () => {
     }
   });
 
-  it('every CoE-cited rule is severity error (section 1 is hard legality)', () => {
-    // The house-implies-warning half of the same policy does not hold today:
-    // AVATAR-UNIQUE is house:true but ships as 'error' because it also
-    // contradicts 1.5 and is disabled by default (see the "two rules that
-    // contradict section 1" test below). So only pin the half that is
-    // actually true of the current data -- a citation forces 'error'.
+  it('every CoE-cited rule is severity error, and every house rule is severity warning (section 1 is hard legality)', () => {
+    // AVATAR-UNIQUE used to be the exception that kept the house-implies-
+    // warning half of this policy from being pinned: house:true but 'error',
+    // because it also contradicted 1.5 and shipped disabled. It was retired
+    // (replaced by four avatar-specific rules -- see the "AVATAR-UNIQUE is
+    // retired" test below), so both halves of the policy now hold.
     for (const r of RULES) {
       if (ruleRefs(r).length > 0) expect(r.severity).toBe('error');
+      if (r.house) expect(r.severity).toBe('warning');
     }
   });
 
@@ -771,9 +814,13 @@ describe('validateDeck', () => {
   });
 
   it('the two rules that contradict section 1 ship disabled until lot 2 replaces them', () => {
-    // AVATAR-UNIQUE fires on any total > 1, but 1.5 allows up to three
-    // avatars. DECKSIZE-PLAY applies one 25-50 range to every play-deck card,
-    // but 1.5 is four separate budgets. Both report legal decks as illegal.
+    // AVATAR-UNIQUE was retired in a previous task (replaced by four
+    // avatar-specific rules that cite 1.5/1.6 instead); isRuleEnabled
+    // returns false for it now simply because unknown/retired ids are
+    // ignored (see catalog.js), not because it ships disabled. DECKSIZE-PLAY
+    // still contradicts 1.5 -- it applies one 25-50 range to every play-deck
+    // card, but 1.5 is four separate budgets -- and still ships disabled
+    // until lot 2 replaces it.
     expect(isRuleEnabled('AVATAR-UNIQUE', {})).toBe(false);
     expect(isRuleEnabled('DECKSIZE-PLAY', {})).toBe(false);
   });

@@ -195,6 +195,8 @@ export const translations = {
     'rules.SIDEBOARD-MAX': 'La réserve a {count} cartes ; la limite pour {length} est {max}. Sors-en {over}.',
     'rules.POOL-CHARS': 'Le pool de départ a {count} personnages ; {side} en autorise {max}. Sors-en {over} vers le talon ou la réserve.',
     'rules.POOL-ITEMS.count': 'Le pool de départ a {count} objets mineurs ; {side} en autorise {max}. Sors-en {over}.',
+    'rules.POOL-ITEMS.unique': '{name} est unique — le pool de départ n’accepte que des objets mineurs non uniques.',
+    'rules.POOL-ITEMS.hoard': '{name} est un objet de trésor — le pool de départ n’accepte pas les objets de trésor.',
     'rules.POOL-ELIGIBLE.type': "{name} ne peut pas être dans le pool de départ — seuls les personnages et les objets mineurs de départ y ont leur place. Déplace-la vers le talon ou la réserve.",
     // Data values interpolated into the messages above ({alignment}, {race}):
     // localized so a sentence never mixes an English data value with
@@ -298,7 +300,7 @@ export const translations = {
     'rules.DECKSIZE-LOCATION.doc': 'Le deck de sites ne devrait pas être vide.',
     'rules.SIDEBOARD-MAX.doc': 'La taille de la réserve est plafonnée selon la longueur de partie.',
     'rules.POOL-CHARS.doc': 'Le nombre de personnages du pool de départ est plafonné par camp.',
-    'rules.POOL-ITEMS.doc': 'Les objets mineurs du pool de départ sont plafonnés par camp.',
+    'rules.POOL-ITEMS.doc': 'Le pool de départ accepte jusqu’à deux objets mineurs non uniques et non issus d’un trésor.',
     'rules.POOL-ELIGIBLE.doc': 'Signale une carte dont le type ne peut pas occuper le pool de départ.',
   },
 
@@ -485,6 +487,8 @@ export const translations = {
     'rules.SIDEBOARD-MAX': 'Sideboard has {count} cards; the {length} limit is {max}. Move {over} out.',
     'rules.POOL-CHARS': 'Starting pool has {count} characters; {side} allows {max}. Move {over} out to the play deck or sideboard.',
     'rules.POOL-ITEMS.count': 'Starting pool has {count} minor items; {side} allows {max}. Move {over} out.',
+    'rules.POOL-ITEMS.unique': '{name} is unique — the starting pool only takes non-unique minor items.',
+    'rules.POOL-ITEMS.hoard': '{name} is a hoard item — the starting pool takes no hoard items.',
     'rules.POOL-ELIGIBLE.type': '{name} cannot sit in the starting pool — only characters and starting minor items are pool-eligible. Move it to the play deck or sideboard.',
     // Data values interpolated above ({alignment}, {race}): English keys are
     // identity mappings (the raw data values already read as English), kept
@@ -588,7 +592,7 @@ export const translations = {
     'rules.DECKSIZE-LOCATION.doc': 'Location deck should not be empty.',
     'rules.SIDEBOARD-MAX.doc': 'Sideboard size is capped by the game length.',
     'rules.POOL-CHARS.doc': 'Starting pool character count is capped per side.',
-    'rules.POOL-ITEMS.doc': 'Starting pool minor items are capped per side.',
+    'rules.POOL-ITEMS.doc': 'The starting pool takes up to two non-unique, non-hoard minor items.',
     'rules.POOL-ELIGIBLE.doc': 'Reports a card whose type cannot occupy the starting pool.',
   },
 
@@ -785,6 +789,8 @@ export const translations = {
     'rules.SIDEBOARD-MAX': 'El sideboard tiene {count} cartas; el límite para {length} es {max}. Saca {over}.',
     'rules.POOL-CHARS': 'La reserva inicial tiene {count} personajes; {side} permite {max}. Saca {over} hacia el mazo de juego o el sideboard.',
     'rules.POOL-ITEMS.count': 'La reserva inicial tiene {count} objetos menores; {side} permite {max}. Saca {over}.',
+    'rules.POOL-ITEMS.unique': '{name} es única — la reserva inicial solo admite objetos menores no únicos.',
+    'rules.POOL-ITEMS.hoard': '{name} es un objeto de tesoro — la reserva inicial no admite objetos de tesoro.',
     'rules.POOL-ELIGIBLE.type': '{name} no puede estar en la reserva inicial — solo caben personajes y objetos menores iniciales. Muévela al mazo de juego o al sideboard.',
     // Data values interpolated above ({alignment}, {race}), localized for the
     // same reason as the fr/en blocks: never mix a raw English data value
@@ -887,7 +893,7 @@ export const translations = {
     'rules.DECKSIZE-LOCATION.doc': 'El mazo de localizaciones no debería estar vacío.',
     'rules.SIDEBOARD-MAX.doc': 'El tamaño del sideboard está limitado según la duración de la partida.',
     'rules.POOL-CHARS.doc': 'El número de personajes de la reserva inicial está limitado por bando.',
-    'rules.POOL-ITEMS.doc': 'Los objetos menores de la reserva inicial están limitados por bando.',
+    'rules.POOL-ITEMS.doc': 'La reserva inicial admite hasta dos objetos menores no únicos y sin tesoro.',
     'rules.POOL-ELIGIBLE.doc': 'Informa de una carta cuyo tipo no puede ocupar la reserva inicial.',
   },
 };

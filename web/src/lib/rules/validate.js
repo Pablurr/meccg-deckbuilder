@@ -201,7 +201,17 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
       continue;
     }
     if (c.type === 'Character') poolChars += n;
-    else if (c.type === 'Resource') poolItems += n;
+    else if (c.type === 'Resource') {
+      poolItems += n;
+      // 1.7 -- "up to two non-unique, non-hoard minor items". The qualifier is
+      // about minor items; the six permanent-events playable "in lieu of a
+      // minor item" enter on their own card text, so it does not apply to them.
+      const a = c.attributes || {};
+      if (a.subtype === 'Minor Item') {
+        if (a.unique) emit('POOL-ITEMS', { id, name: name(c) }, 'POOL-ITEMS.unique');
+        if ((a.keywords || []).includes('Hoard Item')) emit('POOL-ITEMS', { id, name: name(c) }, 'POOL-ITEMS.hoard');
+      }
+    }
   }
   if (poolChars > profile.pool.maxCharacters) emit('POOL-CHARS', { count: poolChars, max: profile.pool.maxCharacters, side });
   if (poolItems > profile.pool.maxMinorItems) emit('POOL-ITEMS', { count: poolItems, max: profile.pool.maxMinorItems, side }, 'POOL-ITEMS.count');
