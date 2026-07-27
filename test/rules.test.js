@@ -42,6 +42,28 @@ describe('zonesFor', () => {
     expect(item).toBeTruthy();
     expect(zonesFor(item)).toEqual({ primary: 'deck', extra: ['sideboard', 'pool'] });
   });
+  it('avatars belong to the play deck and sideboard, never the pool (1.7)', () => {
+    // 1.7: "a pool is a set of up to 10 NON-avatar characters".
+    for (const c of cards.filter((x) => (x.attributes || {}).avatar === true)) {
+      const z = zonesFor(c);
+      expect(z.primary).toBe('deck');
+      expect(z.extra).toEqual(['sideboard']);
+      expect(isDropAllowed(c, 'pool')).toBe(false);
+    }
+  });
+  it('minor items may sit in the pool (1.7)', () => {
+    // BA-34 Elven Rope: Resource/Hero, subtype "Minor Item", non-unique.
+    const z = zonesFor(index.get('BA-34'));
+    expect(z.extra).toContain('pool');
+    expect(isDropAllowed(index.get('BA-34'), 'pool')).toBe(true);
+    // A non-item resource still may not.
+    expect(isDropAllowed(index.get('TW-205'), 'pool')).toBe(false);
+  });
+  it('the six "in lieu of a minor item" permanent-events keep their pool slot', () => {
+    for (const id of ['AS-94', 'BA-31', 'BA-44', 'BA-60', 'BA-70', 'WH-46']) {
+      expect(zonesFor(index.get(id)).extra).toContain('pool');
+    }
+  });
 });
 
 describe('dropTargets', () => {
