@@ -6,6 +6,12 @@
 // a rule covering several, and `house: true` for the advisories that are ours
 // rather than the source's -- those must never display a citation.
 // `hard: true` marks a per-card copy cap the + button enforces (lot 1b).
+//
+// Severity follows the citation: section 1 is hard deck-construction
+// legality, so any rule citing a clause is `error`. House advisories are our
+// own judgement calls rather than the source's, so they stay `warning`.
+// Casual mode already downgrades every severity one notch (see validate.js),
+// so that's the soft path -- no separate warning-vs-error toggle is needed.
 export const COE = 'https://www.councilofelrond.org/rules/#Section1';
 
 export const RULES = [

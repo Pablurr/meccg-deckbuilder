@@ -396,6 +396,7 @@ describe('validateDeck', () => {
     const out = validateDeck({ ...base, length: 'long', quantities: { [wizardAvatar.id]: 1 }, zones: { sideboard: { [hz.id]: 36 }, pool: {} } });
     expect(byId(out, 'SIDEBOARD-MAX')).toHaveLength(1);
     expect(byId(out, 'SIDEBOARD-MAX')[0].params.max).toBe(35);
+    expect(byId(out, 'SIDEBOARD-MAX')[0].severity).toBe('error');
   });
   it('casual downgrades severities one notch and never below info', () => {
     const minionRes = firstWhere((c) => c.alignment === 'Minion' && c.type === 'Resource');
@@ -490,6 +491,7 @@ describe('validateDeck', () => {
     expect(hits).toHaveLength(1);
     expect(hits[0].params.count).toBe(11);
     expect(hits[0].params.max).toBe(10);
+    expect(hits[0].severity).toBe('error');
   });
   it('POOL-ELIGIBLE: a card whose type cannot occupy the pool fires with reason "type"', () => {
     const hazard = firstWhere((c) => c.type === 'Hazard' && ['Hero', 'Neutral'].includes(c.alignment));
@@ -551,6 +553,7 @@ describe('validateDeck', () => {
     expect(hits).toHaveLength(1);
     expect(hits[0].params.count).toBe(3);
     expect(hits[0].params.max).toBe(2);
+    expect(hits[0].severity).toBe('error');
   });
 
   it('UNIQUE-LIMIT: exactly 2+ copies of a unique non-avatar card fire by default; 1 copy never does', () => {
@@ -644,6 +647,17 @@ describe('validateDeck', () => {
       expect(refs.length).toBeGreaterThan(0);
       for (const ref of refs) expect(ref).toMatch(/^1\.[0-9]+(\.[A-Z]?[0-9]+)?$/);
       expect(r.source).toBe(COE);
+    }
+  });
+
+  it('every CoE-cited rule is severity error (section 1 is hard legality)', () => {
+    // The house-implies-warning half of the same policy does not hold today:
+    // AVATAR-UNIQUE is house:true but ships as 'error' because it also
+    // contradicts 1.5 and is disabled by default (see the "two rules that
+    // contradict section 1" test below). So only pin the half that is
+    // actually true of the current data -- a citation forces 'error'.
+    for (const r of RULES) {
+      if (ruleRefs(r).length > 0) expect(r.severity).toBe('error');
     }
   });
 
