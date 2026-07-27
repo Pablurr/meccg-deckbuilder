@@ -7,6 +7,7 @@ import { resolveBanned } from './banned.js';
 import { backGroupForType } from '../deck.js';
 import { zonesFor } from './zones.js';
 import { RULES, RULE_BY_ID, isRuleEnabled } from './catalog.js';
+import { copyCaps } from './copies.js';
 
 // Re-exported so importers keep one entry point into the rules layer.
 export { RULES, isRuleEnabled };
@@ -60,18 +61,9 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
     if (e.card.alignment !== profile.avatarAlignment) emit('AVATAR-SIDE', { id: e.id, name: name(e.card), side });
   }
 
-  // 1.5 + 1.6 -- three copies of one avatar across the whole deck. Cumulative:
-  // `entries` already sums deck + sideboard + pool.
-  for (const e of avatarEntries) {
-    if (e.count > GENERAL.avatarMaxCopies) {
-      emit('AVATAR-COPIES', { id: e.id, name: name(e.card), count: e.count, max: GENERAL.avatarMaxCopies });
-    }
-    // 1.6.2 -- and at most one of those copies may sit in the sideboard.
-    const inSb = sb[e.id] || 0;
-    if (inSb > GENERAL.avatarMaxInSideboard) {
-      emit('AVATAR-SIDEBOARD', { id: e.id, name: name(e.card), count: inSb, max: GENERAL.avatarMaxInSideboard });
-    }
-  }
+  // 1.5 + 1.6 + 1.6.2 -- AVATAR-COPIES (whole-deck cap) and AVATAR-SIDEBOARD
+  // (sideboard sub-cap) are emitted from the unified copyCaps loop below, the
+  // same source the + buttons consult -- not duplicated here.
 
   // 1.5 -- the PLAY DECK holds up to three avatars, "any combination allowed
   // except for three different avatars". Scoped to `quantities`; the sideboard
@@ -135,16 +127,16 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
       emit('SPECIFIC-AVATAR', { id: e.id, name: name(c), wizard: a.specific, avatar: avatarName, avatarId });
     }
 
-    if (c.type === 'Site') {
-      // 1 copy per site; a Darkhaven/Wizardhaven ({H} siteType) is unlimited,
-      // but only for the side whose alignment it matches (e.g. a Minion-
-      // alignment haven is unlimited for ringwraith, not for wizard).
-      const unlimited = a.siteType === '{H}' && profile.alignments.concat(profile.avatarAlignment).includes(c.alignment);
-      if (e.count > 1 && !unlimited) emit('SITE-COPIES', { id: e.id, name: name(c), count: e.count });
-    } else if (!a.avatar) {
-      const limit = profile.copies.byAlignment[c.alignment] ?? profile.copies.default;
-      if (!a.unique && e.count > limit) emit('COPIES-LIMIT', { id: e.id, name: name(c), count: e.count, limit, excess: e.count - limit, side });
-      if (a.unique && e.count > 1) emit('UNIQUE-LIMIT', { id: e.id, name: name(c), count: e.count });
+    // Copy caps all come from copies.js -- the same function the + buttons
+    // consult -- so a card the counter refuses is exactly a card this reports.
+    // `e.count` is already the deck + sideboard + pool total.
+    for (const cap of copyCaps(c, { side, ruleOverrides })) {
+      const used = cap.scope === 'total' ? e.count : ((cap.scope.zone === 'sideboard' ? sb : pool)[e.id] || 0);
+      if (used <= cap.limit) continue;
+      emit(cap.ruleId, {
+        id: e.id, name: name(c), count: used,
+        limit: cap.limit, max: cap.limit, excess: used - cap.limit, side,
+      });
     }
 
     if (side === 'balrog' && c.type === 'Character' && !a.avatar && !balrogExempt) {

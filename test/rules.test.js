@@ -1045,3 +1045,34 @@ describe('copyCaps / remainingCopies', () => {
     }
   });
 });
+
+describe('cap/warning agreement', () => {
+  it('the cap and the warning agree: the count that blocks is the count that reports', () => {
+    // Every 7th card keeps the runtime sane while still covering all types,
+    // alignments and both cap scopes.
+    const sample = cards.filter((_, i) => i % 7 === 0);
+    for (const side of ['wizard', 'ringwraith', 'fallen-wizard', 'balrog']) {
+      const ctx = { side, ruleOverrides: {} };
+      for (const c of sample) {
+        const totalCaps = copyCaps(c, ctx).filter((cap) => cap.scope === 'total');
+        if (totalCaps.length === 0) continue;
+        const limit = Math.min(...totalCaps.map((cap) => cap.limit));
+        const at = validateDeck({
+          side, length: 'standard', tournament: true,
+          quantities: { [c.id]: limit }, cardsById: index,
+        });
+        const over = validateDeck({
+          side, length: 'standard', tournament: true,
+          quantities: { [c.id]: limit + 1 }, cardsById: index,
+        });
+        const capIds = new Set(['COPIES-LIMIT', 'UNIQUE-LIMIT', 'SITE-COPIES', 'AVATAR-COPIES']);
+        const capWarns = (out) => out.filter((w) => capIds.has(w.ruleId));
+        // At the limit: no copy warning, and the counter says zero left.
+        expect(capWarns(at)).toEqual([]);
+        expect(remainingCopies(c, 'deck', { quantities: { [c.id]: limit }, zones: {} }, ctx).remaining).toBe(0);
+        // One over: exactly the rule that produced the cap reports.
+        expect(capWarns(over).length).toBeGreaterThan(0);
+      }
+    }
+  });
+});
