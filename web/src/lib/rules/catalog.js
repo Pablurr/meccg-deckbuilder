@@ -9,7 +9,8 @@
 //
 // Severity follows the citation: section 1 is hard deck-construction
 // legality, so any rule citing a clause is `error`. House advisories are our
-// own judgement calls rather than the source's, so they stay `warning`.
+// own judgement calls rather than the source's, so they stay `warning`
+// (except AVATAR-UNIQUE, which is disabled and pinned).
 // Casual mode already downgrades every severity one notch (see validate.js),
 // so that's the soft path -- no separate warning-vs-error toggle is needed.
 export const COE = 'https://www.councilofelrond.org/rules/#Section1';
