@@ -278,6 +278,34 @@ describe('banned lists', () => {
     expect([...bySide.wizard]).toContain('DM-107');
     expect([...bySide.wizard]).toContain('TW-247');
   });
+
+  it('an id-qualified entry bans exactly that card, not its namesake', () => {
+    // Two cards are named "The Balrog": AS-71 (Resource/Minion, Ally) and
+    // BA-3 (Character/Balrog) -- the Balrog player's own avatar. Banning by
+    // name alone would ban the avatar inside its own deck.
+    const { bySide } = resolveBanned(cards);
+    expect(bySide.balrog.has('AS-71')).toBe(true);
+    expect(bySide.balrog.has('BA-3')).toBe(false);
+  });
+
+  it('a family entry bans every listed id', () => {
+    const { bySide } = resolveBanned(cards);
+    for (const id of ['LE-161', 'LE-162', 'LE-182', 'LE-193', 'LE-198', 'LE-200', 'LE-222', 'LE-248', 'LE-257']) {
+      expect(bySide.balrog.has(id)).toBe(true);
+    }
+  });
+
+  it('the new Balrog entries resolve', () => {
+    const { bySide } = resolveBanned(cards);
+    expect(bySide.balrog.has('TW-12')).toBe(true); // Balrog of Moria
+    expect(bySide.balrog.has('LE-183')).toBe(true); // Fell Rider
+  });
+
+  it('the Fallen-wizard list bans The Balrog (Ally) but not the avatar', () => {
+    const { bySide } = resolveBanned(cards);
+    expect(bySide['fallen-wizard'].has('AS-71')).toBe(true);
+    expect(bySide['fallen-wizard'].has('BA-3')).toBe(false);
+  });
 });
 
 const byId = (list, ruleId) => list.filter((w) => w.ruleId === ruleId);
