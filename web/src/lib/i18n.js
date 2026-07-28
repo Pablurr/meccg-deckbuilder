@@ -192,6 +192,8 @@ export const translations = {
     'rules.UNIQUE-LIMIT': '{name} est unique — 1 exemplaire autorisé, le deck en a {count}. Retires-en {excess}.',
     'rules.SITE-COPIES': '{name} ×{count} — les sites sont limités à 1 exemplaire (les havres de ce camp exceptés). Retires-en {excess}.',
     'rules.SITE-SIDE': '{name} est un lieu {alignment} — un deck de lieux {side} ne peut pas le contenir.',
+    'rules.SITE-BALROG-VERSION.swap': '{name} — un joueur Balrog doit utiliser la version Balrog de ce lieu.',
+    'rules.SITE-BALROG-VERSION.none': '{name} n’existe pas en version Balrog — ce lieu est indisponible pour un joueur Balrog.',
     'rules.REGION-EXCLUDED': '{name} est une carte Région — un deck de lieux n’en contient pas (elles sont remplacées par une carte du monde en tournoi).',
     'rules.SPECIFIC-AVATAR': "{name} est spécifique à {wizard} et ne peut pas être jouée sous {avatar}. Retire-la, ou change d'avatar.",
     'rules.SPECIFIC-SIDE': '{name} est spécifique à {specific} — un deck {side} ne peut pas déclarer cet avatar, donc la carte n’y est pas jouable.',
@@ -278,7 +280,7 @@ export const translations = {
     // One full phrase per (bucket, alignment) combination -- each language
     // owns its own word order rather than the code concatenating a bucket
     // word onto an alignment word (see docText.js's copiesText).
-    'docs.copies.category.resource-Stage': '{n} pour les ressources de Mise en scène',
+    'docs.copies.category.resource-Stage': '{n} pour les ressources Mise en scène',
     'docs.copies.category.character': '{n} pour les personnages',
     'docs.copies.category.resource-Hero': '{n} pour les ressources Héros',
     'docs.copies.category.resource-Minion': '{n} pour les ressources Sbire',
@@ -314,6 +316,7 @@ export const translations = {
     'rules.UNIQUE-LIMIT.doc': 'Les cartes uniques sont limitées à 1 exemplaire.',
     'rules.SITE-COPIES.doc': 'Les sites sont limités à 1 exemplaire, sauf les havres propres au camp.',
     'rules.SITE-SIDE.doc': 'Un deck de lieux ne contient que les lieux du camp du joueur, plus les cinq lieux Balrog sans équivalent héros ou serviteur.',
+    'rules.SITE-BALROG-VERSION.doc': 'Un joueur Balrog doit utiliser la version Balrog de Moria, Carn Dûm, Dol Guldur, Minas Morgul, de tous les Abîmes et de tous les Antres sombres.',
     'rules.REGION-EXCLUDED.doc': 'Un deck de lieux ne contient aucune carte Région.',
     'rules.SPECIFIC-AVATAR.doc': "Les cartes spécifiques à un sorcier doivent correspondre à l'avatar réel du deck.",
     'rules.SPECIFIC-SIDE.doc': 'Une carte spécifique à un avatar donné n’est autorisée que dans un deck qui déclare cet avatar.',
@@ -511,6 +514,8 @@ export const translations = {
     'rules.UNIQUE-LIMIT': '{name} is unique — 1 copy allowed, the deck has {count}. Remove {excess}.',
     'rules.SITE-COPIES': "{name} ×{count} — sites are limited to 1 copy (this side's havens excepted). Remove {excess}.",
     'rules.SITE-SIDE': '{name} is a {alignment} site — a {side} location deck cannot hold it.',
+    'rules.SITE-BALROG-VERSION.swap': '{name} — a Balrog player must use the Balrog version of this site.',
+    'rules.SITE-BALROG-VERSION.none': '{name} has no Balrog version — the site is unavailable to a Balrog player.',
     'rules.REGION-EXCLUDED': '{name} is a Region card — a location deck holds none (they are replaced by a map for tournament play).',
     'rules.SPECIFIC-AVATAR': '{name} is specific to {wizard} and cannot be played under {avatar}. Remove it, or switch avatars.',
     'rules.SPECIFIC-SIDE': '{name} is specific to {specific} — a {side} deck cannot declare that avatar, so the card is not playable in it.',
@@ -633,6 +638,7 @@ export const translations = {
     'rules.UNIQUE-LIMIT.doc': 'Unique cards are limited to 1 copy.',
     'rules.SITE-COPIES.doc': "Sites are limited to 1 copy, except a side's own havens.",
     'rules.SITE-SIDE.doc': 'A location deck holds only the player’s own sites, plus the five Balrog sites with no hero or minion counterpart.',
+    'rules.SITE-BALROG-VERSION.doc': 'A Balrog player must use the Balrog version of Moria, Carn Dûm, Dol Guldur, Minas Morgul, every Under-deeps site and every Dark-hold.',
     'rules.REGION-EXCLUDED.doc': 'A location deck contains no Region cards.',
     'rules.SPECIFIC-AVATAR.doc': "Wizard-specific cards must match the deck's actual avatar.",
     'rules.SPECIFIC-SIDE.doc': 'A card specific to a given avatar is only allowed in a deck that declares that avatar.',
@@ -840,6 +846,8 @@ export const translations = {
     'rules.UNIQUE-LIMIT': '{name} es única — se permite 1 copia, el mazo tiene {count}. Retira {excess}.',
     'rules.SITE-COPIES': '{name} ×{count} — los sitios están limitados a 1 copia (los refugios de este bando exceptuados). Retira {excess}.',
     'rules.SITE-SIDE': '{name} es un lugar {alignment} — un mazo de lugares {side} no puede contenerlo.',
+    'rules.SITE-BALROG-VERSION.swap': '{name} — un jugador Balrog debe usar la versión Balrog de este lugar.',
+    'rules.SITE-BALROG-VERSION.none': '{name} no tiene versión Balrog — el lugar no está disponible para un jugador Balrog.',
     'rules.REGION-EXCLUDED': '{name} es una carta de Región — un mazo de lugares no contiene ninguna (se sustituyen por un mapa en torneo).',
     'rules.SPECIFIC-AVATAR': '{name} es específica de {wizard} y no se puede jugar bajo {avatar}. Retírala, o cambia de avatar.',
     'rules.SPECIFIC-SIDE': '{name} es específica de {specific} — un mazo {side} no puede declarar ese avatar, así que la carta no es jugable en él.',
@@ -925,7 +933,7 @@ export const translations = {
     // One full phrase per (bucket, alignment) combination -- each language
     // owns its own word order rather than the code concatenating a bucket
     // word onto an alignment word (see docText.js's copiesText).
-    'docs.copies.category.resource-Stage': '{n} para los recursos de Puesta en escena',
+    'docs.copies.category.resource-Stage': '{n} para los recursos Puesta en escena',
     'docs.copies.category.character': '{n} para los personajes',
     'docs.copies.category.resource-Hero': '{n} para los recursos Héroe',
     'docs.copies.category.resource-Minion': '{n} para los recursos Secuaz',
@@ -961,6 +969,7 @@ export const translations = {
     'rules.UNIQUE-LIMIT.doc': 'Las cartas únicas están limitadas a 1 copia.',
     'rules.SITE-COPIES.doc': 'Los sitios están limitados a 1 copia, salvo los refugios propios del bando.',
     'rules.SITE-SIDE.doc': 'Un mazo de lugares solo contiene los lugares del bando del jugador, más los cinco lugares Balrog sin equivalente héroe o sirviente.',
+    'rules.SITE-BALROG-VERSION.doc': 'Un jugador Balrog debe usar la versión Balrog de Moria, Carn Dûm, Dol Guldur, Minas Morgul, todos los Abismos y todos los Antros oscuros.',
     'rules.REGION-EXCLUDED.doc': 'Un mazo de lugares no contiene cartas de Región.',
     'rules.SPECIFIC-AVATAR.doc': 'Las cartas específicas de un mago deben coincidir con el avatar real del mazo.',
     'rules.SPECIFIC-SIDE.doc': 'Una carta específica de un avatar solo se permite en un mazo que declare ese avatar.',

@@ -6,6 +6,7 @@ import ProxyStamp from './ProxyStamp.jsx';
 import { useT } from '../i18n.jsx';
 import { zonesFor } from '../lib/rules/zones.js';
 import { isLegalForSide } from '../lib/rules/sides.js';
+import { siteIndex } from '../lib/rules/sites.js';
 import { remainingCopies } from '../lib/rules/copies.js';
 import { capTitle } from '../lib/rules/docText.js';
 
@@ -72,10 +73,15 @@ export default function CardBrowser({ cards, filters, quantities, lang, onChange
   const t = useT();
   const [showAll, setShowAll] = useState(false);
   const filtered = useMemo(() => filterCards(cards, filters), [cards, filters]);
+  // 1.4.1 opens five Balrog sites (no hero or minion counterpart) to every
+  // side. isLegalForSide doesn't know about it on its own, so derive the set
+  // from siteIndex -- the single source of truth the validator also reads --
+  // and OR it into both legality checks below.
+  const openBalrog = useMemo(() => siteIndex(cards).openBalrog, [cards]);
   // Legality filter: on by default in deckbuilding, hides cards that aren't
   // legal for the chosen side. `showAll` reveals the rest, visibly marked
   // (never disabled — the app advises, it never blocks what can be added).
-  const visible = side && !showAll ? filtered.filter((c) => isLegalForSide(c, side)) : filtered;
+  const visible = side && !showAll ? filtered.filter((c) => isLegalForSide(c, side, openBalrog)) : filtered;
   const shown = visible.slice(0, CAP);
   const { previewRef, previewImgRef, stampRef, trackPointer, hidePreview } = useCardPreview(lang, proxyMode);
 
@@ -107,7 +113,7 @@ export default function CardBrowser({ cards, filters, quantities, lang, onChange
           const anySelected = deckbuilding
             ? qty > 0 || (zones.sideboard[c.id] || 0) > 0 || (zones.pool[c.id] || 0) > 0
             : qty > 0;
-          const illegal = deckbuilding && side && showAll && !isLegalForSide(c, side);
+          const illegal = deckbuilding && side && showAll && !isLegalForSide(c, side, openBalrog);
           return (
             <div key={c.id} className={`cardcell ${anySelected ? 'selected' : ''} ${illegal ? 'illegal' : ''}`}>
               {/* Click image to select (qty 1) / deselect. Use −/+ for copies once selected.

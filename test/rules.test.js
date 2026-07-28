@@ -290,6 +290,14 @@ describe('sides data', () => {
     expect(isLegalForSide(specificBalrog, 'balrog')).toBe(true);
   });
 
+  it('isLegalForSide: an open Balrog site (1.4.1) reads illegal for a non-Balrog camp without the open set, legal with it', () => {
+    const { openBalrog } = siteIndex(cards);
+    const openSite = index.get('BA-83');
+    expect(openSite).toBeTruthy();
+    expect(isLegalForSide(openSite, 'wizard')).toBe(false);
+    expect(isLegalForSide(openSite, 'wizard', openBalrog)).toBe(true);
+  });
+
   it('sideboard caps follow the length', () => {
     expect(LENGTHS.starter.sideboardMax).toBe(30);
     expect(LENGTHS.standard.sideboardMax).toBe(30);
@@ -1343,5 +1351,30 @@ describe('location deck (1.4, 1.4.1, 1.4.W1/R1/F1/B1)', () => {
   it('SITE-COPIES: a haven is unlimited only for a side that may hold its alignment', () => {
     expect(of(V('wizard', { 'TW-421': 4 }), 'SITE-COPIES')).toEqual([]);      // Rivendell, Hero
     expect(of(V('ringwraith', { 'LE-359': 4 }), 'SITE-COPIES')).toEqual([]);  // Carn Dum, Minion
+  });
+
+  it('SITE-BALROG-VERSION: 18 Minion sites need the Balrog version, 17 have one', () => {
+    const info = siteIndex(cards);
+    const flagged = cards.filter((c) => c.type === 'Site' && c.alignment === 'Minion' && info.needsBalrogVersion(c));
+    expect(flagged).toHaveLength(18);
+    const orphans = flagged.filter((c) => !info.hasBalrogVersion(c));
+    expect(orphans.map((c) => c.id)).toEqual(['LE-409']);
+  });
+
+  it('SITE-BALROG-VERSION.swap: the Minion Under-deeps needs its Balrog twin', () => {
+    const out = validateDeck({ side: 'balrog', length: 'standard', tournament: true, quantities: { 'AS-152': 1 }, cardsById: index });
+    expect(out.filter((w) => w.code === 'SITE-BALROG-VERSION.swap')).toHaveLength(1);
+  });
+
+  it('SITE-BALROG-VERSION.none: Urlurtsu Nurn has no Balrog version at all', () => {
+    const out = validateDeck({ side: 'balrog', length: 'standard', tournament: true, quantities: { 'LE-409': 1 }, cardsById: index });
+    expect(out.filter((w) => w.code === 'SITE-BALROG-VERSION.none')).toHaveLength(1);
+  });
+
+  it('SITE-BALROG-VERSION: the Balrog versions themselves pass, and other sides are unaffected', () => {
+    const ok = validateDeck({ side: 'balrog', length: 'standard', tournament: true, quantities: { 'BA-91': 1 }, cardsById: index });
+    expect(ok.filter((w) => w.ruleId === 'SITE-BALROG-VERSION')).toEqual([]);
+    const rw = validateDeck({ side: 'ringwraith', length: 'standard', tournament: true, quantities: { 'AS-152': 1 }, cardsById: index });
+    expect(rw.filter((w) => w.ruleId === 'SITE-BALROG-VERSION')).toEqual([]);
   });
 });

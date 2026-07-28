@@ -109,12 +109,20 @@ export const SIDES = {
 // Balrog-specific and wizard-specific cards are handled by the validator with
 // finer messages; here they stay visible (legal) so the filter never hides
 // what a rule merely restricts per-avatar.
-export function isLegalForSide(card, sideId) {
+//
+// `openBalrog` is optional: the five Balrog sites 1.4.1 opens to every side
+// (no hero or minion counterpart). It has no default here because deriving it
+// means walking the full card array (siteIndex) -- callers that already have
+// that Set (the card browser) pass it through; callers that don't (existing
+// tests, non-site checks) are unaffected, since a card's id is never in an
+// undefined Set.
+export function isLegalForSide(card, sideId, openBalrog) {
   const side = SIDES[sideId];
   if (!side || !card) return true;
   const a = card.attributes || {};
   if (a.avatar === true) return card.alignment === side.avatarAlignment;
   if (sideId === 'balrog' && a.specific === 'Balrog') return true;
+  if (openBalrog && openBalrog.has(card.id)) return true;
   return side.alignments.includes(card.alignment);
 }
 

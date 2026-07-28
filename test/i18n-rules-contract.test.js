@@ -207,6 +207,16 @@ function buildFixture(code) {
       const hazard = firstWhere((c) => c.type === 'Hazard' && ['Hero', 'Neutral'].includes(c.alignment));
       return { ...base, side: 'wizard', quantities: { [wizardAvatar.id]: 1 }, zones: { sideboard: {}, pool: { [hazard.id]: 1 } } };
     }
+    case 'SITE-BALROG-VERSION.swap': {
+      // AS-152 The Iron-deeps is a Minion Under-deeps site (1.4.B1); BA-91 is
+      // its Balrog twin, so the Balrog player must swap to it.
+      return { ...base, side: 'balrog', quantities: { 'AS-152': 1 } };
+    }
+    case 'SITE-BALROG-VERSION.none': {
+      // LE-409 Urlurtsu Nurn is one of the 18 Minion sites 1.4.B1 flags, but
+      // it has no Balrog counterpart at all -- unavailable, not swappable.
+      return { ...base, side: 'balrog', quantities: { 'LE-409': 1 } };
+    }
     default:
       return null;
   }

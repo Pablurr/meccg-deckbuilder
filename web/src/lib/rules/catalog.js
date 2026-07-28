@@ -44,6 +44,9 @@ export const RULES = [
   // 1.4.1 -- a location deck holds only the side's own sites, plus the five
   // Balrog sites with no hero or minion counterpart.
   { id: 'SITE-SIDE', severity: 'error', status: 'verified', refs: ['1.4.W1', '1.4.R1', '1.4.F1', '1.4.B1', '1.4.1'], source: COE },
+  // 1.4.B1 -- a Balrog player must use the Balrog version of Moria, Carn Dum,
+  // Dol Guldur, Minas Morgul, every Under-deeps site and every Dark-hold.
+  { id: 'SITE-BALROG-VERSION', severity: 'error', status: 'verified', ref: '1.4.B1', source: COE },
 
   // -- Balrog-specific --
   { id: 'BALROG-RACE', severity: 'error', status: 'verified', ref: '1.3.B4', source: COE },

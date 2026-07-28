@@ -191,6 +191,15 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
       emit('SITE-SIDE', { id: e.id, name: name(c), alignment: c.alignment, side });
     }
 
+    // 1.4.B1 -- a Balrog player must use the Balrog version of Moria, Carn Dum,
+    // Dol Guldur, Minas Morgul, every Under-deeps site and every Dark-hold.
+    // Urlurtsu Nurn (LE-409) has no Balrog version, so it is unavailable rather
+    // than swappable -- two different messages.
+    if (profile.locationDeck.requireBalrogVersion && siteInfo.needsBalrogVersion(c)) {
+      const code = siteInfo.hasBalrogVersion(c) ? 'SITE-BALROG-VERSION.swap' : 'SITE-BALROG-VERSION.none';
+      emit('SITE-BALROG-VERSION', { id: e.id, name: name(c) }, code);
+    }
+
     if (profile.specificMode === 'avatar-match' && a.specific && a.specific !== 'Balrog' && avatarName && !avatarName.includes(a.specific)) {
       emit('SPECIFIC-AVATAR', { id: e.id, name: name(c), wizard: a.specific, avatar: avatarName, avatarId });
     }
