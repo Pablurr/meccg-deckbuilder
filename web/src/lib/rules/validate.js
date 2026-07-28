@@ -1,6 +1,9 @@
 // Pure deck validator. Emits translatable descriptors, never sentences.
 // A rule that is disabled (per-deck override, or unverified by default)
-// is not evaluated at all. The app advises; it never blocks.
+// is not evaluated at all. validateDeck itself never blocks -- it only
+// reports. The one thing that blocks is a per-card copy cap: copies.js's
+// remainingCopies is consulted directly by the + button, which refuses a
+// copy past the limit, independently of this file.
 import { SIDES, GENERAL, SPECIFIC_TO_SIDES, raceAllowed } from './sides.js';
 import { LENGTHS } from './formats.js';
 import { resolveBanned } from './banned.js';
@@ -327,6 +330,14 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
   // 1.7.F1 -- the Fallen-wizard stage pool.
   const stageReq = profile.pool.stagePoints;
   if (stageReq) {
+    // I4 -- a brand-new deck (pool untouched) must not greet the player with
+    // a "0 of 3 stage points" error before they've added a single card.
+    // Gated on the pool zone holding ANY recognized card, not on `count`
+    // below (qualifying Permanent-event Stage resources only): a pool full
+    // of wrong-type stage cards -- WH-86/87/88, or the WH-55 site case below
+    // -- must still be reported non-compliant, since the player has started
+    // building it and simply has zero real stage points banked.
+    const poolNonEmpty = Object.entries(pool).some(([id, n]) => n > 0 && cardsById.get(id));
     let points = 0, count = 0, nonUnique = 0;
     for (const [id, n] of Object.entries(pool)) {
       const c = cardsById.get(id); if (!c) continue;
@@ -344,7 +355,7 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
       count += n;
       if (!a.unique) nonUnique += n;
     }
-    if (points !== stageReq.total) emit('POOL-STAGE', { total: points, required: stageReq.total }, 'POOL-STAGE.points');
+    if (poolNonEmpty && points !== stageReq.total) emit('POOL-STAGE', { total: points, required: stageReq.total }, 'POOL-STAGE.points');
     if (count > stageReq.maxCards) emit('POOL-STAGE', { count, max: stageReq.maxCards }, 'POOL-STAGE.count');
     if (count > 0 && nonUnique < stageReq.minNonUnique) emit('POOL-STAGE', { min: stageReq.minNonUnique }, 'POOL-STAGE.nonUnique');
   }

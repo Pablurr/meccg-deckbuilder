@@ -197,7 +197,8 @@ body {
 .cardcell.selected { border-color: var(--accent); }
 .cardcell img { cursor: pointer; }
 /* Legality filter, "show illegal cards" mode: still fully addable, just
-   visibly marked — the app advises, it never blocks. */
+   visibly marked — this filter never blocks. (Copy caps do, separately,
+   via the + button.) */
 .cardcell.illegal img { filter: grayscale(.6); }
 .cardcell.illegal::after {
   content: '⚠';

@@ -97,7 +97,8 @@ export default function CardBrowser({ cards, filters, quantities, lang, onChange
   );
   // Legality filter: on by default in deckbuilding, hides cards that aren't
   // legal for the chosen side. `showAll` reveals the rest, visibly marked
-  // (never disabled — the app advises, it never blocks what can be added).
+  // (never disabled by this filter). Copy caps are the only thing that
+  // actually blocks an add, via remainingCopies/ZoneCtrls below.
   const legal = (c) => isLegalForSide(c, side, openBalrog, bannedIds);
   const visible = side && !showAll ? filtered.filter(legal) : filtered;
   const shown = visible.slice(0, CAP);

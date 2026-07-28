@@ -1536,6 +1536,19 @@ describe('whole-list assertions (I6): the complete set of emitted rule ids', () 
     const out = V('wizard', { ...LEGAL_WIZARD_DECK, 'AS-1': 1 });
     expect(ids(out)).toEqual(['ALIGN-LEGAL']);
   });
+
+  // I4 -- POOL-STAGE.points used to compare an empty Fallen-wizard pool's 0
+  // stage points against the required 3 with no emptiness guard, so a
+  // brand-new deck (nothing added yet) greeted the player with a hard error
+  // before they touched a single card. Its own sibling (.nonUnique, two
+  // lines below in validate.js) already guarded on `count > 0`; every
+  // DECKSIZE-* guards on `playCount > 0` the same way. .points now matches.
+  it('a brand-new empty deck emits nothing but the missing-avatar advisory, for every camp', () => {
+    for (const side of ['wizard', 'ringwraith', 'fallen-wizard', 'balrog']) {
+      const out = V(side, {}, { sideboard: {}, pool: {} });
+      expect(ids(out)).toEqual(['AVATAR-PRESENT']);
+    }
+  });
 });
 
 describe('POOL-STAGE (1.7.F1)', () => {
