@@ -1,6 +1,9 @@
 import { useRef, useEffect } from 'react';
 import { cardImageSrc, cardImageEn } from '../lib/lang.js';
-import { swatchKeyForCard, rectForLang, PROXY_LABEL } from '../lib/proxy.js';
+import {
+  swatchKeyForCard, PROXY_PATCH_RECT, PROXY_LABEL, PROXY_LABEL_COLOR,
+  PROXY_LABEL_FONT_CQW, PROXY_LABEL_DY_CQH, patchUrl,
+} from '../lib/proxy.js';
 
 // Natural source image dimensions (see README). The hover preview shows the
 // image at full size, scaled down only if it would overflow the viewport.
@@ -52,12 +55,19 @@ export function useCardPreview(lang, proxyOn = false) {
     if (stamp) {
       const key = proxyOn ? swatchKeyForCard(c) : null;
       if (key) {
-        const r = rectForLang(lang);
+        const r = PROXY_PATCH_RECT;
         stamp.style.left = `${r.x * 100}%`;
         stamp.style.top = `${r.y * 100}%`;
         stamp.style.width = `${r.w * 100}%`;
         stamp.style.height = `${r.h * 100}%`;
-        stamp.style.backgroundImage = `url(/proxy-swatches/${key}.png)`;
+        stamp.style.backgroundImage = `url(${patchUrl(key, lang)})`;
+        const span = stamp.firstElementChild;
+        if (span) {
+          span.textContent = PROXY_LABEL;
+          span.style.color = PROXY_LABEL_COLOR[key];
+          span.style.fontSize = `${PROXY_LABEL_FONT_CQW}cqw`;
+          span.style.transform = `translateY(${PROXY_LABEL_DY_CQH}cqh)`;
+        }
         stamp.style.display = 'flex';
       } else {
         stamp.style.display = 'none';
@@ -114,9 +124,7 @@ export function CardPreview({ previewRef, previewImgRef, stampRef }) {
   return (
     <div className="card-preview" ref={previewRef} style={{ display: 'none' }} aria-hidden="true">
       <img ref={previewImgRef} alt="" />
-      <div className="proxy-stamp" ref={stampRef} style={{ display: 'none' }}>
-        <span>{PROXY_LABEL}</span>
-      </div>
+      <div className="proxy-stamp" ref={stampRef} style={{ display: 'none' }}><span /></div>
     </div>
   );
 }

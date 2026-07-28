@@ -1,18 +1,21 @@
 import React from 'react';
-import { swatchKeyForCard, rectForLang, PROXY_LABEL } from '../lib/proxy.js';
+import {
+  swatchKeyForCard, PROXY_PATCH_RECT, PROXY_LABEL, PROXY_LABEL_COLOR,
+  PROXY_LABEL_FONT_CQW, PROXY_LABEL_DY_CQH, patchUrl,
+} from '../lib/proxy.js';
 
 const pct = (f) => `${f * 100}%`;
 
-// CSS overlay covering the copyright / set-name zone with the card-type's band
-// texture and the "Proxy" label. Must live inside a positioned wrapper that
-// matches the card image bounds exactly. Text scales with the box via cqh
-// (see .proxy-stamp in styles.css). Renders nothing when off or for cards
-// without a stamp (Regions).
+// CSS overlay repainting the copyright / set-name zone with the card frame's own
+// patch, plus the "Proxy" label. Must live inside a positioned wrapper that
+// matches the card image bounds exactly. The label scales with the box via cqw
+// and is nudged onto the reference band via cqh (see .proxy-stamp in styles.css).
+// Renders nothing when off or for cards without a stamp (Regions).
 export default function ProxyStamp({ card, lang, on }) {
   if (!on) return null;
   const key = swatchKeyForCard(card);
   if (!key) return null;
-  const r = rectForLang(lang);
+  const r = PROXY_PATCH_RECT;
   return (
     <div
       className="proxy-stamp"
@@ -22,10 +25,18 @@ export default function ProxyStamp({ card, lang, on }) {
         top: pct(r.y),
         width: pct(r.w),
         height: pct(r.h),
-        backgroundImage: `url(/proxy-swatches/${key}.png)`,
+        backgroundImage: `url(${patchUrl(key, lang)})`,
       }}
     >
-      <span>{PROXY_LABEL}</span>
+      <span
+        style={{
+          color: PROXY_LABEL_COLOR[key],
+          fontSize: `${PROXY_LABEL_FONT_CQW}cqw`,
+          transform: `translateY(${PROXY_LABEL_DY_CQH}cqh)`,
+        }}
+      >
+        {PROXY_LABEL}
+      </span>
     </div>
   );
 }
