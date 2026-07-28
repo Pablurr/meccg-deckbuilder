@@ -51,15 +51,26 @@ plus two ES cards fetched from the CDN.
 - **Region cards have no frame in the covered zone.** Both region templates are
   transparent at the bottom-left (the map art bleeds through), and region cards
   carry no copyright line there. They stay unstamped.
-- **Text extents** (fractions of card width/height):
+- **Text extents** (fractions of card width/height). Measured by locating glyph
+  strokes through per-column local contrast, over 24 EN and 35 FR cards. A
+  card-vs-template difference is **not** a usable detector here: it fires on the
+  card-specific `Art by …` line, and on FR cards it fires everywhere.
 
-  | Notice | x | y |
-  |---|---|---|
-  | `©19xx Tolkien Enterprises` (en, es) | 0.165 – 0.433 | 0.951 – 0.971 |
-  | FR set name (`Contre l'Ombre`, `L'Œil de Sauron`, …) | 0.172 – 0.365 | 0.942 – 0.957 |
+  | Notice | x | y | |
+  |---|---|---|---|
+  | `©19xx Tolkien Enterprises` (en, es) | 0.1632 – 0.4246 | 0.951 – 0.971 | must be covered |
+  | FR set name (`Contre l'Ombre`, `L'Œil de Sauron`, …) | 0.1789 – 0.3561 | 0.942 – 0.957 | must be covered |
+  | FR `Remastérisé - Traduction non officielle` | starts **0.4684** | 0.952 – 0.961 | must **not** be touched |
 
   The ES notice is the same string at the same place as EN, confirming that one
   rect can serve all three languages.
+
+  The third row is the binding constraint on the right-hand side and the one
+  this design nearly got wrong: the patch must end in the 0.0438-wide (25 px)
+  gap between the end of the copyright and the start of the French remaster
+  credit. Beware the four site frames when measuring — the bright torn parchment
+  edge sits at ≈0.4526 and reads as a glyph to a naive detector, which is what
+  first suggested a false 9 px window.
 - **Reference text metrics.** `Remastérisé - Traduction non officielle` has a cap
   height of ≈6.2 px at 570 width, i.e. a font size of **≈0.0155 × card width**.
 - **Export scaling.** Fronts are scaled to a 750×1050 cut size (822×1122 with
@@ -80,7 +91,7 @@ recalibration does not depend on a local Downloads folder.
 
 - `<key>.png` — 16 files, used for **en** and **es**. The template cropped over
   the draw box (below), carrying the template's own alpha, with a 7 px alpha ramp
-  applied inward from each edge. **196×48 px RGBA.**
+  applied inward from each edge. **179×48 px RGBA.**
 - `<key>-fr.png` — 16 files, used for **fr**. Same crop, with a per-channel
   constant added to R/G/B before writing. The constant is the mean difference
   between the FR cards of that key and the template, measured over the margin
@@ -102,17 +113,18 @@ One rect for all three languages. `PROXY_RECT.enes` / `PROXY_RECT.fr` and
 `rectForLang()` are removed.
 
 ```
-core   x 0.150 → 0.470   y 0.9320 → 0.9750    (fully opaque; covers the notice)
+core   x 0.150 → 0.440   y 0.9320 → 0.9750    (fully opaque; covers the notice)
 margin 7 px at 570 width = 0.01228 w, 0.00879 h   (alpha ramp 0 → 1)
-draw   x 0.1377 → 0.4823  y 0.9232 → 0.9838   (the box the asset is drawn into)
+draw   x 0.1377 → 0.4523  y 0.9232 → 0.9838   (the box the asset is drawn into)
 ```
 
-Clearance between the core and the widest measured notice: **0.015 left**
-(≈9 px), **0.037 right** (≈21 px), **0.010 top** (≈8 px), **0.004 bottom**
-(≈3 px). The bottom is the tight edge; 0.975 was verified to erase the notice
-cleanly on every key in the calibration renders, and the margin ramp lies outside
-the core so the core itself stays fully opaque. Its left edge sits at 0.150, just
-left of the notice and just right
+Clearance between the core and the nearest text: **0.013 left** (≈8 px),
+**0.015 right** (≈9 px), **0.010 top** (≈8 px), **0.004 bottom** (≈3 px); and
+between the *outer* edge and the French remaster credit it must not touch,
+**0.016** (≈9 px). The bottom is the tight edge; 0.975 was verified to erase the
+notice cleanly on every key in the calibration renders, and the margin ramp lies
+outside the core so the core itself stays fully opaque. Its left edge sits at
+0.150, just left of the notice and just right
 of the site/character number shield (right edge ≈0.159) — and because the
 template carries the same empty shield, overlapping it is invisible anyway.
 
@@ -130,7 +142,7 @@ Fractions are resolved against each card's own pixel size, which handles the
 
 - Size: **0.0155 × card width** — matching `Remastérisé - Traduction non
   officielle`.
-- Position: centred at **x = 0.310** (the core's horizontal centre),
+- Position: centred at **x = 0.295** (the core's horizontal centre),
   **y = 0.9565** (the vertical centre of the reference text's band).
 - Colour: a **frozen per-key constant**, `#191919` or `#F0F0EA`, in a
   `PROXY_LABEL_COLOR` table in `proxy.js`. The generator picks each value from

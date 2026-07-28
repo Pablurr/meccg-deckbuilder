@@ -12,10 +12,11 @@
 
 ## Global Constraints
 
-- Card fraction geometry, one rect for all three image languages. Core (opaque): `x 0.150 → 0.470`, `y 0.9320 → 0.9750`. Margin: `7` px at 570 width. Draw box: `x 0.1377 → 0.4823`, `y 0.9232 → 0.9838`.
+- Card fraction geometry, one rect for all three image languages. Core (opaque): `x 0.150 → 0.440`, `y 0.9320 → 0.9750`. Margin: `7` px at 570 width. Draw box: `x 0.1377 → 0.4523`, `y 0.9232 → 0.9838`.
+- The patch must cover `©19xx Tolkien Enterprises` (en/es, `x 0.1632 – 0.4246`) and the FR set name (`x 0.1789 – 0.3561`), and must **not** touch the FR `Remastérisé - Traduction non officielle` line, whose first glyph starts at `x 0.4684`.
 - Label text is the literal string `Proxy` in every language (existing `PROXY_LABEL`).
 - Label font: **Arial Bold** — `bold <size>px Arial, Helvetica, sans-serif` on canvas, `font-family: Arial, Helvetica, sans-serif` + `font-weight: 700` in CSS. No letter-spacing on either side.
-- Label size: `0.0155 × card width`. Label centre: `x 0.310`, `y 0.9565` (fractions of card width/height).
+- Label size: `0.0155 × card width`. Label centre: `x 0.295`, `y 0.9565` (fractions of card width/height).
 - Label colour: one of exactly two values — `#191919` (dark) or `#F0F0EA` (light).
 - Reference card size `570 × 796`. FR card images are `570 × 798`; all geometry is fractional and resolves against each card's own size.
 - Asset paths: `/proxy-patches/<key>.png` (en, es) and `/proxy-patches/<key>-fr.png` (fr).
@@ -37,7 +38,7 @@
 
 **Interfaces:**
 - Consumes: nothing.
-- Produces: the 32 PNGs at `web/public/proxy-patches/<key>.png` and `<key>-fr.png`, each `196×48` RGBA; and `scripts/proxy-patch-colors.txt`, one line per key formatted `<key> <#RRGGBB> <mean-luminance>`, which Task 2 transcribes into `PROXY_LABEL_COLOR`.
+- Produces: the 32 PNGs at `web/public/proxy-patches/<key>.png` and `<key>-fr.png`, each `179×48` RGBA; and `scripts/proxy-patch-colors.txt`, one line per key formatted `<key> <#RRGGBB> <mean-luminance>`, which Task 2 transcribes into `PROXY_LABEL_COLOR`.
 
 - [ ] **Step 1: Copy the 18 templates into the repo**
 
@@ -83,12 +84,12 @@ async function pngInfo(file) {
 }
 
 describe('proxy patch assets', () => {
-  it('ships one RGBA 196x48 patch per key per language variant', async () => {
+  it('ships one RGBA 179x48 patch per key per language variant', async () => {
     expect(SWATCH_KEYS).toHaveLength(16);
     for (const key of SWATCH_KEYS) {
       for (const name of [`${key}.png`, `${key}-fr.png`]) {
         const info = await pngInfo(path.join(PATCHES, name));
-        expect({ name, ...info }).toEqual({ name, width: 196, height: 48, colorType: 6 });
+        expect({ name, ...info }).toEqual({ name, width: 179, height: 48, colorType: 6 });
       }
     }
   });
@@ -131,10 +132,10 @@ QA = os.path.join(ROOT, 'scripts', 'proxy-patch-qa.png')
 COLORS = os.path.join(ROOT, 'scripts', 'proxy-patch-colors.txt')
 
 REF_W, REF_H = 570, 796
-CORE = (0.150, 0.9320, 0.470, 0.9750)   # x0, y0, x1, y1 — fully opaque
+CORE = (0.150, 0.9320, 0.440, 0.9750)   # x0, y0, x1, y1 — fully opaque
 MARGIN_PX = 7                            # alpha ramp, at REF_W
 LABEL_FONT_FRAC = 0.0155
-LABEL_CX, LABEL_CY = 0.310, 0.9565
+LABEL_CX, LABEL_CY = 0.295, 0.9565
 LUM_THRESHOLD = 118
 DARK, LIGHT = '#191919', '#F0F0EA'
 FR_CLAMP = 40
@@ -378,7 +379,7 @@ if __name__ == '__main__':
 
 Run: `python scripts/make_proxy_patches.py`
 
-Expected: 16 lines of the form `hero-character    size=196x48  fr_offset=(...)  label=#... (lum ...)`, then the colours path and `QA sheet -> ... (32 panels)`.
+Expected: 16 lines of the form `hero-character    size=179x48  fr_offset=(...)  label=#... (lum ...)`, then the colours path and `QA sheet -> ... (32 panels)`.
 
 - [ ] **Step 7: Run the test to verify it passes**
 
@@ -448,8 +449,8 @@ describe('geometry', () => {
     const r = PROXY_PATCH_RECT;
     // en/es "(c)19xx Tolkien Enterprises" and the widest fr set name
     const notices = [
-      { x0: 0.165, x1: 0.433, y0: 0.951, y1: 0.971 },
-      { x0: 0.172, x1: 0.365, y0: 0.942, y1: 0.957 },
+      { x0: 0.1632, x1: 0.4246, y0: 0.951, y1: 0.971 },
+      { x0: 0.1789, x1: 0.3561, y0: 0.942, y1: 0.957 },
     ];
     for (const n of notices) {
       expect(r.x).toBeLessThan(n.x0);
@@ -457,6 +458,12 @@ describe('geometry', () => {
       expect(r.y).toBeLessThan(n.y0);
       expect(r.y + r.h).toBeGreaterThan(n.y1);
     }
+  });
+
+  it('stops short of the fr "Remastérisé" credit', () => {
+    // First glyph of "Remastérisé - Traduction non officielle" on fr cards.
+    // Overlapping it clips the R — the defect this rect was recalibrated for.
+    expect(PROXY_PATCH_RECT.x + PROXY_PATCH_RECT.w).toBeLessThan(0.4684);
   });
 
   it('centres the label horizontally in the draw rect', () => {
@@ -497,16 +504,18 @@ In `web/src/lib/proxy.js`, replace lines 17–28 (from the `// Covered zone, ...
 
 ```javascript
 // Covered zone, as fractions of card width/height. One rect for en/es/fr: it
-// clears both the left-aligned "©19xx Tolkien Enterprises" (en, es) and the
-// more-centred French set name. The opaque core is x 0.150–0.470, y 0.932–0.975;
-// the rect below adds the 7px-at-570 feathered margin baked into each patch PNG.
+// clears both the left-aligned "©19xx Tolkien Enterprises" (en, es, x to 0.4246)
+// and the more-centred French set name, while stopping short of the French
+// "Remastérisé…" credit, whose first glyph starts at x 0.4684 and must stay
+// readable. The opaque core is x 0.150–0.440, y 0.932–0.975; the rect below adds
+// the 7px-at-570 feathered margin baked into each patch PNG.
 // Spec: docs/superpowers/specs/2026-07-28-proxy-frame-patches-design.md
-export const PROXY_PATCH_RECT = { x: 0.1377, y: 0.9232, w: 0.3446, h: 0.0606 };
+export const PROXY_PATCH_RECT = { x: 0.1377, y: 0.9232, w: 0.3146, h: 0.0606 };
 
 // "Proxy" label: Arial Bold, sized like the card's own
 // "Remastérisé - Traduction non officielle" line and sitting on its band.
 export const PROXY_LABEL_FONT_FRAC = 0.0155;          // of card width
-export const PROXY_LABEL_POS = { cx: 0.310, cy: 0.9565 };
+export const PROXY_LABEL_POS = { cx: 0.295, cy: 0.9565 };
 
 // The same label spec expressed in container-query units, for the CSS overlay
 // whose container is the patch box (see .proxy-stamp in styles.css). Derived,
