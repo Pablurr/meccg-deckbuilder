@@ -1,7 +1,7 @@
 // Pure text-composition helpers for the documentation page (RulesDoc.jsx).
 // Split out from the component so the conditional logic here -- optional mind
-// cap, optional per-character cap, forbidden/required races, unsourced
-// playDeck ranges -- can be unit-tested directly against the real SIDES data
+// cap, optional per-character cap, forbidden/required races, the four sourced
+// playDeck budgets -- can be unit-tested directly against the real SIDES data
 // without mounting React. Every value rendered still comes from the SIDES/
 // LENGTHS modules the validator itself reads; only word choice lives here.
 // Kept alongside validate.js/sides.js/formats.js since these functions are

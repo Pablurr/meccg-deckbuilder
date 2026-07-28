@@ -55,7 +55,13 @@ export function localizeParams(w, { cardsById, lang, t }) {
     const localized = t(`race.${p.race}`);
     p.race = localized === `race.${p.race}` ? p.race : localized;
   }
-  if (w.ruleId === 'SIDEBOARD-MAX' || w.ruleId === 'POOL-CHARS' || w.ruleId === 'POOL-ITEMS') p.over = p.count - p.max;
+  // POOL-ITEMS.unique/.hoard carry { id, name } with no count/max (they flag
+  // one specific card, not a total), so p.over would be NaN for them. Guard
+  // on both operands being present rather than on ruleId alone, so no
+  // template ever gets handed a value the validator didn't actually supply.
+  if ((w.ruleId === 'SIDEBOARD-MAX' || w.ruleId === 'POOL-CHARS' || w.ruleId === 'POOL-ITEMS') && p.count != null && p.max != null) {
+    p.over = p.count - p.max;
+  }
   return p;
 }
 

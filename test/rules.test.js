@@ -1,4 +1,7 @@
 import { describe, it, expect } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import raw from '../web/public/cards.json';
 import { parseCards } from '../web/src/lib/parseCards.js';
 import { zonesFor } from '../web/src/lib/rules/zones.js';
@@ -192,7 +195,6 @@ describe('sides data', () => {
 
   it('GENERAL carries the side-independent limits', () => {
     expect(GENERAL.agentMindMax).toBe(36);
-    expect(GENERAL.copiesDefault).toBe(3);
     expect(GENERAL.uniqueMax).toBe(1);
     expect(GENERAL.siteMax).toBe(1);
     expect(GENERAL.avatarMaxCopies).toBe(3);
@@ -830,6 +832,15 @@ describe('validateDeck', () => {
     // dropped it and shipped a warning that rendered a raw "{side}" token to
     // the user, which is why the i18n contract test exists.
     expect(hit[0].params).toEqual({ count: 3, max: 2, side: 'wizard' });
+
+    // The "two do not" half the test name promises: the same fixture, one
+    // card short of the cap, must not fire at all.
+    const twoPool = Object.fromEntries(ok.slice(0, 2).map((c) => [c.id, 1]));
+    const twoOut = validateDeck({
+      side: 'wizard', length: 'standard', tournament: true,
+      zones: { sideboard: {}, pool: twoPool }, cardsById: index,
+    });
+    expect(twoOut.filter((w) => w.code === 'POOL-ITEMS.count')).toEqual([]);
   });
 
   it('the six "in lieu of a minor item" permanent-events still trip the minor-item cap', () => {
@@ -1633,5 +1644,38 @@ describe('sites.js siteIndex cache shares one derivation across callers', () => 
     siteIndex(otherRef);
     const again = siteIndex(cards);
     expect(again).toBe(first);
+  });
+});
+
+// web/src/lib/rules/*.js matches raw card names and races (sites.js's `fold`,
+// races.js's matchesRace), so this project mandates \u escapes over literal
+// non-ASCII characters here -- a stray literal is easy to type, easy to miss
+// on review, and impossible to grep for with confidence. This test makes the
+// convention self-enforcing rather than a comment someone has to remember.
+describe('web/src/lib/rules/*.js: no literal non-ASCII bytes outside the allow-list', () => {
+  // Explicit allow-list of exact (file, line) locations, modelled on the
+  // ALLOWED_FACTION_KEYS guard in test/i18n.test.js: each entry is a
+  // conscious, hand-verified exception, not a blanket pass for the file --
+  // every addition is a permanent hole in this guard's coverage for that one
+  // line, forever. Currently just the middle dot ('·') docText.js uses
+  // twice (poolText, playDeckText) to join short doc-page fragments -- a
+  // display separator, not a card-name/race match target, so it never needs
+  // to survive fold()/matchesRace().
+  const ALLOWED = new Set(['docText.js:62', 'docText.js:75']);
+
+  it('every byte above 0x7F is on the allow-list', () => {
+    const dir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'web', 'src', 'lib', 'rules');
+    const files = fs.readdirSync(dir).filter((f) => f.endsWith('.js'));
+    expect(files.length).toBeGreaterThan(0); // the scan itself must not go silently empty
+    const offenders = [];
+    for (const file of files) {
+      const buf = fs.readFileSync(path.join(dir, file));
+      let line = 1;
+      for (let i = 0; i < buf.length; i++) {
+        if (buf[i] === 0x0a) { line += 1; continue; }
+        if (buf[i] > 0x7f && !ALLOWED.has(`${file}:${line}`)) offenders.push(`${file}:${line}`);
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 });

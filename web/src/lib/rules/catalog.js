@@ -40,6 +40,10 @@ export const RULES = [
   { id: 'COPIES-LIMIT', severity: 'error', status: 'verified', refs: ['1.3.1', '1.3.F1'], hard: true, source: COE },
   { id: 'UNIQUE-LIMIT', severity: 'error', status: 'verified', ref: '1.3.1', hard: true, source: COE },
   { id: 'SITE-COPIES', severity: 'error', status: 'verified', refs: ['1.4', '1.4.F1'], hard: true, source: COE },
+
+  // 1.4 -- no Region cards at all, which are generally replaced with a map
+  // for tournament play. Neither a copy cap nor hard-enforced -- reported,
+  // like every other rule below, not blocked.
   { id: 'REGION-EXCLUDED', severity: 'error', status: 'verified', ref: '1.4', source: COE },
   // 1.4.1 -- a location deck holds only the side's own sites, plus the five
   // Balrog sites with no hero or minion counterpart.

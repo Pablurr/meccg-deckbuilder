@@ -7,7 +7,6 @@ import { matchesRace } from './races.js';
 // Side-independent limits (1.3.1, 1.3.2, 1.4).
 export const GENERAL = {
   agentMindMax: 36, // 1.3.2 -- total mind of all agent cards in the whole deck
-  copiesDefault: 3, // 1.3.1 -- copies of a non-unique card
   uniqueMax: 1,     // 1.3.1 -- copies of a unique non-avatar card
   siteMax: 1,       // 1.4   -- copies of a non-haven site
   // Avatars are exempt from the unique rule (1.3.1 says "each unique

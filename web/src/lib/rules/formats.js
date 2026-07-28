@@ -1,7 +1,7 @@
-// Game lengths → numeric thresholds. STUB values from the local rules KB
+// Game lengths -> numeric thresholds. STUB values from the local rules KB
 // (modes-de-jeu.md); to be confirmed against councilofelrond.org.
 // NOTE: a "+10 sideboard cards against a Fallen-wizard opponent" allowance
-// existed here as `fwExtra: 10` on every length, but nothing read it — the
+// existed here as `fwExtra: 10` on every length, but nothing read it -- the
 // allowance depends on the *opponent's* side, which this app does not model
 // (there is no second player/deck in scope). Deliberately left out rather
 // than re-added: if the app ever models an opponent, source and wire this

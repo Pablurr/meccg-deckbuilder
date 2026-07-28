@@ -17,14 +17,21 @@ import { isRuleEnabled } from './catalog.js';
 import { roleFor } from './roles.js';
 
 // 1.3.1 / 1.3.F1 -- the first entry whose bucket and alignment both match.
-// An entry with neither is the catch-all.
+// An entry with neither is the catch-all, and every SIDES profile ends with
+// one (checked by the "never throws" fuzz test in test/rules.test.js), so
+// this loop always returns before falling off the end in practice. It used
+// to fall back to a second, standalone copy of the number 3 here
+// (GENERAL.copiesDefault) -- a duplicate of the value copies.js is
+// chartered to be the single source of truth for. A malformed profile
+// missing its catch-all is a bug in sides.js, not a case to paper over with
+// a guessed default, so this throws instead.
 export function copyLimitFor(profile, role) {
   for (const rule of profile.copies) {
     if (rule.bucket && rule.bucket !== role.bucket) continue;
     if (rule.alignment && rule.alignment !== role.effectiveAlignment) continue;
     return rule.limit;
   }
-  return GENERAL.copiesDefault;
+  throw new Error('copyLimitFor: profile.copies has no catch-all entry (no bucket, no alignment)');
 }
 
 export function copyCaps(card, { side, ruleOverrides = {} } = {}) {

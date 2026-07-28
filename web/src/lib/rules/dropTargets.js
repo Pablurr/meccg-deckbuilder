@@ -1,6 +1,6 @@
 // Pure drop-target legality for the deck panel's zone tabs. Extracted from
 // DeckPanel's onDropOnTab so the routing logic (which zone a dragged card is
-// allowed to land on) can be unit-tested without a DOM/React tree — the same
+// allowed to land on) can be unit-tested without a DOM/React tree -- the same
 // kind of pure rule logic test/rules.test.js already covers for
 // zonesFor/isLegalForSide.
 import { zonesFor } from './zones.js';
