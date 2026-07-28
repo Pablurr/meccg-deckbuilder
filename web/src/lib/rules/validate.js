@@ -303,6 +303,26 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
   if (poolChars > profile.pool.maxCharacters) emit('POOL-CHARS', { count: poolChars, max: profile.pool.maxCharacters, side });
   if (poolItems > profile.pool.maxMinorItems) emit('POOL-ITEMS', { count: poolItems, max: profile.pool.maxMinorItems, side }, 'POOL-ITEMS.count');
 
+  // 1.7.F1 -- the Fallen-wizard stage pool.
+  const stageReq = profile.pool.stagePoints;
+  if (stageReq) {
+    let points = 0, count = 0, nonUnique = 0;
+    for (const [id, n] of Object.entries(pool)) {
+      const c = cardsById.get(id); if (!c) continue;
+      // stagePoints also appears on Fallen-wizard SITES (WH-55 Deep Mines = 3,
+      // WH-57 Rhosgobel = 1), which are not stage resources.
+      if (c.alignment !== 'Stage' || c.type !== 'Resource') continue;
+      const a = c.attributes || {};
+      // WH-22 spells its value "2(3)" -- take the leading integer.
+      points += (toInt(a.stagePoints) || 0) * n;
+      count += n;
+      if (!a.unique) nonUnique += n;
+    }
+    if (points !== stageReq.total) emit('POOL-STAGE', { total: points, required: stageReq.total }, 'POOL-STAGE.points');
+    if (count > stageReq.maxCards) emit('POOL-STAGE', { count, max: stageReq.maxCards }, 'POOL-STAGE.count');
+    if (count > 0 && nonUnique < stageReq.minNonUnique) emit('POOL-STAGE', { min: stageReq.minNonUnique }, 'POOL-STAGE.nonUnique');
+  }
+
   const rank = { error: 0, warning: 1, info: 2 };
   return out.sort((a, b) => rank[a.severity] - rank[b.severity]);
 }

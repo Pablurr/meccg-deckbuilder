@@ -44,7 +44,7 @@ export const SIDES = {
     alignments: ['Hero', 'Neutral', 'Dual'],
     // 1.3.1 -- three copies of any non-unique card.
     copies: [{ limit: 3 }],
-    pool: { maxCharacters: 10, maxMinorItems: 2, balrogMindPerCharacterLimit: null, requireRaces: null },
+    pool: { maxCharacters: 10, maxMinorItems: 2, balrogMindPerCharacterLimit: null, requireRaces: null, stagePoints: null },
     agents: { role: 'hazard' },   // 1.3.W2
     flexMaxAsResource: null,      // 1.3.3 -- free choice
     heroTreatment: false,
@@ -57,7 +57,7 @@ export const SIDES = {
     alignments: ['Minion', 'Neutral', 'Dual'],
     // 1.3.1 -- three copies of any non-unique card.
     copies: [{ limit: 3 }],
-    pool: { maxCharacters: 10, maxMinorItems: 2, balrogMindPerCharacterLimit: null, requireRaces: null },
+    pool: { maxCharacters: 10, maxMinorItems: 2, balrogMindPerCharacterLimit: null, requireRaces: null, stagePoints: null },
     agents: { role: 'character' }, // 1.3.R2 (for deck-building requirements)
     flexMaxAsResource: null,
     heroTreatment: false,
@@ -77,7 +77,12 @@ export const SIDES = {
       { bucket: 'resource', alignment: 'Minion', limit: 2 },
       { limit: 3 },
     ],
-    pool: { maxCharacters: 10, maxMinorItems: 2, balrogMindPerCharacterLimit: null, requireRaces: null },
+    pool: {
+      maxCharacters: 10, maxMinorItems: 2, balrogMindPerCharacterLimit: null, requireRaces: null,
+      // 1.7.F1 -- up to three Stage resource permanent-events in the starting
+      // pool, totalling exactly three stage points, at least one non-unique.
+      stagePoints: { total: 3, maxCards: 3, minNonUnique: 1 },
+    },
     agents: { role: 'character' }, // 1.3.F4
     flexMaxAsResource: 2,          // 1.3.F2 -- the third copy counts as a hazard
     heroTreatment: true,           // 1.3.F5
@@ -93,7 +98,7 @@ export const SIDES = {
     copies: [{ limit: 3 }],
     // 1.3.B4 -- non-avatar characters must be Orc or Troll with mind < 9,
     // unless they are Balrog-specific.
-    pool: { maxCharacters: 10, maxMinorItems: 2, balrogMindPerCharacterLimit: 9, requireRaces: ['Orc', 'Troll'] },
+    pool: { maxCharacters: 10, maxMinorItems: 2, balrogMindPerCharacterLimit: 9, requireRaces: ['Orc', 'Troll'], stagePoints: null },
     agents: { role: 'hazard' },   // 1.3.B2
     flexMaxAsResource: null,
     heroTreatment: false,

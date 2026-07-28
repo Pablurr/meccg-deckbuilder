@@ -207,6 +207,27 @@ function buildFixture(code) {
       const hazard = firstWhere((c) => c.type === 'Hazard' && ['Hero', 'Neutral'].includes(c.alignment));
       return { ...base, side: 'wizard', quantities: { [wizardAvatar.id]: 1 }, zones: { sideboard: {}, pool: { [hazard.id]: 1 } } };
     }
+    case 'POOL-STAGE.points': {
+      // A single 2-point Stage resource is one short of the required 3 (1.7.F1).
+      const two = firstWhere((c) => c.alignment === 'Stage' && c.type === 'Resource'
+        && parseInt((c.attributes || {}).stagePoints, 10) === 2 && !c.attributes.unique);
+      return { ...base, side: 'fallen-wizard', zones: { sideboard: {}, pool: { [two.id]: 1 } } };
+    }
+    case 'POOL-STAGE.count': {
+      // Four 1-point Stage resources total 4 stage points AND exceed the
+      // 3-card maximum -- both POOL-STAGE.points and POOL-STAGE.count fire.
+      const ones = cards.filter((c) => c.alignment === 'Stage' && c.type === 'Resource'
+        && parseInt((c.attributes || {}).stagePoints, 10) === 1).slice(0, 4);
+      expect(ones.length).toBe(4);
+      return { ...base, side: 'fallen-wizard', zones: { sideboard: {}, pool: Object.fromEntries(ones.map((c) => [c.id, 1])) } };
+    }
+    case 'POOL-STAGE.nonUnique': {
+      // A unique 3-point Stage resource alone hits the points total exactly,
+      // but leaves zero non-unique stage resources (1.7.F1).
+      const uniq3 = firstWhere((c) => c.alignment === 'Stage' && c.type === 'Resource'
+        && parseInt((c.attributes || {}).stagePoints, 10) === 3 && c.attributes.unique === true);
+      return { ...base, side: 'fallen-wizard', zones: { sideboard: {}, pool: { [uniq3.id]: 1 } } };
+    }
     case 'SITE-BALROG-VERSION.swap': {
       // AS-152 The Iron-deeps is a Minion Under-deeps site (1.4.B1); BA-91 is
       // its Balrog twin, so the Balrog player must swap to it.

@@ -69,6 +69,9 @@ export const RULES = [
   { id: 'POOL-CHARS', severity: 'error', status: 'verified', ref: '1.7', source: COE },
   { id: 'POOL-ITEMS', severity: 'error', status: 'verified', ref: '1.7', source: COE },
   { id: 'POOL-ELIGIBLE', severity: 'error', status: 'verified', ref: '1.7', source: COE },
+  // 1.7.F1 -- the Fallen-wizard-only stage pool: up to three Stage resource
+  // permanent-events totalling exactly three stage points, at least one non-unique.
+  { id: 'POOL-STAGE', severity: 'error', status: 'verified', ref: '1.7.F1', source: COE },
 ].map((r) => ({ ...r, defaultEnabled: r.status === 'verified' }));
 
 export const RULE_BY_ID = new Map(RULES.map((r) => [r.id, r]));

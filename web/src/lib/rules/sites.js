@@ -1,6 +1,6 @@
 // Site derivations for the location-deck rules. Built once per card array and
-// memoised on its identity -- validateDeck runs on every deck edit, the same
-// reason bannedFor caches.
+// memoised on its identity (see the WeakMap cache below) -- validateDeck runs
+// on every deck edit, the same reason bannedFor caches.
 const fold = (s) => String(s || '')
   .normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '')
@@ -12,10 +12,20 @@ const fold = (s) => String(s || '')
 // Guldur, Minas Morgul, any Under-deeps site and any Dark-hold.
 const B1_NAMES = new Set(['moria', 'carn dum', 'dol guldur', 'minas morgul']);
 
-let _cache = { key: null, value: null };
+// A single-slot cache thrashes when two callers alternate different array
+// references over the same underlying cards (the card browser's loaded
+// `cards` array vs validate.js's own `[...cardsById.values()]` snapshot):
+// each call would evict the other's entry, defeating the "single source of
+// truth" this module claims to be. A WeakMap keyed on the array itself lets
+// every distinct-but-stable reference keep its own permanent entry -- no
+// eviction, no recomputation once a given array has been seen -- without
+// threading a shared reference through both call sites (which would mean
+// widening validateDeck's signature to accept the raw `cards` array
+// alongside `cardsById`, a bigger change for the same result).
+const _cache = new WeakMap();
 
 export function siteIndex(cards) {
-  if (_cache.key === cards) return _cache.value;
+  if (_cache.has(cards)) return _cache.get(cards);
   const sites = cards.filter((c) => c.type === 'Site');
   const namesBy = (alignment) => new Set(sites.filter((c) => c.alignment === alignment).map((c) => fold(c.name && c.name.en)));
   const hero = namesBy('Hero');
@@ -40,6 +50,6 @@ export function siteIndex(cards) {
   const hasBalrogVersion = (card) => balrog.has(fold(card && card.name && card.name.en));
 
   const value = { openBalrog, needsBalrogVersion, hasBalrogVersion };
-  _cache = { key: cards, value };
+  _cache.set(cards, value);
   return value;
 }

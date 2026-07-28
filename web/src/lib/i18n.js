@@ -211,6 +211,9 @@ export const translations = {
     'rules.POOL-ITEMS.unique': '{name} est unique — le pool de départ n’accepte que des objets mineurs non uniques.',
     'rules.POOL-ITEMS.hoard': '{name} est un objet de trésor — le pool de départ n’accepte pas les objets de trésor.',
     'rules.POOL-ELIGIBLE.type': "{name} ne peut pas être dans le pool de départ — seuls les personnages et les objets mineurs de départ y ont leur place. Déplace-la vers le talon ou la réserve.",
+    'rules.POOL-STAGE.points': 'Le pool contient {total} points de mise en scène — il en faut exactement {required}.',
+    'rules.POOL-STAGE.count': '{count} ressources de mise en scène dans le pool — {max} au maximum.',
+    'rules.POOL-STAGE.nonUnique': 'Le pool doit contenir au moins {min} ressource de mise en scène non unique.',
     // Data values interpolated into the messages above ({alignment}, {race}):
     // localized so a sentence never mixes an English data value with
     // translated prose. Values are those that actually occur (see sides.js
@@ -332,6 +335,7 @@ export const translations = {
     'rules.POOL-CHARS.doc': 'Le nombre de personnages du pool de départ est plafonné par camp.',
     'rules.POOL-ITEMS.doc': 'Le pool de départ accepte jusqu’à deux objets mineurs non uniques et non issus d’un trésor.',
     'rules.POOL-ELIGIBLE.doc': 'Signale une carte dont le type ne peut pas occuper le pool de départ.',
+    'rules.POOL-STAGE.doc': 'Un Sorcier déchu place jusqu’à trois ressources de mise en scène dans son pool, totalisant exactement trois points, dont au moins une non unique.',
   },
 
   en: {
@@ -533,6 +537,9 @@ export const translations = {
     'rules.POOL-ITEMS.unique': '{name} is unique — the starting pool only takes non-unique minor items.',
     'rules.POOL-ITEMS.hoard': '{name} is a hoard item — the starting pool takes no hoard items.',
     'rules.POOL-ELIGIBLE.type': '{name} cannot sit in the starting pool — only characters and starting minor items are pool-eligible. Move it to the play deck or sideboard.',
+    'rules.POOL-STAGE.points': 'The pool holds {total} stage points — exactly {required} are needed.',
+    'rules.POOL-STAGE.count': '{count} stage resources in the pool — {max} at most.',
+    'rules.POOL-STAGE.nonUnique': 'The pool needs at least {min} non-unique stage resource.',
     // Data values interpolated above ({alignment}, {race}): English keys are
     // identity mappings (the raw data values already read as English), kept
     // here so the lookup path in DeckPanel's localizeParams is the same for
@@ -654,6 +661,7 @@ export const translations = {
     'rules.POOL-CHARS.doc': 'Starting pool character count is capped per side.',
     'rules.POOL-ITEMS.doc': 'The starting pool takes up to two non-unique, non-hoard minor items.',
     'rules.POOL-ELIGIBLE.doc': 'Reports a card whose type cannot occupy the starting pool.',
+    'rules.POOL-STAGE.doc': 'A Fallen-wizard puts up to three stage resources in the pool, totalling exactly three stage points, at least one of them non-unique.',
   },
 
   // Groundwork only — partial by design. Missing keys resolve through the
@@ -865,6 +873,9 @@ export const translations = {
     'rules.POOL-ITEMS.unique': '{name} es única — la reserva inicial solo admite objetos menores no únicos.',
     'rules.POOL-ITEMS.hoard': '{name} es un objeto de tesoro — la reserva inicial no admite objetos de tesoro.',
     'rules.POOL-ELIGIBLE.type': '{name} no puede estar en la reserva inicial — solo caben personajes y objetos menores iniciales. Muévela al mazo de juego o al sideboard.',
+    'rules.POOL-STAGE.points': 'La reserva inicial tiene {total} puntos de puesta en escena — hacen falta exactamente {required}.',
+    'rules.POOL-STAGE.count': '{count} recursos de puesta en escena en la reserva inicial — {max} como máximo.',
+    'rules.POOL-STAGE.nonUnique': 'La reserva inicial necesita al menos {min} recurso de puesta en escena no único.',
     // Data values interpolated above ({alignment}, {race}), localized for the
     // same reason as the fr/en blocks: never mix a raw English data value
     // into a translated sentence.
@@ -985,6 +996,7 @@ export const translations = {
     'rules.POOL-CHARS.doc': 'El número de personajes de la reserva inicial está limitado por bando.',
     'rules.POOL-ITEMS.doc': 'La reserva inicial admite hasta dos objetos menores no únicos y sin tesoro.',
     'rules.POOL-ELIGIBLE.doc': 'Informa de una carta cuyo tipo no puede ocupar la reserva inicial.',
+    'rules.POOL-STAGE.doc': 'Un Mago caído pone hasta tres recursos de puesta en escena en su reserva inicial, sumando exactamente tres puntos, con al menos uno no único.',
   },
 };
 

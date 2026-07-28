@@ -15,7 +15,9 @@ export function zonesFor(card) {
   // actual Minor Item cards, and the six permanent-events whose own text says
   // they may be played with a starting company "in lieu of a minor item"
   // (AS-94, BA-31, BA-44, BA-60, BA-70, WH-46), which consume an item slot.
-  if (type === 'Resource' && (a.subtype === 'Minor Item' || a.playableAsStartingMinorItem === true)) {
+  // 1.7.F1 -- a third family, Fallen-wizard only: Stage resource
+  // permanent-events, up to three of them totalling exactly three stage points.
+  if (type === 'Resource' && (a.subtype === 'Minor Item' || a.playableAsStartingMinorItem === true || card.alignment === 'Stage')) {
     return { primary: 'deck', extra: ['sideboard', 'pool'] };
   }
   return { primary: 'deck', extra: ['sideboard'] };

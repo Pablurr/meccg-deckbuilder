@@ -1378,3 +1378,70 @@ describe('location deck (1.4, 1.4.1, 1.4.W1/R1/F1/B1)', () => {
     expect(rw.filter((w) => w.ruleId === 'SITE-BALROG-VERSION')).toEqual([]);
   });
 });
+
+describe('POOL-STAGE (1.7.F1)', () => {
+  const stages = () => cards.filter((c) => c.alignment === 'Stage' && c.type === 'Resource');
+  const byPoints = (n, unique) => stages().find((c) => parseInt((c.attributes || {}).stagePoints, 10) === n
+    && !!(c.attributes || {}).unique === unique);
+  const V = (pool) => validateDeck({ side: 'fallen-wizard', length: 'standard', tournament: true, zones: { sideboard: {}, pool }, cardsById: index });
+  const of = (out, code) => out.filter((w) => w.code === code);
+
+  it('exactly three stage points with a non-unique card passes', () => {
+    const three = byPoints(3, false);
+    expect(of(V({ [three.id]: 1 }), 'POOL-STAGE.points')).toEqual([]);
+    expect(of(V({ [three.id]: 1 }), 'POOL-STAGE.nonUnique')).toEqual([]);
+  });
+
+  it('POOL-STAGE.points: two points fires', () => {
+    const two = byPoints(2, false);
+    const hit = of(V({ [two.id]: 1 }), 'POOL-STAGE.points');
+    expect(hit).toHaveLength(1);
+    expect(hit[0].params).toEqual({ total: 2, required: 3 });
+  });
+
+  it('POOL-STAGE.nonUnique: three points from a unique card alone fires', () => {
+    const uniq3 = byPoints(3, true);
+    expect(of(V({ [uniq3.id]: 1 }), 'POOL-STAGE.nonUnique')).toHaveLength(1);
+  });
+
+  it('POOL-STAGE.count: four stage cards fire', () => {
+    const ones = stages().filter((c) => parseInt((c.attributes || {}).stagePoints, 10) === 1).slice(0, 4);
+    expect(ones).toHaveLength(4);
+    expect(of(V(Object.fromEntries(ones.map((c) => [c.id, 1]))), 'POOL-STAGE.count')).toHaveLength(1);
+  });
+
+  it('a Fallen-wizard SITE with stagePoints is not a stage resource', () => {
+    // WH-55 Deep Mines carries stagePoints 3 but is a Site.
+    const out = V({ 'WH-55': 1 });
+    expect(of(out, 'POOL-STAGE.points')).toHaveLength(1); // still 0 stage points
+  });
+
+  it('the other sides have no stage-pool requirement', () => {
+    for (const side of ['wizard', 'ringwraith', 'balrog']) {
+      const out = validateDeck({ side, length: 'standard', tournament: true, zones: { sideboard: {}, pool: {} }, cardsById: index });
+      expect(out.filter((w) => w.ruleId === 'POOL-STAGE')).toEqual([]);
+    }
+  });
+
+  it('a stage resource is pool-eligible (zonesFor widened for 1.7.F1)', () => {
+    const three = byPoints(3, false);
+    const z = zonesFor(three);
+    expect(z.primary === 'pool' || z.extra.includes('pool')).toBe(true);
+  });
+});
+
+describe('sites.js siteIndex cache shares one derivation across callers', () => {
+  it('two calls with the same reference return the identical cached object', () => {
+    const a = siteIndex(cards);
+    const b = siteIndex(cards);
+    expect(a).toBe(b);
+  });
+
+  it('an intervening call with a different-but-equivalent array does not evict the first', () => {
+    const first = siteIndex(cards);
+    const otherRef = [...cards]; // same card objects, different array identity
+    siteIndex(otherRef);
+    const again = siteIndex(cards);
+    expect(again).toBe(first);
+  });
+});
