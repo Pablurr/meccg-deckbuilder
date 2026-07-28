@@ -34,15 +34,15 @@ describe('copiesText', () => {
     expect(minionResource).toMatchObject({ bucket: 'resource', alignment: 'Minion' });
 
     const text = copiesText(stubT, SIDES['fallen-wizard']);
-    // localize() falls back to the raw table value when the stub's
-    // untranslated echo matches the key template, so the raw bucket/alignment
-    // strings surface here rather than real translated prose.
+    // Each (bucket, alignment) combination resolves to its own full-phrase
+    // dictionary key -- docs.copies.category.<bucket>[-<alignment>] -- rather
+    // than a bucket label and an alignment label concatenated in code.
     expect(text).toBe([
       `docs.copies.default::{"n":${catchAll.limit}}`,
-      `docs.copies.override::{"n":${stageResource.limit},"alignment":"${stageResource.alignment} ${stageResource.bucket}"}`,
-      `docs.copies.override::{"n":${character.limit},"alignment":"${character.bucket}"}`,
-      `docs.copies.override::{"n":${heroResource.limit},"alignment":"${heroResource.alignment} ${heroResource.bucket}"}`,
-      `docs.copies.override::{"n":${minionResource.limit},"alignment":"${minionResource.alignment} ${minionResource.bucket}"}`,
+      `docs.copies.category.${stageResource.bucket}-${stageResource.alignment}::{"n":${stageResource.limit}}`,
+      `docs.copies.category.${character.bucket}::{"n":${character.limit}}`,
+      `docs.copies.category.${heroResource.bucket}-${heroResource.alignment}::{"n":${heroResource.limit}}`,
+      `docs.copies.category.${minionResource.bucket}-${minionResource.alignment}::{"n":${minionResource.limit}}`,
     ].join(', '));
   });
 });

@@ -122,6 +122,12 @@ function buildFixture(code) {
       const region = firstWhere((c) => c.type === 'Region');
       return { ...base, side: 'wizard', quantities: { [region.id]: 1 } };
     }
+    case 'SITE-SIDE': {
+      // A Minion site is illegal in a Wizard location deck (1.4.W1); it is
+      // not one of 1.4.1's five open Balrog sites, so SITE-SIDE fires.
+      const minionSite = firstWhere((c) => c.type === 'Site' && c.alignment === 'Minion');
+      return { ...base, side: 'wizard', quantities: { [wizardAvatar.id]: 1, [minionSite.id]: 1 } };
+    }
     case 'BALROG-RACE': {
       const balrogAvatar = firstWhere((c) => c.attributes.avatar && c.alignment === 'Balrog');
       const wrongRaceChar = firstWhere((c) => c.type === 'Character' && !c.attributes.avatar && c.attributes.specific !== 'Balrog'

@@ -19,23 +19,29 @@ export function localize(t, prefix, value) {
 }
 
 // "3 per card, 3 for Stage resources, 2 for characters" -- the catch-all
-// entry (the one table row with neither `bucket` nor `alignment`, which sits
-// LAST in SIDES[side].copies because copyLimitFor's first-match-wins scan
-// needs it there as the fallback) rendered first, then every more specific
-// entry in table order. Every number and category name is read straight off
-// the table -- nothing here is hardcoded -- so this text can never drift from
-// what copyCaps/copyLimitFor (copies.js) actually enforces.
+// entry (the one table row with neither `bucket` nor `alignment`; a Character
+// row's bucket is always 'character', so the bucket check alone keeps a
+// hero-treated Fallen-wizard character out of any resource-keyed entry
+// regardless of table position -- what actually depends on position is the
+// catch-all sitting LAST, since copyLimitFor's first-match-wins scan needs it
+// there as the fallback; moving it first would give every card the general
+// limit) rendered first, then every more specific entry in table order.
+//
+// Each (bucket, alignment) combination gets one full-phrase dictionary key
+// (docs.copies.category.<bucket>[-<alignment>]) so each language owns its own
+// word order, prepositions and gender -- rather than concatenating a
+// localized alignment name and a localized bucket name in code, which forces
+// one (English) noun order on every language. The category id is derived
+// from the table row, never hardcoded here, so this text can never drift
+// from what copyCaps/copyLimitFor (copies.js) actually enforces.
 export function copiesText(t, profile) {
   const rules = profile.copies;
   const catchAll = rules.find((rule) => !rule.bucket && !rule.alignment);
   const overrides = rules.filter((rule) => rule.bucket || rule.alignment);
   const parts = [t('docs.copies.default', { n: catchAll.limit })];
   for (const rule of overrides) {
-    const label = [
-      rule.alignment ? localize(t, 'alignment', rule.alignment) : null,
-      rule.bucket ? localize(t, 'bucket', rule.bucket) : null,
-    ].filter(Boolean).join(' ');
-    parts.push(t('docs.copies.override', { n: rule.limit, alignment: label }));
+    const category = [rule.bucket, rule.alignment].filter(Boolean).join('-');
+    parts.push(t(`docs.copies.category.${category}`, { n: rule.limit }));
   }
   return parts.join(', ');
 }

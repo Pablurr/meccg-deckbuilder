@@ -12,6 +12,7 @@ import { racesOf, singularize, matchesRace } from '../web/src/lib/rules/races.js
 import { buildGroups, TYPE_ORDER } from '../web/src/lib/deckList.js';
 import { copyCaps, remainingCopies } from '../web/src/lib/rules/copies.js';
 import { roleFor, DRAGON_MANIFESTATIONS } from '../web/src/lib/rules/roles.js';
+import { siteIndex } from '../web/src/lib/rules/sites.js';
 
 const { cards, index } = parseCards(raw);
 
@@ -1306,5 +1307,41 @@ describe('roleFor (1.3.W2/R2/B2, 1.3.F2, 1.3.F5, 1.5.1)', () => {
         expect(typeof r.effectiveAlignment).toBe('string');
       }
     }
+  });
+});
+
+describe('location deck (1.4, 1.4.1, 1.4.W1/R1/F1/B1)', () => {
+  const V = (side, quantities) => validateDeck({ side, length: 'standard', tournament: true, quantities, cardsById: index });
+  const of = (out, id) => out.filter((w) => w.ruleId === id);
+
+  it('the five open Balrog sites derive exactly as 1.4.1 names them', () => {
+    const { openBalrog } = siteIndex(cards);
+    expect([...openBalrog].sort()).toEqual(['BA-104', 'BA-83', 'BA-89', 'BA-95', 'BA-96']);
+  });
+
+  it('SITE-SIDE: a Minion site is illegal in a Wizard location deck (1.4.W1)', () => {
+    expect(of(V('wizard', { 'LE-352': 1 }), 'SITE-SIDE')).toHaveLength(1);
+    expect(of(V('ringwraith', { 'LE-352': 1 }), 'SITE-SIDE')).toEqual([]);
+  });
+
+  it('SITE-SIDE: the five open Balrog sites are legal for every side (1.4.1)', () => {
+    for (const side of ['wizard', 'ringwraith', 'fallen-wizard', 'balrog']) {
+      expect(of(V(side, { 'BA-83': 1 }), 'SITE-SIDE')).toEqual([]);
+    }
+  });
+
+  it('SITE-SIDE: a Fallen-wizard location deck takes hero AND minion sites (1.4.F1)', () => {
+    expect(of(V('fallen-wizard', { 'TW-374': 1, 'LE-352': 1 }), 'SITE-SIDE')).toEqual([]);
+  });
+
+  it('SITE-COPIES: Fallen-wizard sites may be repeated (1.4.F1)', () => {
+    // WH-55 Deep Mines is {R}, not a haven, so the haven exemption misses it.
+    expect(of(V('fallen-wizard', { 'WH-55': 3 }), 'SITE-COPIES')).toEqual([]);
+    expect(copyCaps(index.get('WH-55'), { side: 'fallen-wizard', ruleOverrides: {} })).toEqual([]);
+  });
+
+  it('SITE-COPIES: a haven is unlimited only for a side that may hold its alignment', () => {
+    expect(of(V('wizard', { 'TW-421': 4 }), 'SITE-COPIES')).toEqual([]);      // Rivendell, Hero
+    expect(of(V('ringwraith', { 'LE-359': 4 }), 'SITE-COPIES')).toEqual([]);  // Carn Dum, Minion
   });
 });

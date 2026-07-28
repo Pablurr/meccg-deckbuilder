@@ -52,11 +52,15 @@ export function copyCaps(card, { side, ruleOverrides = {} } = {}) {
   // only for a side whose location deck may hold that alignment: a Minion
   // Darkhaven is unlimited for a Ringwraith, not for a Wizard.
   if (card.type === 'Site') {
-    const unlimited = a.siteType === '{H}'
-      && profile.alignments.concat(profile.avatarAlignment).includes(card.alignment);
-    if (!unlimited && on('SITE-COPIES')) {
-      caps.push({ limit: GENERAL.siteMax, scope: 'total', ruleId: 'SITE-COPIES' });
-    }
+    const ld = profile.locationDeck;
+    // 1.4.F1 -- a Fallen-wizard may include multiple copies of each
+    // Fallen-wizard site. WH-55 Deep Mines is {R}, so the haven test misses it.
+    if (ld.unlimitedFwSites && card.alignment === 'Fallen-wizard') return caps;
+    // 1.4 -- any number of haven sites, but only for a side whose location deck
+    // may hold that alignment: a Minion Darkhaven is unlimited for a Ringwraith,
+    // not for a Wizard.
+    if (a.siteType === '{H}' && ld.alignments.includes(card.alignment)) return caps;
+    if (on('SITE-COPIES')) caps.push({ limit: GENERAL.siteMax, scope: 'total', ruleId: 'SITE-COPIES' });
     return caps;
   }
 

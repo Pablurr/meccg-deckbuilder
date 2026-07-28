@@ -49,6 +49,8 @@ export const SIDES = {
     flexMaxAsResource: null,      // 1.3.3 -- free choice
     heroTreatment: false,
     specificMode: 'avatar-match',
+    // 1.4.W1 -- a location deck holds only Hero sites, plus 1.4.1's five open Balrog sites.
+    locationDeck: { alignments: ['Hero'], unlimitedFwSites: false, requireBalrogVersion: false },
   },
   ringwraith: {
     id: 'ringwraith', avatarAlignment: 'Minion',
@@ -60,6 +62,8 @@ export const SIDES = {
     flexMaxAsResource: null,
     heroTreatment: false,
     specificMode: 'avatar-match',
+    // 1.4.R1 -- a location deck holds only Minion sites, plus 1.4.1's five open Balrog sites.
+    locationDeck: { alignments: ['Minion'], unlimitedFwSites: false, requireBalrogVersion: false },
   },
   'fallen-wizard': {
     id: 'fallen-wizard', avatarAlignment: 'Fallen-wizard',
@@ -78,6 +82,9 @@ export const SIDES = {
     flexMaxAsResource: 2,          // 1.3.F2 -- the third copy counts as a hazard
     heroTreatment: true,           // 1.3.F5
     specificMode: 'avatar-match',
+    // 1.4.F1 -- a Fallen-wizard location deck takes hero AND minion sites, plus
+    // its own Fallen-wizard sites (unlimited copies of those, see copies.js).
+    locationDeck: { alignments: ['Hero', 'Minion', 'Fallen-wizard'], unlimitedFwSites: true, requireBalrogVersion: false },
   },
   balrog: {
     id: 'balrog', avatarAlignment: 'Balrog',
@@ -91,6 +98,9 @@ export const SIDES = {
     flexMaxAsResource: null,
     heroTreatment: false,
     specificMode: 'balrog-exempt',
+    // 1.4.B1 -- a location deck holds Minion and Balrog sites, plus 1.4.1's
+    // five open Balrog sites; a Balrog version is required for the sites 1.4.B1 names.
+    locationDeck: { alignments: ['Minion', 'Balrog'], unlimitedFwSites: false, requireBalrogVersion: true },
   },
 };
 

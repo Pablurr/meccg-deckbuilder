@@ -9,6 +9,7 @@ import { zonesFor } from './zones.js';
 import { RULES, RULE_BY_ID, isRuleEnabled } from './catalog.js';
 import { copyCaps } from './copies.js';
 import { roleFor } from './roles.js';
+import { siteIndex } from './sites.js';
 
 // Re-exported so importers keep one entry point into the rules layer.
 export { RULES, isRuleEnabled };
@@ -69,6 +70,15 @@ let _banned = { key: null, value: null };
 function bannedFor(cardsById, side) {
   if (_banned.key !== cardsById) _banned = { key: cardsById, value: resolveBanned([...cardsById.values()]) };
   return _banned.value.bySide[side] || new Set();
+}
+
+// [...cardsById.values()] allocates a new array each call, which would defeat
+// siteIndex's own memo (keyed on array identity). Cache on cardsById itself,
+// the same trick bannedFor uses above.
+let _siteInfo = { key: null, value: null };
+function siteInfoFor(cardsById) {
+  if (_siteInfo.key !== cardsById) _siteInfo = { key: cardsById, value: siteIndex([...cardsById.values()]) };
+  return _siteInfo.value;
 }
 
 export function validateDeck({ side, length, tournament, ruleOverrides = {}, quantities = {}, zones = {}, cardsById }) {
@@ -149,6 +159,7 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
 
   // --- per-card checks ---
   const bannedSet = bannedFor(cardsById, side);
+  const siteInfo = siteInfoFor(cardsById);
   for (const e of entries) {
     const c = e.card; const a = c.attributes || {};
     const balrogExempt = profile.specificMode === 'balrog-exempt' && a.specific === 'Balrog';
@@ -171,6 +182,14 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
     // 1.4 -- "no region cards, which are generally replaced with a map for
     // tournament play".
     if (c.type === 'Region') emit('REGION-EXCLUDED', { id: e.id, name: name(c) });
+
+    // 1.4.W1/R1/F1/B1 -- a location deck holds only the side's own sites, plus
+    // the five Balrog sites 1.4.1 opens to everyone.
+    if (c.type === 'Site'
+        && !profile.locationDeck.alignments.includes(c.alignment)
+        && !siteInfo.openBalrog.has(e.id)) {
+      emit('SITE-SIDE', { id: e.id, name: name(c), alignment: c.alignment, side });
+    }
 
     if (profile.specificMode === 'avatar-match' && a.specific && a.specific !== 'Balrog' && avatarName && !avatarName.includes(a.specific)) {
       emit('SPECIFIC-AVATAR', { id: e.id, name: name(c), wizard: a.specific, avatar: avatarName, avatarId });
