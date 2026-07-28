@@ -219,6 +219,10 @@ export const translations = {
     'alignment.Balrog': 'Balrog',
     'alignment.Fallen-wizard': 'Magicien déchu',
     'alignment.Dual': 'Double',
+    // Copy-table categories (1.3.F1): the bucket half of a copiesText label,
+    // paired with an alignment.* value when the table entry has both.
+    'bucket.resource': 'ressources',
+    'bucket.character': 'personnages',
     'race.Orc': 'Orque',
     'race.Troll': 'Troll',
     'race.Dwarf': 'Nain',
@@ -530,6 +534,10 @@ export const translations = {
     'alignment.Balrog': 'Balrog',
     'alignment.Fallen-wizard': 'Fallen-wizard',
     'alignment.Dual': 'Dual',
+    // Copy-table categories (1.3.F1): the bucket half of a copiesText label,
+    // paired with an alignment.* value when the table entry has both.
+    'bucket.resource': 'resources',
+    'bucket.character': 'characters',
     'race.Orc': 'Orc',
     'race.Troll': 'Troll',
     'race.Dwarf': 'Dwarf',
@@ -850,6 +858,10 @@ export const translations = {
     'alignment.Balrog': 'Balrog',
     'alignment.Fallen-wizard': 'Mago caído',
     'alignment.Dual': 'Doble',
+    // Copy-table categories (1.3.F1): the bucket half of a copiesText label,
+    // paired with an alignment.* value when the table entry has both.
+    'bucket.resource': 'recursos',
+    'bucket.character': 'personajes',
     'race.Orc': 'Orco',
     'race.Troll': 'Troll',
     'race.Dwarf': 'Enano',

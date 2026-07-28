@@ -136,8 +136,16 @@ describe('buildGroups', () => {
 describe('sides data', () => {
   it('exposes the four sides with alignments and copy limits', () => {
     expect(Object.keys(SIDES).sort()).toEqual(['balrog', 'fallen-wizard', 'ringwraith', 'wizard']);
-    expect(SIDES['fallen-wizard'].copies.default).toBe(2);
-    expect(SIDES['fallen-wizard'].copies.byAlignment.Stage).toBe(3);
+    // 1.3.F1 -- ordered (bucket, alignment) table, first match wins; hazards
+    // match none of the four categories and fall through to the catch-all 3.
+    expect(SIDES['fallen-wizard'].copies).toEqual([
+      { bucket: 'resource', alignment: 'Stage', limit: 3 },
+      { bucket: 'character', limit: 2 },
+      { bucket: 'resource', alignment: 'Hero', limit: 2 },
+      { bucket: 'resource', alignment: 'Minion', limit: 2 },
+      { limit: 3 },
+    ]);
+    expect(SIDES.wizard.copies).toEqual([{ limit: 3 }]);
     expect(SIDES.wizard.alignments).toContain('Neutral');
   });
   it('every side allows Dual-alignment cards (1.3.W3/R3/F4/B3)', () => {
@@ -1134,6 +1142,39 @@ describe('copyCaps / remainingCopies', () => {
     expect(copyCaps(heroRes, ctx('fallen-wizard'))[0].limit).toBe(2);
     const stage = cards.find((c) => c.alignment === 'Stage' && !(c.attributes || {}).unique);
     expect(copyCaps(stage, ctx('fallen-wizard'))[0].limit).toBe(3);
+  });
+
+  it('Fallen-wizard copy limits follow 1.3.F1 per category', () => {
+    const ctxFw = { side: 'fallen-wizard', ruleOverrides: {} };
+    const lim = (id) => copyCaps(index.get(id), ctxFw)[0].limit;
+    const find = (fn) => cards.find(fn);
+    // Non-unique Stage resource: 3
+    expect(lim(find((c) => c.alignment === 'Stage' && c.type === 'Resource' && !(c.attributes || {}).unique).id)).toBe(3);
+    // Non-unique character: 2
+    expect(lim(find((c) => c.type === 'Character' && !(c.attributes || {}).unique && !(c.attributes || {}).avatar && !(c.attributes || {}).agent).id)).toBe(2);
+    // Non-unique hero resource: 2
+    expect(lim(find((c) => c.type === 'Resource' && c.alignment === 'Hero' && !(c.attributes || {}).unique).id)).toBe(2);
+    // Non-unique minion resource: 2
+    expect(lim(find((c) => c.type === 'Resource' && c.alignment === 'Minion' && !(c.attributes || {}).unique).id)).toBe(2);
+    // Non-unique HAZARD: 3 -- 1.3.F1 says nothing about hazards, so 1.3.1's
+    // general limit applies. The old `default: 2` capped these at 2.
+    expect(lim(find((c) => c.type === 'Hazard' && !(c.attributes || {}).unique && !(c.attributes || {}).agent && !(c.attributes || {}).playableAsResource).id)).toBe(3);
+  });
+
+  it('a Fallen-wizard non-Orc, non-Troll character still caps at 2 via 1.3.F5 aliasing', () => {
+    // 1.3.F5 reads such a character as Hero; the character rule matches first,
+    // so the limit is 2 either way -- the alias must not raise it to 3.
+    const c = cards.find((x) => x.type === 'Character' && x.alignment === 'Minion'
+      && !(x.attributes || {}).avatar && !(x.attributes || {}).agent && !(x.attributes || {}).unique
+      && !['Orc', 'Troll'].some((r) => matchesRace((x.attributes || {}).race, r)));
+    expect(copyCaps(c, { side: 'fallen-wizard', ruleOverrides: {} })[0].limit).toBe(2);
+  });
+
+  it('the other three sides cap every non-unique card at 3', () => {
+    for (const side of ['wizard', 'ringwraith', 'balrog']) {
+      const c = cards.find((x) => x.type === 'Hazard' && !(x.attributes || {}).unique);
+      expect(copyCaps(c, { side, ruleOverrides: {} })[0].limit).toBe(3);
+    }
   });
 
   it('an unknown side or a missing card yields no cap rather than throwing', () => {

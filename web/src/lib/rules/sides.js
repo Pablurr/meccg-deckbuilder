@@ -42,7 +42,8 @@ export const SIDES = {
   wizard: {
     id: 'wizard', avatarAlignment: 'Hero',
     alignments: ['Hero', 'Neutral', 'Dual'],
-    copies: { default: 3, byAlignment: {} },
+    // 1.3.1 -- three copies of any non-unique card.
+    copies: [{ limit: 3 }],
     pool: { maxCharacters: 10, maxMinorItems: 2, balrogMindPerCharacterLimit: null, requireRaces: null },
     agents: { role: 'hazard' },   // 1.3.W2
     flexMaxAsResource: null,      // 1.3.3 -- free choice
@@ -52,7 +53,8 @@ export const SIDES = {
   ringwraith: {
     id: 'ringwraith', avatarAlignment: 'Minion',
     alignments: ['Minion', 'Neutral', 'Dual'],
-    copies: { default: 3, byAlignment: {} },
+    // 1.3.1 -- three copies of any non-unique card.
+    copies: [{ limit: 3 }],
     pool: { maxCharacters: 10, maxMinorItems: 2, balrogMindPerCharacterLimit: null, requireRaces: null },
     agents: { role: 'character' }, // 1.3.R2 (for deck-building requirements)
     flexMaxAsResource: null,
@@ -62,8 +64,15 @@ export const SIDES = {
   'fallen-wizard': {
     id: 'fallen-wizard', avatarAlignment: 'Fallen-wizard',
     alignments: ['Hero', 'Minion', 'Neutral', 'Dual', 'Stage', 'Fallen-wizard'],
-    // 1.3.F1 -- rekeyed onto (bucket, alignment) in lot 3 Task 20.
-    copies: { default: 2, byAlignment: { Stage: 3 } },
+    // 1.3.F1 -- four categories, checked in order, first match wins. Hazards
+    // match none of them and fall through to 1.3.1's general 3.
+    copies: [
+      { bucket: 'resource', alignment: 'Stage', limit: 3 },
+      { bucket: 'character', limit: 2 },
+      { bucket: 'resource', alignment: 'Hero', limit: 2 },
+      { bucket: 'resource', alignment: 'Minion', limit: 2 },
+      { limit: 3 },
+    ],
     pool: { maxCharacters: 10, maxMinorItems: 2, balrogMindPerCharacterLimit: null, requireRaces: null },
     agents: { role: 'character' }, // 1.3.F4
     flexMaxAsResource: 2,          // 1.3.F2 -- the third copy counts as a hazard
@@ -73,7 +82,8 @@ export const SIDES = {
   balrog: {
     id: 'balrog', avatarAlignment: 'Balrog',
     alignments: ['Minion', 'Neutral', 'Dual', 'Balrog'],
-    copies: { default: 3, byAlignment: {} },
+    // 1.3.1 -- three copies of any non-unique card.
+    copies: [{ limit: 3 }],
     // 1.3.B4 -- non-avatar characters must be Orc or Troll with mind < 9,
     // unless they are Balrog-specific.
     pool: { maxCharacters: 10, maxMinorItems: 2, balrogMindPerCharacterLimit: 9, requireRaces: ['Orc', 'Troll'] },

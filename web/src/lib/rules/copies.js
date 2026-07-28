@@ -14,6 +14,18 @@
 // the sideboard, out of the three that avatar may have in the whole deck.
 import { SIDES, GENERAL } from './sides.js';
 import { isRuleEnabled } from './catalog.js';
+import { roleFor } from './roles.js';
+
+// 1.3.1 / 1.3.F1 -- the first entry whose bucket and alignment both match.
+// An entry with neither is the catch-all.
+export function copyLimitFor(profile, role) {
+  for (const rule of profile.copies) {
+    if (rule.bucket && rule.bucket !== role.bucket) continue;
+    if (rule.alignment && rule.alignment !== role.effectiveAlignment) continue;
+    return rule.limit;
+  }
+  return GENERAL.copiesDefault;
+}
 
 export function copyCaps(card, { side, ruleOverrides = {} } = {}) {
   // Reject inherited keys ('constructor', 'toString', ...): SIDES is a plain
@@ -56,7 +68,7 @@ export function copyCaps(card, { side, ruleOverrides = {} } = {}) {
   }
 
   if (on('COPIES-LIMIT')) {
-    const limit = profile.copies.byAlignment[card.alignment] ?? profile.copies.default;
+    const limit = copyLimitFor(profile, roleFor(card, side));
     caps.push({ limit, scope: 'total', ruleId: 'COPIES-LIMIT' });
   }
   return caps;

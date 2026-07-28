@@ -18,12 +18,24 @@ export function localize(t, prefix, value) {
   return localized === `${prefix}.${value}` ? value : localized;
 }
 
-// "3 per card, 3 for Stage" -- the default copy limit plus any per-alignment
-// overrides, straight from SIDES[side].copies.
+// "3 per card, 3 for Stage resources, 2 for characters" -- the catch-all
+// entry (the one table row with neither `bucket` nor `alignment`, which sits
+// LAST in SIDES[side].copies because copyLimitFor's first-match-wins scan
+// needs it there as the fallback) rendered first, then every more specific
+// entry in table order. Every number and category name is read straight off
+// the table -- nothing here is hardcoded -- so this text can never drift from
+// what copyCaps/copyLimitFor (copies.js) actually enforces.
 export function copiesText(t, profile) {
-  const parts = [t('docs.copies.default', { n: profile.copies.default })];
-  for (const [alignment, n] of Object.entries(profile.copies.byAlignment)) {
-    parts.push(t('docs.copies.override', { n, alignment: localize(t, 'alignment', alignment) }));
+  const rules = profile.copies;
+  const catchAll = rules.find((rule) => !rule.bucket && !rule.alignment);
+  const overrides = rules.filter((rule) => rule.bucket || rule.alignment);
+  const parts = [t('docs.copies.default', { n: catchAll.limit })];
+  for (const rule of overrides) {
+    const label = [
+      rule.alignment ? localize(t, 'alignment', rule.alignment) : null,
+      rule.bucket ? localize(t, 'bucket', rule.bucket) : null,
+    ].filter(Boolean).join(' ');
+    parts.push(t('docs.copies.override', { n: rule.limit, alignment: label }));
   }
   return parts.join(', ');
 }

@@ -13,18 +13,37 @@ function stubT(key, params) {
 }
 
 describe('copiesText', () => {
-  it('wizard: default only, no per-alignment override', () => {
+  it('wizard: a single-entry catch-all table renders as the default only', () => {
+    // wizard.copies is [{ limit: 3 }] -- one entry, no bucket/alignment, so
+    // it IS the catch-all and there are no override entries to render.
+    expect(SIDES.wizard.copies).toEqual([{ limit: 3 }]);
     const text = copiesText(stubT, SIDES.wizard);
-    expect(text).toBe(`docs.copies.default::{"n":${SIDES.wizard.copies.default}}`);
+    expect(text).toBe(`docs.copies.default::{"n":${SIDES.wizard.copies[0].limit}}`);
   });
 
-  it('fallen-wizard: default plus a Stage override, using the localized alignment', () => {
+  it('fallen-wizard: catch-all first, then each 1.3.F1 category in table order, using localized labels', () => {
+    const [stageResource, character, heroResource, minionResource, catchAll] = SIDES['fallen-wizard'].copies;
+    // Sanity on the shape this test's expectation is built from: a catch-all
+    // (no bucket/alignment) last, three resource+alignment rows and one
+    // bucket-only row before it.
+    expect(catchAll).toEqual({ limit: catchAll.limit });
+    expect(stageResource).toMatchObject({ bucket: 'resource', alignment: 'Stage' });
+    expect(character).toMatchObject({ bucket: 'character' });
+    expect(character.alignment).toBeUndefined();
+    expect(heroResource).toMatchObject({ bucket: 'resource', alignment: 'Hero' });
+    expect(minionResource).toMatchObject({ bucket: 'resource', alignment: 'Minion' });
+
     const text = copiesText(stubT, SIDES['fallen-wizard']);
-    const [alignment, n] = Object.entries(SIDES['fallen-wizard'].copies.byAlignment)[0];
-    expect(text).toContain(`docs.copies.default::{"n":${SIDES['fallen-wizard'].copies.default}}`);
-    // localize() falls back to the raw value when the stub's untranslated echo
-    // matches the key template, so the raw alignment string surfaces here.
-    expect(text).toContain(`docs.copies.override::{"n":${n},"alignment":"${alignment}"}`);
+    // localize() falls back to the raw table value when the stub's
+    // untranslated echo matches the key template, so the raw bucket/alignment
+    // strings surface here rather than real translated prose.
+    expect(text).toBe([
+      `docs.copies.default::{"n":${catchAll.limit}}`,
+      `docs.copies.override::{"n":${stageResource.limit},"alignment":"${stageResource.alignment} ${stageResource.bucket}"}`,
+      `docs.copies.override::{"n":${character.limit},"alignment":"${character.bucket}"}`,
+      `docs.copies.override::{"n":${heroResource.limit},"alignment":"${heroResource.alignment} ${heroResource.bucket}"}`,
+      `docs.copies.override::{"n":${minionResource.limit},"alignment":"${minionResource.alignment} ${minionResource.bucket}"}`,
+    ].join(', '));
   });
 });
 
