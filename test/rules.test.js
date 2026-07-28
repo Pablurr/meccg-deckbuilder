@@ -752,6 +752,31 @@ describe('validateDeck', () => {
     expect(hits[0].params.id).toBe(wrongRaceChar.id);
   });
 
+  it('FACTION-RACE: a Man faction is illegal for a Balrog, an Orc faction is not (1.3.B4)', () => {
+    const V = (id) => validateDeck({ side: 'balrog', length: 'standard', tournament: true, quantities: { [id]: 1 }, cardsById: index });
+    expect(V('LE-260').filter((w) => w.ruleId === 'FACTION-RACE')).toHaveLength(1); // Balchoth, Man
+    expect(V('LE-274').filter((w) => w.ruleId === 'FACTION-RACE')).toEqual([]);     // Orcs of Angmar, Orc
+    expect(V('LE-262').filter((w) => w.ruleId === 'FACTION-RACE')).toEqual([]);     // Black Trolls, Troll
+    expect(V('LE-272').filter((w) => w.ruleId === 'FACTION-RACE')).toEqual([]);     // Misty Mountain Wargs, Wolf
+    expect(V('AS-112').filter((w) => w.ruleId === 'FACTION-RACE')).toEqual([]);     // Bairanax Roused, Dragon
+  });
+
+  it('FACTION-RACE: other sides are unaffected', () => {
+    const out = validateDeck({ side: 'ringwraith', length: 'standard', tournament: true, quantities: { 'LE-260': 1 }, cardsById: index });
+    expect(out.filter((w) => w.ruleId === 'FACTION-RACE')).toEqual([]);
+  });
+
+  it('FACTION-RACE: plural race spellings still match', () => {
+    // Guard against a regression to substring matching.
+    for (const c of cards.filter((x) => (x.attributes || {}).marshallingPointsType === 'faction')) {
+      const race = (c.attributes || {}).race;
+      const legal = ['Orc', 'Troll', 'Wolf', 'Animal', 'Dragon'].some((r) => matchesRace(race, r));
+      const out = validateDeck({ side: 'balrog', length: 'standard', tournament: true, quantities: { [c.id]: 1 }, cardsById: index });
+      const fired = out.some((w) => w.ruleId === 'FACTION-RACE');
+      expect(fired).toBe(!legal);
+    }
+  });
+
   it('POOL-ITEMS: starting minor items above the per-side max fire by default', () => {
     const minorItem = firstWhere((c) => c.type === 'Resource' && c.attributes.playableAsStartingMinorItem === true);
     const out = validateDeck({

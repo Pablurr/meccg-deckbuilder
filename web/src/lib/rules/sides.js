@@ -51,6 +51,7 @@ export const SIDES = {
     specificMode: 'avatar-match',
     // 1.4.W1 -- a location deck holds only Hero sites, plus 1.4.1's five open Balrog sites.
     locationDeck: { alignments: ['Hero'], unlimitedFwSites: false, requireBalrogVersion: false },
+    factionRaces: null,
   },
   ringwraith: {
     id: 'ringwraith', avatarAlignment: 'Minion',
@@ -64,6 +65,7 @@ export const SIDES = {
     specificMode: 'avatar-match',
     // 1.4.R1 -- a location deck holds only Minion sites, plus 1.4.1's five open Balrog sites.
     locationDeck: { alignments: ['Minion'], unlimitedFwSites: false, requireBalrogVersion: false },
+    factionRaces: null,
   },
   'fallen-wizard': {
     id: 'fallen-wizard', avatarAlignment: 'Fallen-wizard',
@@ -90,6 +92,7 @@ export const SIDES = {
     // 1.4.F1 -- a Fallen-wizard location deck takes hero AND minion sites, plus
     // its own Fallen-wizard sites (unlimited copies of those, see copies.js).
     locationDeck: { alignments: ['Hero', 'Minion', 'Fallen-wizard'], unlimitedFwSites: true, requireBalrogVersion: false },
+    factionRaces: null,
   },
   balrog: {
     id: 'balrog', avatarAlignment: 'Balrog',
@@ -106,6 +109,8 @@ export const SIDES = {
     // 1.4.B1 -- a location deck holds Minion and Balrog sites, plus 1.4.1's
     // five open Balrog sites; a Balrog version is required for the sites 1.4.B1 names.
     locationDeck: { alignments: ['Minion', 'Balrog'], unlimitedFwSites: false, requireBalrogVersion: true },
+    // 1.3.B4 -- "Factions can only be Orc, Troll, Wolf, Animal, or Dragon".
+    factionRaces: ['Orc', 'Troll', 'Wolf', 'Animal', 'Dragon'],
   },
 };
 

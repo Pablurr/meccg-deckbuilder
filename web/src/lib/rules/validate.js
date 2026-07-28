@@ -10,6 +10,7 @@ import { RULES, RULE_BY_ID, isRuleEnabled } from './catalog.js';
 import { copyCaps } from './copies.js';
 import { roleFor } from './roles.js';
 import { siteIndex } from './sites.js';
+import { matchesRace } from './races.js';
 
 // Re-exported so importers keep one entry point into the rules layer.
 export { RULES, isRuleEnabled };
@@ -225,6 +226,13 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
       if (mind != null && profile.pool.balrogMindPerCharacterLimit != null && mind >= profile.pool.balrogMindPerCharacterLimit) {
         emit('BALROG-MIND', { id: e.id, name: name(c), mind, limit: profile.pool.balrogMindPerCharacterLimit });
       }
+    }
+
+    // 1.3.B4 -- faction races. "Faction" here is the game's card category
+    // (marshallingPointsType 'faction'), never a player camp.
+    if (profile.factionRaces && a.marshallingPointsType === 'faction'
+        && !profile.factionRaces.some((r) => matchesRace(a.race, r))) {
+      emit('FACTION-RACE', { id: e.id, name: name(c), race: String(a.race || '') });
     }
   }
 

@@ -74,9 +74,24 @@ describe('terminology guards', () => {
     }
   });
 
+  // Explicit allow-list: keys where "faction" legitimately names the game's
+  // Faction card category rather than a player's camp/side. CoE 1.3.B4 is a
+  // rule *about* Factions (a Balrog player's allowed Faction races), so its
+  // message and doc keys must say the word. Every entry here is a conscious,
+  // hand-verified assertion that THIS key's value uses "faction"/"facción" in
+  // its card-category sense — not a blanket exemption. Do not add a key here
+  // to silence a failure without first reading the string and confirming it
+  // never refers to a side; each addition is a hole in the guard's coverage
+  // for that one key, in every language, forever.
+  const ALLOWED_FACTION_KEYS = new Set([
+    'rules.FACTION-RACE',
+    'rules.FACTION-RACE.doc',
+  ]);
+
   it('side-related strings never use the word "faction" for a side', () => {
     for (const lang of ['fr', 'en', 'es']) {
       for (const [key, value] of Object.entries(translations[lang])) {
+        if (ALLOWED_FACTION_KEYS.has(key)) continue;
         if (NAMESPACES.some((ns) => key.startsWith(ns))) {
           expect(`${lang}:${key}=${value}`).not.toMatch(OFFENDING);
         }

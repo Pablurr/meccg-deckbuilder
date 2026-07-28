@@ -139,6 +139,13 @@ function buildFixture(code) {
       const bigMindChar = firstWhere((c) => c.type === 'Character' && !c.attributes.avatar && c.attributes.specific !== 'Balrog' && parseInt(c.attributes.mind, 10) >= 9);
       return { ...base, side: 'balrog', quantities: { [balrogAvatar.id]: 1, [bigMindChar.id]: 1 } };
     }
+    case 'FACTION-RACE': {
+      // LE-260 Balchoth: marshallingPointsType 'faction', race "Man" -- not
+      // in the Balrog's allowed faction-race list (1.3.B4).
+      const wrongRaceFaction = firstWhere((c) => (c.attributes || {}).marshallingPointsType === 'faction'
+        && !['Orc', 'Troll', 'Wolf', 'Animal', 'Dragon'].includes((c.attributes || {}).race));
+      return { ...base, side: 'balrog', quantities: { [wrongRaceFaction.id]: 1 } };
+    }
     // 1.5 -- the play deck's four budgets. 29 distinct non-unique Hero
     // resources (one short of the 30 minimum) triggers DECKSIZE-RESOURCES;
     // pairing them with 30 hazards (one more than resources) also triggers

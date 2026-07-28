@@ -51,6 +51,7 @@ export const RULES = [
   // -- Balrog-specific --
   { id: 'BALROG-RACE', severity: 'error', status: 'verified', ref: '1.3.B4', source: COE },
   { id: 'BALROG-MIND', severity: 'error', status: 'verified', ref: '1.3.B4', source: COE },
+  { id: 'FACTION-RACE', severity: 'error', status: 'verified', ref: '1.3.B4', source: COE },
 
   // -- deck sizes --
   // 1.5 -- the play deck's four independent budgets: resources, hazards
