@@ -23,10 +23,10 @@ QA = os.path.join(ROOT, 'scripts', 'proxy-patch-qa.png')
 COLORS = os.path.join(ROOT, 'scripts', 'proxy-patch-colors.txt')
 
 REF_W, REF_H = 570, 796
-CORE = (0.150, 0.9320, 0.470, 0.9750)   # x0, y0, x1, y1 — fully opaque
+CORE = (0.150, 0.9320, 0.440, 0.9750)   # x0, y0, x1, y1 — fully opaque
 MARGIN_PX = 7                            # alpha ramp, at REF_W
 LABEL_FONT_FRAC = 0.0155
-LABEL_CX, LABEL_CY = 0.310, 0.9565
+LABEL_CX, LABEL_CY = 0.295, 0.9565
 LUM_THRESHOLD = 118
 DARK, LIGHT = '#191919', '#F0F0EA'
 FR_CLAMP = 40

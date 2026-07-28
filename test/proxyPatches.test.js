@@ -19,12 +19,12 @@ async function pngInfo(file) {
 }
 
 describe('proxy patch assets', () => {
-  it('ships one RGBA 196x48 patch per key per language variant', async () => {
+  it('ships one RGBA 179x48 patch per key per language variant', async () => {
     expect(SWATCH_KEYS).toHaveLength(16);
     for (const key of SWATCH_KEYS) {
       for (const name of [`${key}.png`, `${key}-fr.png`]) {
         const info = await pngInfo(path.join(PATCHES, name));
-        expect({ name, ...info }).toEqual({ name, width: 196, height: 48, colorType: 6 });
+        expect({ name, ...info }).toEqual({ name, width: 179, height: 48, colorType: 6 });
       }
     }
   });
