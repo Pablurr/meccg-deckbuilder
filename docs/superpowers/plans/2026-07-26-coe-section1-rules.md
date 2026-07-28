@@ -3511,7 +3511,24 @@ git commit -m "feat: SITE-BALROG-VERSION, with a distinct message for Urlurtsu N
 
 **Interfaces:** `SIDES['fallen-wizard'].pool.stagePoints = { total: 3, maxCards: 3, minNonUnique: 1 }`; `null` on the other three sides. Rule `POOL-STAGE`, codes `POOL-STAGE.points` (`{ total, required }`), `POOL-STAGE.count` (`{ count, max }`), `POOL-STAGE.nonUnique` (`{ min }`).
 
-Two data traps: `stagePoints` also appears on Fallen-wizard **sites** (WH-55 = 3, WH-57 = 1), which are not stage resources — filter on `alignment === 'Stage' && type === 'Resource'`; and WH-22 carries `stagePoints: "2(3)"`, so parse the leading integer.
+**PLAN ERROR, found by review — the filter below is wrong.** 1.7.F1 says *"Stage
+resource **permanent-events**"*, so the subtype is part of the rule. Gating only on
+alignment and type admits five cards that are not permanent-events — WH-86, WH-87
+(subtype `Faction`), WH-88, WH-89 (`Special Item`), WH-114 (`Ally`), all "Playable
+at [site]" cards for normal play. A pool of three of those emitted **no** warning,
+so the validator certified an illegal setup as compliant, and drag-and-drop let them
+in. Require `subtype === 'Permanent-event'` in **both** `validate.js` and
+`zones.js`. Of 64 Stage-alignment resources, 59 qualify.
+
+**Second consequence, also found by review.** Widening `zonesFor` broke an invariant
+`POOL-ITEMS` silently relied on: `poolItems += n` counted any pool-eligible
+`Resource`, safe only while Minor Items were the only resources able to reach the
+pool. A fully legal three-card stage pool (WH-66, WH-71, WH-73) fired
+`POOL-ITEMS.count` as a hard error. Scope that counter to minor items — while still
+counting the six "in lieu of a minor item" substitutes, which occupy an item slot by
+their own card text.
+
+Two data traps: `stagePoints` also appears on Fallen-wizard **sites** (WH-55 = 3, WH-57 = 1), which are not stage resources; and WH-22 carries `stagePoints: "2(3)"`, so parse the leading integer — though WH-22 is a `Hazard/Neutral`, making that trap about parser robustness rather than a card that ever reaches the pool sum.
 
 - [ ] **Step 1: Write the failing tests**
 
