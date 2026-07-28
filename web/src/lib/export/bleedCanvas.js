@@ -4,8 +4,7 @@ import { withPngDpi } from './pngDpi.js';
 import { drawProxyOnFace } from './proxyDraw.js';
 
 // Image bytes (JPEG/PNG) -> cut-size (750x1050) face canvas, optionally with
-// the proxy stamp baked in. stamp = { lang } | null (self-clone variant: the
-// cover is sampled from the face itself, so no swatch is needed).
+// the proxy stamp baked in. stamp = { patchBmp, key } | null.
 export async function renderCutFace(bytes, stamp = null) {
   const bmp = await createImageBitmap(new Blob([bytes]));
   const face = document.createElement('canvas');
@@ -16,7 +15,7 @@ export async function renderCutFace(bytes, stamp = null) {
   fctx.imageSmoothingQuality = 'high';
   fctx.drawImage(bmp, 0, 0, CARD_W_CUT, CARD_H_CUT);
   bmp.close();
-  if (stamp) drawProxyOnFace(fctx, CARD_W_CUT, CARD_H_CUT, stamp);
+  if (stamp) drawProxyOnFace(fctx, CARD_W_CUT, CARD_H_CUT, stamp.patchBmp, stamp.key);
   return face;
 }
 

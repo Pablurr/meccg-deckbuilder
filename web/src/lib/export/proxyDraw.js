@@ -1,42 +1,52 @@
-import { rectForLang, PROXY_LABEL, labelColorForLum } from '../proxy.js';
+import {
+  PROXY_PATCH_RECT, PROXY_LABEL, PROXY_LABEL_FONT_FRAC,
+  PROXY_LABEL_POS, PROXY_LABEL_COLOR, patchUrl,
+} from '../proxy.js';
 
-// Mean luminance [0..255] of a canvas region (own bytes, never tainted here).
-function regionLuminance(ctx, x, y, w, h) {
-  const data = ctx.getImageData(x, y, w, h).data;
-  let sum = 0;
-  let n = 0;
-  for (let i = 0; i < data.length; i += 4) {
-    sum += 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-    n++;
+// Bake the proxy stamp into a cut-size face: the frame patch drawn over the
+// copyright / set-name zone, "Proxy" in Arial Bold on top. Browser-only
+// (canvas 2d ctx). If the patch bitmap is missing, fill with the average of the
+// pixels already under the rect — proxy mode must never leave the notice visible.
+export function drawProxyOnFace(ctx, w, h, patchBmp, key) {
+  const r = PROXY_PATCH_RECT;
+  const x = Math.round(r.x * w);
+  const y = Math.round(r.y * h);
+  const rw = Math.round(r.w * w);
+  const rh = Math.round(r.h * h);
+  if (patchBmp) {
+    ctx.drawImage(patchBmp, x, y, rw, rh);
+  } else {
+    const data = ctx.getImageData(x, y, rw, rh).data;
+    let R = 0, G = 0, B = 0;
+    const n = data.length / 4;
+    for (let i = 0; i < data.length; i += 4) { R += data[i]; G += data[i + 1]; B += data[i + 2]; }
+    ctx.fillStyle = `rgb(${Math.round(R / n)},${Math.round(G / n)},${Math.round(B / n)})`;
+    ctx.fillRect(x, y, rw, rh);
   }
-  return n ? sum / n : 0;
-}
-
-// Bake the proxy stamp into a cut-size face (SELF-CLONE variant): sample a clean
-// band segment of the face itself and stretch it over the covered zone, then
-// draw "Proxy" (bold) centred. Browser-only (canvas 2d ctx). No assets, no
-// fetch — the cover colour/texture comes from the card's own frame. The label
-// colour is chosen from the ACTUAL luminance of the pasted patch (authoritative,
-// per card), so it stays legible whatever the frame turns out to be.
-// stamp = { lang, rect: {x,y,w,h}, src: {x,y,w,h} }.
-export function drawProxyOnFace(ctx, w, h, stamp) {
-  const r = stamp.rect || rectForLang(stamp.lang);
-  const s = stamp.src;
-  const dx = Math.round(r.x * w);
-  const dy = Math.round(r.y * h);
-  const dw = Math.round(r.w * w);
-  const dh = Math.round(r.h * h);
-  const sx = Math.round(s.x * w);
-  const sy = Math.round(s.y * h);
-  const sw = Math.round(s.w * w);
-  const sh = Math.round(s.h * h);
-  // Source and dest never share pixels (the source strip is either beside the
-  // zone or a clean row above it), so drawing the canvas onto itself is safe.
-  ctx.drawImage(ctx.canvas, sx, sy, sw, sh, dx, dy, dw, dh);
-  const color = labelColorForLum(regionLuminance(ctx, dx, dy, dw, dh));
-  ctx.fillStyle = color;
-  ctx.font = `bold ${Math.round(dh * 0.62)}px Arial, Helvetica, sans-serif`;
+  ctx.fillStyle = PROXY_LABEL_COLOR[key] || '#F0F0EA';
+  ctx.font = `bold ${Math.round(PROXY_LABEL_FONT_FRAC * w)}px Arial, Helvetica, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(PROXY_LABEL, dx + dw / 2, dy + dh / 2 + 1);
+  ctx.fillText(PROXY_LABEL, PROXY_LABEL_POS.cx * w, PROXY_LABEL_POS.cy * h);
+}
+
+// Fetch + decode the patch PNGs once per export, in the export's image language.
+// A failed patch maps to null so drawProxyOnFace falls back to the averaged fill.
+export async function loadPatchBitmaps(keys, lang) {
+  const out = new Map();
+  await Promise.all([...keys].map(async (key) => {
+    try {
+      const res = await fetch(patchUrl(key, lang));
+      if (!res.ok) throw new Error(String(res.status));
+      out.set(key, await createImageBitmap(await res.blob()));
+    } catch {
+      out.set(key, null);
+    }
+  }));
+  return out;
+}
+
+// Free the decoded patch bitmaps once an export has consumed them.
+export function closePatchBitmaps(bitmaps) {
+  for (const bmp of bitmaps.values()) if (bmp) bmp.close();
 }

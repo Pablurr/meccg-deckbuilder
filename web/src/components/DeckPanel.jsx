@@ -50,7 +50,7 @@ function MiniCard({ card, qty, lang, thumbW, onChangeQty, onToggle, trackPointer
           if (next) el.src = next;
         }}
       />
-      <ProxyStamp card={card} lang={lang} on={proxyMode} src={cardThumbSrc(card, lang, thumbW)} />
+      <ProxyStamp card={card} lang={lang} on={proxyMode} />
       {confirming ? (
         <div className="deck-mini-confirm">
           <button
