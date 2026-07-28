@@ -67,6 +67,16 @@ describe('zonesFor', () => {
       expect(zonesFor(index.get(id)).extra).toContain('pool');
     }
   });
+  it('non-permanent-event Stage resources are not pool-eligible, even with stagePoints (1.7.F1)', () => {
+    // CoE 1.7.F1 restricts the Fallen-wizard stage pool to Stage resource
+    // PERMANENT-EVENTS. WH-86/WH-87 (subtype Faction), WH-88/WH-89 (subtype
+    // Special Item) and WH-114 (subtype Ally) all carry stagePoints but are
+    // not permanent-events, so the pool must stay closed to them.
+    for (const id of ['WH-86', 'WH-87', 'WH-88', 'WH-89', 'WH-114']) {
+      const z = zonesFor(index.get(id));
+      expect(z.extra).not.toContain('pool');
+    }
+  });
 });
 
 describe('dropTargets', () => {
@@ -797,6 +807,18 @@ describe('validateDeck', () => {
     expect(hit[0].params).toEqual({ count: 3, max: 2, side: 'wizard' });
   });
 
+  it('the six "in lieu of a minor item" permanent-events still trip the minor-item cap', () => {
+    // These occupy an item slot by their own card text, so the widening that
+    // let 1.7.F1's Stage resources into the pool must not have carved them
+    // out of the count -- only the Stage family gets its own budget.
+    const inLieu = ['AS-94', 'BA-31', 'BA-44'];
+    const out = validateDeck({
+      side: 'wizard', length: 'standard', tournament: true,
+      zones: { sideboard: {}, pool: Object.fromEntries(inLieu.map((id) => [id, 1])) }, cardsById: index,
+    });
+    expect(out.filter((w) => w.code === 'POOL-ITEMS.count')).toHaveLength(1);
+  });
+
   it('UNIQUE-LIMIT: exactly 2+ copies of a unique non-avatar card fire by default; 1 copy never does', () => {
     const uniqueCard = firstWhere((c) => c.attributes.unique === true && !c.attributes.avatar && c.type !== 'Site');
     const oneCopy = validateDeck({
@@ -1483,6 +1505,24 @@ describe('POOL-STAGE (1.7.F1)', () => {
     const three = byPoints(3, false);
     const z = zonesFor(three);
     expect(z.primary === 'pool' || z.extra.includes('pool')).toBe(true);
+  });
+
+  it('a pool of non-permanent-event stage cards is reported non-compliant, not silently accepted', () => {
+    // WH-86/WH-87 (subtype Faction) and WH-88 (subtype Special Item) all
+    // carry stagePoints but are not Permanent-events, so none of them may
+    // satisfy 1.7.F1 -- this must not read as a legal, zero-point-required
+    // empty stage pool.
+    const out = V({ 'WH-86': 1, 'WH-87': 1, 'WH-88': 1 });
+    expect(of(out, 'POOL-ELIGIBLE.type')).toHaveLength(3);
+    expect(of(out, 'POOL-STAGE.points')).toHaveLength(1); // 0 real stage points banked
+  });
+
+  it('a compliant three-card stage pool does not also trip the minor-item cap (1.7 vs 1.7.F1)', () => {
+    // WH-66, WH-71, WH-73: three non-unique 1-point Stage permanent-events,
+    // exactly the legal 1.7.F1 pool. They must not count against
+    // maxMinorItems -- that cap belongs to a different card family (1.7).
+    const out = V({ 'WH-66': 1, 'WH-71': 1, 'WH-73': 1 });
+    expect(out.filter((w) => w.ruleId === 'POOL-ITEMS')).toEqual([]);
   });
 });
 

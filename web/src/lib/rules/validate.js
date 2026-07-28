@@ -289,14 +289,22 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
     }
     if (c.type === 'Character') poolChars += n;
     else if (c.type === 'Resource') {
-      poolItems += n;
       // 1.7 -- "up to two non-unique, non-hoard minor items". The qualifier is
       // about minor items; the six permanent-events playable "in lieu of a
-      // minor item" enter on their own card text, so it does not apply to them.
+      // minor item" enter on their own card text, so it does not apply to
+      // them, but they still occupy an item slot and must count toward the
+      // cap below. 1.7.F1's Stage resource permanent-events are a separate
+      // family with their own budget (POOL-STAGE below) and must NOT also
+      // count here -- same minor-item-family test zonesFor uses to route a
+      // card to the pool at all, minus the Stage branch.
       const a = c.attributes || {};
-      if (a.subtype === 'Minor Item') {
-        if (a.unique) emit('POOL-ITEMS', { id, name: name(c) }, 'POOL-ITEMS.unique');
-        if ((a.keywords || []).includes('Hoard Item')) emit('POOL-ITEMS', { id, name: name(c) }, 'POOL-ITEMS.hoard');
+      const isMinorItemFamily = a.subtype === 'Minor Item' || a.playableAsStartingMinorItem === true;
+      if (isMinorItemFamily) {
+        poolItems += n;
+        if (a.subtype === 'Minor Item') {
+          if (a.unique) emit('POOL-ITEMS', { id, name: name(c) }, 'POOL-ITEMS.unique');
+          if ((a.keywords || []).includes('Hoard Item')) emit('POOL-ITEMS', { id, name: name(c) }, 'POOL-ITEMS.hoard');
+        }
       }
     }
   }
@@ -309,10 +317,15 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
     let points = 0, count = 0, nonUnique = 0;
     for (const [id, n] of Object.entries(pool)) {
       const c = cardsById.get(id); if (!c) continue;
-      // stagePoints also appears on Fallen-wizard SITES (WH-55 Deep Mines = 3,
-      // WH-57 Rhosgobel = 1), which are not stage resources.
-      if (c.alignment !== 'Stage' || c.type !== 'Resource') continue;
       const a = c.attributes || {};
+      // stagePoints also appears on Fallen-wizard SITES (WH-55 Deep Mines = 3,
+      // WH-57 Rhosgobel = 1), which are not stage resources. It also appears
+      // on five Stage resources that are not Permanent-events (WH-86/WH-87
+      // subtype Faction, WH-88/WH-89 subtype Special Item, WH-114 subtype
+      // Ally) -- CoE 1.7.F1 names "Stage resource permanent-events"
+      // specifically, so the subtype must be checked too, not just alignment
+      // and type.
+      if (c.alignment !== 'Stage' || c.type !== 'Resource' || a.subtype !== 'Permanent-event') continue;
       // WH-22 spells its value "2(3)" -- take the leading integer.
       points += (toInt(a.stagePoints) || 0) * n;
       count += n;
