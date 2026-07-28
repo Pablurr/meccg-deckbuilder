@@ -3145,6 +3145,19 @@ git commit -m "feat: doc page states the four play-deck budgets"
 
 - [ ] **Step 2: Confirm failure** — `npx vitest run test/rules.test.js -t "1.3.F1"` → FAIL (hazard caps at 2).
 
+**Plan gap found during execution.** This task's file list omits
+`web/src/lib/rules/docText.js` and `test/docText.test.js`. `copiesText` reads the
+old `{ default, byAlignment }` shape and breaks with three failing tests the moment
+`copies` becomes an ordered table. It must be rewritten here — leaving it would put
+wrong copy limits on the documentation page, the exact class of doc/enforcement
+divergence Task 19 existed to eliminate.
+
+Render the **catch-all entry first** (it is last in the table, but reads naturally
+first — matching the old output's "3 per card, 3 for Stage" shape), then the
+specific entries in table order. Each specific entry needs a label composed from its
+bucket and/or alignment, so add `bucket.*` keys alongside the existing `alignment.*`
+ones and reuse `docs.copies.default` / `docs.copies.override`.
+
 - [ ] **Step 3: Rewrite the `copies` field**
 
 In `sides.js`, replace each side's `copies` with an ordered table. Wizard, Ringwraith and Balrog:
