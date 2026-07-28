@@ -1,7 +1,7 @@
 // Proxy-stamp classification & geometry. Pure data + functions, no IO.
-// Maps each card to one of 16 swatch textures (the band segment matching the
-// card frame's colour) and positions the covered copyright / set-name zone.
-// Spec: docs/superpowers/specs/2026-07-23-proxy-card-stamp-design.md
+// Maps each card to one of 16 frame keys, and holds the geometry and label
+// spec shared by the CSS overlay and the canvas export.
+// Spec: docs/superpowers/specs/2026-07-28-proxy-frame-patches-design.md
 
 export const PROXY_LABEL = 'Proxy';
 

@@ -74,12 +74,15 @@ pour les planches PDF, `jszip` pour l'archive), sans passer par aucun serveur.
 
 ### Mode Proxy
 
-L'interrupteur **« Proxy »** (à côté du sélecteur de langues, **activé par défaut**) recouvre la
-mention « ©19xx Tolkien Enterprises » — ou le nom d'extension sur les cartes FR — par un tampon
-« Proxy » assorti à la **texture du cadre de chaque type de carte** (16 fonds : par type/camp, un
-rouge pour Nazgûl/Balrog, un par wizard). C'est une exigence de MPC pour les cartes proxy. Le
-tampon apparaît **à l'écran et dans les exports ZIP/PDF** ; désactive l'interrupteur pour
-retrouver les images d'origine. Les cartes **Région** et les **dos** ne sont jamais tamponnés.
+L'interrupteur **« Proxy »** (à côté du sélecteur de langues, **activé par défaut**) efface la
+mention « ©19xx Tolkien Enterprises » — ou le nom d'extension sur les cartes FR — en **repeignant
+la zone avec le cadre vierge du type de carte**, puis écrit « Proxy » par-dessus en Arial Bold.
+C'est une exigence de MPC pour les cartes proxy. Les 16 cadres sources sont dans
+`assets/card-templates/` ; les 32 patchs de `web/public/proxy-patches/` s'en régénèrent avec
+`python scripts/make_proxy_patches.py`. Les cartes FR utilisent la variante `-fr` (leurs images
+viennent d'une autre source, à la colorimétrie différente). Le tampon apparaît **à l'écran et dans
+les exports ZIP/PDF** ; désactive l'interrupteur pour retrouver les images d'origine. Les cartes
+**Région** et les **dos** ne sont jamais tamponnés.
 
 ### Langue des images (ZIP et PDF)
 
