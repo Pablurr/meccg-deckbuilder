@@ -1,0 +1,16 @@
+hero-character #191919 171.5
+minion-character #F0F0EA 40.4
+hero-site #191919 225.5
+minion-site #F0F0EA 42.0
+balrog-site #F0F0EA 71.2
+fw-site #191919 183.9
+hero-resource #F0F0EA 73.3
+minion-resource #F0F0EA 53.1
+stage-resource #191919 135.0
+hazard #F0F0EA 36.4
+red #F0F0EA 60.9
+alatar #191919 170.3
+gandalf #191919 161.5
+pallando #F0F0EA 105.5
+radagast #191919 154.4
+saruman #191919 210.5
