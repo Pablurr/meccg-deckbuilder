@@ -3,7 +3,11 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { flattenCards } from '../web/src/lib/parseCards.js';
-import { swatchKeyForCard, rectForLang, PROXY_RECT, PROXY_LABEL, SWATCH_KEYS } from '../web/src/lib/proxy.js';
+import {
+  swatchKeyForCard, PROXY_PATCH_RECT, PROXY_LABEL, SWATCH_KEYS,
+  PROXY_LABEL_COLOR, PROXY_LABEL_FONT_FRAC, PROXY_LABEL_POS,
+  PROXY_LABEL_FONT_CQW, PROXY_LABEL_DY_CQH, patchUrl,
+} from '../web/src/lib/proxy.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CARDS_JSON = path.join(__dirname, '..', 'web', 'public', 'cards.json');
@@ -65,20 +69,60 @@ describe('swatchKeyForCard', () => {
 });
 
 describe('geometry', () => {
-  it('exposes sane fractional rects and label', () => {
-    for (const r of [PROXY_RECT.enes, PROXY_RECT.fr]) {
-      for (const k of ['x', 'y', 'w', 'h']) {
-        expect(r[k]).toBeGreaterThan(0);
-        expect(r[k]).toBeLessThan(1);
-      }
-      expect(r.x + r.w).toBeLessThan(1);
-      expect(r.y + r.h).toBeLessThanOrEqual(1);
+  it('exposes one fractional draw rect inside the card', () => {
+    const r = PROXY_PATCH_RECT;
+    for (const k of ['x', 'y', 'w', 'h']) {
+      expect(r[k]).toBeGreaterThan(0);
+      expect(r[k]).toBeLessThan(1);
     }
-    expect(rectForLang('fr')).toBe(PROXY_RECT.fr);
-    expect(rectForLang('en')).toBe(PROXY_RECT.enes);
-    expect(rectForLang('es')).toBe(PROXY_RECT.enes);
-    expect(rectForLang(undefined)).toBe(PROXY_RECT.enes);
+    expect(r.x + r.w).toBeLessThan(1);
+    expect(r.y + r.h).toBeLessThanOrEqual(1);
     expect(PROXY_LABEL).toBe('Proxy');
     expect(SWATCH_KEYS).toHaveLength(16);
+  });
+
+  it('covers the measured copyright and set-name extents in every language', () => {
+    const r = PROXY_PATCH_RECT;
+    // en/es "(c)19xx Tolkien Enterprises" and the widest fr set name
+    const notices = [
+      { x0: 0.1632, x1: 0.4246, y0: 0.951, y1: 0.971 },
+      { x0: 0.1789, x1: 0.3561, y0: 0.942, y1: 0.957 },
+    ];
+    for (const n of notices) {
+      expect(r.x).toBeLessThan(n.x0);
+      expect(r.x + r.w).toBeGreaterThan(n.x1);
+      expect(r.y).toBeLessThan(n.y0);
+      expect(r.y + r.h).toBeGreaterThan(n.y1);
+    }
+  });
+
+  it('stops short of the fr "Remastérisé" credit', () => {
+    // First glyph of "Remastérisé - Traduction non officielle" on fr cards.
+    // Overlapping it clips the R — the defect this rect was recalibrated for.
+    expect(PROXY_PATCH_RECT.x + PROXY_PATCH_RECT.w).toBeLessThan(0.4684);
+  });
+
+  it('centres the label horizontally in the draw rect', () => {
+    expect(PROXY_LABEL_POS.cx).toBeCloseTo(PROXY_PATCH_RECT.x + PROXY_PATCH_RECT.w / 2, 6);
+  });
+
+  it('derives the css container-query units from the rect', () => {
+    expect(PROXY_LABEL_FONT_CQW).toBeCloseTo((PROXY_LABEL_FONT_FRAC / PROXY_PATCH_RECT.w) * 100, 6);
+    const boxMid = PROXY_PATCH_RECT.y + PROXY_PATCH_RECT.h / 2;
+    expect(PROXY_LABEL_DY_CQH).toBeCloseTo(((PROXY_LABEL_POS.cy - boxMid) / PROXY_PATCH_RECT.h) * 100, 6);
+  });
+
+  it('gives every key exactly one of the two allowed label colours', () => {
+    expect(Object.keys(PROXY_LABEL_COLOR).sort()).toEqual([...SWATCH_KEYS].sort());
+    for (const key of SWATCH_KEYS) {
+      expect(['#191919', '#F0F0EA']).toContain(PROXY_LABEL_COLOR[key]);
+    }
+  });
+
+  it('selects the fr patch variant only for fr', () => {
+    expect(patchUrl('hazard', 'fr')).toBe('/proxy-patches/hazard-fr.png');
+    expect(patchUrl('hazard', 'en')).toBe('/proxy-patches/hazard.png');
+    expect(patchUrl('hazard', 'es')).toBe('/proxy-patches/hazard.png');
+    expect(patchUrl('hazard', undefined)).toBe('/proxy-patches/hazard.png');
   });
 });
