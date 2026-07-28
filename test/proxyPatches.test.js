@@ -28,4 +28,12 @@ describe('proxy patch assets', () => {
       }
     }
   });
+
+  it('bakes a real FR tone offset: each -fr variant differs from its plain counterpart', async () => {
+    for (const key of SWATCH_KEYS) {
+      const plain = await readFile(path.join(PATCHES, `${key}.png`));
+      const fr = await readFile(path.join(PATCHES, `${key}-fr.png`));
+      expect(fr.equals(plain)).toBe(false);
+    }
+  });
 });

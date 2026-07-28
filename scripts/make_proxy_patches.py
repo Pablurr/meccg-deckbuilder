@@ -7,11 +7,19 @@ copyright / set-name zone can be repainted with the frame itself. Writes:
   scripts/proxy-patch-colors.txt          label colour per key (for proxy.js)
   scripts/proxy-patch-qa.png              visual QA sheet (not committed)
 
+Requires:
+  - Pillow >= 11.3 (for Image.get_flattened_data())
+  - a Windows "Arial Bold" font at C:\\Windows\\Fonts\\arialbd.ttf
+  - the local card corpus under cards/ (gitignored; not present in a fresh
+    clone) — both cards/remastered-all and cards/fr must be populated, since
+    the FR tone offset (fr_offset) is measured against real FR card images.
+
 Run from the repo root:  python scripts/make_proxy_patches.py
 Spec: docs/superpowers/specs/2026-07-28-proxy-frame-patches-design.md
 """
 import json
 import os
+import re
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -86,7 +94,7 @@ def build_patch(key, w=REF_W, h=REF_H):
     return a, outer, m
 
 
-def fr_offset(key, patch, outer, m):
+def fr_offset(key, patch, m):
     """Mean per-channel delta (FR cards - patch) over the margin ring only."""
     cards = []
     for dirpath, _, files in os.walk(FR_CARDS):
@@ -95,7 +103,9 @@ def fr_offset(key, patch, outer, m):
                 cards.append(os.path.join(dirpath, f))
     keyed = [p for p in cards if _key_of_fr(p) == key][:12]
     if not keyed:
-        return (0.0, 0.0, 0.0)
+        raise SystemExit(
+            'No FR cards found for key %r under %s; cannot compute the FR tone '
+            'offset for this key.' % (key, FR_CARDS))
     ow, oh = patch.size
     mask = Image.new('L', (ow, oh), 255)
     ImageDraw.Draw(mask).rectangle([m, m, ow - 1 - m, oh - 1 - m], fill=0)
@@ -104,7 +114,10 @@ def fr_offset(key, patch, outer, m):
     for p in keyed:
         im = Image.open(p).convert('RGB')
         w, h = im.size
-        _, o, mm = boxes(w, h, key)
+        # Per-card margin is discarded: band is resized to (ow, oh) below, so
+        # the mask above (built from the caller's m, i.e. patch's own margin)
+        # is what actually applies.
+        _, o, _ = boxes(w, h, key)
         band = im.crop(o).resize((ow, oh), Image.LANCZOS)
         for ci in range(3):
             hb = band.split()[ci].histogram(mask)
@@ -177,21 +190,56 @@ def label_colour(patch, outer):
     return (DARK if lum > LUM_THRESHOLD else LIGHT), lum
 
 
+def _require_corpus(path, label):
+    """Raise loudly if the local (gitignored) card corpus is missing, rather
+    than letting a fresh clone silently produce zero-offset FR patches."""
+    for _, _, files in os.walk(path):
+        if files:
+            return
+    raise SystemExit(
+        '%s (%s) is missing or empty. Regenerating proxy patches requires the '
+        'local card corpus under cards/, which is gitignored and not present '
+        'in a fresh clone.' % (label, path))
+
+
+def _swatch_keys_from_js():
+    """Pull the SWATCH_KEYS array out of web/src/lib/proxy.js by regex, so
+    TEMPLATE_BY_KEY (this file's hand-maintained mirror) can't silently drift
+    from it. Deliberately not a real JS parse — just enough to catch drift."""
+    js_path = os.path.join(ROOT, 'web', 'src', 'lib', 'proxy.js')
+    with open(js_path, encoding='utf-8') as f:
+        src = f.read()
+    m = re.search(r'SWATCH_KEYS\s*=\s*\[(.*?)\]', src, re.S)
+    if not m:
+        raise SystemExit('Could not find SWATCH_KEYS in %s' % js_path)
+    return set(re.findall(r"'([^']+)'", m.group(1)))
+
+
 def main():
+    _require_corpus(EN_CARDS, 'EN_CARDS')
+    _require_corpus(FR_CARDS, 'FR_CARDS')
+
+    py_keys = set(TEMPLATE_BY_KEY)
+    js_keys = _swatch_keys_from_js()
+    if py_keys != js_keys:
+        raise SystemExit(
+            'TEMPLATE_BY_KEY (make_proxy_patches.py) and SWATCH_KEYS '
+            '(web/src/lib/proxy.js) disagree: only in python=%s only in js=%s'
+            % (sorted(py_keys - js_keys), sorted(js_keys - py_keys)))
+
     os.makedirs(OUT, exist_ok=True)
-    rows, colours = [], []
+    colours = []
     for key in TEMPLATE_BY_KEY:
         patch, outer, m = build_patch(key)
         patch.save(os.path.join(OUT, '%s.png' % key))
 
-        off = fr_offset(key, patch, outer, m)
+        off = fr_offset(key, patch, m)
         chans = [patch.split()[i].point(lambda v, o=off[i]: max(0, min(255, int(round(v + o)))))
                  for i in range(3)]
         Image.merge('RGBA', chans + [patch.getchannel('A')]).save(os.path.join(OUT, '%s-fr.png' % key))
 
         col, lum = label_colour(patch, outer)
         colours.append((key, col, lum))
-        rows.append((key, off))
         print('%-17s size=%dx%d  fr_offset=%s  label=%s (lum %.0f)'
               % (key, patch.width, patch.height, tuple(round(v, 1) for v in off), col, lum))
 

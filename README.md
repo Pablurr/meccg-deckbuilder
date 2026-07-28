@@ -84,6 +84,10 @@ viennent d'une autre source, à la colorimétrie différente). Le tampon appara�
 les exports ZIP/PDF** ; désactive l'interrupteur pour retrouver les images d'origine. Les cartes
 **Région** et les **dos** ne sont jamais tamponnés.
 
+Régénérer les patchs demande le corpus de cartes local sous `cards/` (gitignoré, absent d'un clone
+frais), Pillow et une police Windows Arial Bold. Avant de committer des patchs régénérés, relire
+`scripts/proxy-patch-qa.png` (planche de contrôle visuelle, non committée).
+
 ### Langue des images (ZIP et PDF)
 
 Les exports ZIP et PDF proposent une **langue d'images** : **English, Español, Français** — les

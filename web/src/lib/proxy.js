@@ -20,6 +20,10 @@ export const SWATCH_KEYS = [
 // "Remastérisé…" credit, whose first glyph starts at x 0.4684 and must stay
 // readable. The opaque core is x 0.150–0.440, y 0.932–0.975; the rect below adds
 // the 7px-at-570 feathered margin baked into each patch PNG.
+// These values are the generator's pixel crop box (scripts/make_proxy_patches.py,
+// boxes()/build_patch()) transcribed and rounded to 4 dp, not an independent
+// derivation - the two are coupled by that transcription, so a future
+// recalibration of the generator's crop must update this rect too.
 // Spec: docs/superpowers/specs/2026-07-28-proxy-frame-patches-design.md
 export const PROXY_PATCH_RECT = { x: 0.1377, y: 0.9232, w: 0.3146, h: 0.0606 };
 
