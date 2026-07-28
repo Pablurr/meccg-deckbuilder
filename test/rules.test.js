@@ -1482,6 +1482,62 @@ describe('location deck (1.4, 1.4.1, 1.4.W1/R1/F1/B1)', () => {
   });
 });
 
+// I6 -- every other test in this file (~51 assertions) filters validateDeck's
+// output down to one ruleId, so none of them CAN see one rule contradicting
+// another in the same call. That is exactly how C1 survived 24 individually
+// task-scoped reviews: 'SITE-SIDE: the five open Balrog sites are legal for
+// every side (1.4.1)' above asserts `of(out, 'SITE-SIDE')` is empty and
+// passes, while ALIGN-LEGAL fired on that very same validateDeck() call,
+// unseen, because nothing ever looked at the rest of the array. These assert
+// the COMPLETE, unfiltered output, so a rule that starts firing where it
+// should not fails loudly here even while every single-rule test still
+// passes.
+describe('whole-list assertions (I6): the complete set of emitted rule ids', () => {
+  const V = (side, quantities, zones = { sideboard: {}, pool: {} }) => validateDeck({
+    side, length: 'standard', tournament: true, quantities, zones, cardsById: index,
+  });
+  const ids = (out) => out.map((w) => w.ruleId).sort();
+
+  it('an open Balrog site in a Wizard deck emits nothing about legality (1.4.1) -- C1 itself', () => {
+    // Before the C1 fix this was ['ALIGN-LEGAL', 'AVATAR-PRESENT']: SITE-SIDE
+    // correctly waved BA-83 through (it is one of 1.4.1's five sites with no
+    // hero/minion counterpart) while ALIGN-LEGAL -- comparing c.alignment
+    // 'Balrog' against the Wizard's own alignment list with no exemption --
+    // fired anyway, telling the user to remove a card the rules permit.
+    expect(ids(V('wizard', { 'BA-83': 1 }))).toEqual(['AVATAR-PRESENT']);
+  });
+
+  it('the same open Balrog site is equally clean for a Ringwraith', () => {
+    expect(ids(V('ringwraith', { 'BA-83': 1 }))).toEqual(['AVATAR-PRESENT']);
+  });
+
+  // A real, from-card-data Wizard deck: 1 avatar, 1 site, 30 resources, 30
+  // hazards (12 of them creatures). Frozen here as literal ids rather than
+  // re-derived on every run, so the fixture doesn't drift with the card pool
+  // and so a break in deck construction (not rule evaluation) can't disguise
+  // itself as a rule regression.
+  const LEGAL_WIZARD_DECK = {
+    'TW-117': 1, 'AS-137': 1,
+    'AS-44': 3, 'AS-45': 3, 'AS-46': 3, 'AS-47': 3, 'AS-49': 3, 'AS-50': 3, 'AS-51': 3, 'AS-52': 3, 'AS-53': 3, 'AS-54': 3,
+    'AS-8': 1, 'AS-9': 1, 'AS-10': 1, 'AS-20': 1, 'AS-21': 1, 'AS-22': 1,
+    'BA-11': 1, 'BA-12': 1, 'BA-13': 1, 'DM-106': 1, 'DM-108': 1, 'DM-109': 1,
+    'AS-23': 3, 'AS-24': 3, 'AS-25': 3, 'AS-26': 3, 'AS-27': 3, 'AS-28': 3,
+  };
+
+  it('a legal minimal deck emits nothing at all', () => {
+    expect(V('wizard', LEGAL_WIZARD_DECK)).toEqual([]);
+  });
+
+  it('adding one illegal card to that same legal deck breaches exactly one rule', () => {
+    // AS-1: Minion, non-avatar, non-specific character. Illegal for a Wizard
+    // on alignment alone, and -- landing in the `characters` bucket rather
+    // than `resources`/`hazards` -- it doesn't disturb any other budget the
+    // fixture otherwise satisfies exactly, so it isolates ALIGN-LEGAL alone.
+    const out = V('wizard', { ...LEGAL_WIZARD_DECK, 'AS-1': 1 });
+    expect(ids(out)).toEqual(['ALIGN-LEGAL']);
+  });
+});
+
 describe('POOL-STAGE (1.7.F1)', () => {
   const stages = () => cards.filter((c) => c.alignment === 'Stage' && c.type === 'Resource');
   const byPoints = (n, unique) => stages().find((c) => parseInt((c.attributes || {}).stagePoints, 10) === n

@@ -164,10 +164,15 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
   for (const e of entries) {
     const c = e.card; const a = c.attributes || {};
     const balrogExempt = profile.specificMode === 'balrog-exempt' && a.specific === 'Balrog';
+    // 1.4.1 -- the five Balrog sites with no hero/minion counterpart are open
+    // to every camp. Both SITE-SIDE and ALIGN-LEGAL must honour the exemption
+    // (sides.js isLegalForSide already does, for the browser filter) or a
+    // card the browser presents as legal gets contradicted by the validator.
+    const openBalrogSite = c.type === 'Site' && siteInfo.openBalrog.has(e.id);
 
     if (bannedSet.has(e.id)) emit('BANNED', { id: e.id, name: name(c), side });
 
-    if (!a.avatar && !balrogExempt && !profile.alignments.includes(c.alignment)) {
+    if (!a.avatar && !balrogExempt && !openBalrogSite && !profile.alignments.includes(c.alignment)) {
       emit('ALIGN-LEGAL', { id: e.id, name: name(c), alignment: c.alignment, side });
     }
 
@@ -188,7 +193,7 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
     // the five Balrog sites 1.4.1 opens to everyone.
     if (c.type === 'Site'
         && !profile.locationDeck.alignments.includes(c.alignment)
-        && !siteInfo.openBalrog.has(e.id)) {
+        && !openBalrogSite) {
       emit('SITE-SIDE', { id: e.id, name: name(c), alignment: c.alignment, side });
     }
 
