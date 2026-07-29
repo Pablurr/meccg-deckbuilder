@@ -999,11 +999,15 @@ code {
   /* Bottom drawer: icons instead of labels. The six labels measured 588px of
      width against 355 available, so the bar always wrapped onto a second row
      and cost 97px of a screen the card grid needs. */
-  .drawer { gap: 8px; padding: 8px 10px; }
-  /* min-width spends the room the icons freed: without it the glyphs alone
-     gave 28-36px targets, and one row of six needs only 325px of the 355. */
-  .drawer .btn { padding: 7px 10px; min-height: 36px; min-width: 44px; }
-  .drawer-viewdeck { order: -1; }
+  .drawer { gap: 6px; padding: 8px 8px; }
+  /* min-width spends the room the icons freed: the glyphs alone gave 28-36px
+     targets. 40 rather than the full 44, and tighter gaps and padding with
+     it, because fitting on one row at 375px is not the same as fitting on a
+     real phone: the reporter's device lays these out wider than a 375px test
+     viewport does, and a bar that wraps costs a whole 44px row. At 40 the six
+     need ~285px of the 355, so a device rendering ~20% wider still fits. */
+  .drawer .btn { padding: 7px 8px; min-height: 36px; min-width: 40px; }
+  .drawer-viewdeck { order: -1; gap: 6px; }
   .drawer .ico { display: inline; font-size: 16px; line-height: 1; }
   /* Same declarations as .sr-only, applied by the layout rather than by a
      class in the markup: the label must stay visually hidden AND announced,
