@@ -298,6 +298,62 @@ describe('sides data', () => {
     expect(isLegalForSide(openSite, 'wizard', openBalrog)).toBe(true);
   });
 
+  it('isLegalForSide: a banned card reads legal without the banned set, illegal with it', () => {
+    const oldRoad = index.get('TW-294'); // "Old Road", banned for fallen-wizard (1.3.F6)
+    expect(oldRoad).toBeTruthy();
+    expect(isLegalForSide(oldRoad, 'fallen-wizard')).toBe(true);
+    expect(isLegalForSide(oldRoad, 'fallen-wizard', undefined, new Set(['TW-294']))).toBe(false);
+  });
+
+  it('isLegalForSide: every banned card of a camp is hidden by the filter, and none was hidden already', () => {
+    // The whole point of threading the set through: before this, all 52 banned
+    // cards were fully visible in the browser and only the validator objected.
+    // Asserting "was visible before, hidden now" over the real lists stops a
+    // refactor from dropping the check while the per-card test above still
+    // passes on a hand-picked id.
+    const { bySide } = resolveBanned(cards);
+    const { openBalrog } = siteIndex(cards);
+    for (const side of ['fallen-wizard', 'balrog']) {
+      const banned = bySide[side];
+      expect(banned.size).toBeGreaterThan(0);
+      for (const id of banned) {
+        const card = index.get(id);
+        expect(isLegalForSide(card, side, openBalrog)).toBe(true);
+        expect(isLegalForSide(card, side, openBalrog, banned)).toBe(false);
+      }
+    }
+  });
+
+  it('isLegalForSide: a ban outranks both the Balrog-specific and the 1.4.1 open-site passes', () => {
+    // Ordering guard. No real card is in both states today, so this is
+    // synthetic on purpose: if the ban check ever moves below those two early
+    // returns, a future banned Balrog-specific card would silently stay visible.
+    const specific = { id: 'X-1', alignment: 'Hero', attributes: { specific: 'Balrog' } };
+    expect(isLegalForSide(specific, 'balrog')).toBe(true);
+    expect(isLegalForSide(specific, 'balrog', undefined, new Set(['X-1']))).toBe(false);
+    const openSite = { id: 'X-2', type: 'Site', alignment: 'Balrog', attributes: {} };
+    expect(isLegalForSide(openSite, 'wizard', new Set(['X-2']))).toBe(true);
+    expect(isLegalForSide(openSite, 'wizard', new Set(['X-2']), new Set(['X-2']))).toBe(false);
+  });
+
+  it('isLegalForSide: the Balrog avatar stays visible to the Balrog camp', () => {
+    // BA-3 shares its name with AS-71 "The Balrog (Ally)", which IS banned for
+    // the Balrog. Resolving that ban by name instead of id would delete the
+    // camp's own avatar from its browser.
+    const { bySide } = resolveBanned(cards);
+    expect(bySide.balrog.has('AS-71')).toBe(true);
+    expect(bySide.balrog.has('BA-3')).toBe(false);
+    expect(isLegalForSide(index.get('BA-3'), 'balrog', undefined, bySide.balrog)).toBe(true);
+  });
+
+  it('isLegalForSide: a ban is per camp — a card banned for the Balrog stays visible to a Ringwraith', () => {
+    const { bySide } = resolveBanned(cards);
+    const blackRider = index.get('LE-170'); // "Black Rider", banned for the Balrog (1.3.B5)
+    expect(bySide.balrog.has('LE-170')).toBe(true);
+    expect(isLegalForSide(blackRider, 'balrog', undefined, bySide.balrog)).toBe(false);
+    expect(isLegalForSide(blackRider, 'ringwraith', undefined, bySide.ringwraith)).toBe(true);
+  });
+
   it('sideboard caps follow the length', () => {
     expect(LENGTHS.starter.sideboardMax).toBe(30);
     expect(LENGTHS.standard.sideboardMax).toBe(30);

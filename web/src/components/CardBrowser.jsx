@@ -7,6 +7,8 @@ import { useT } from '../i18n.jsx';
 import { zonesFor } from '../lib/rules/zones.js';
 import { isLegalForSide } from '../lib/rules/sides.js';
 import { siteIndex } from '../lib/rules/sites.js';
+import { resolveBanned } from '../lib/rules/banned.js';
+import { isRuleEnabled } from '../lib/rules/catalog.js';
 import { remainingCopies } from '../lib/rules/copies.js';
 import { capTitle } from '../lib/rules/docText.js';
 
@@ -78,10 +80,26 @@ export default function CardBrowser({ cards, filters, quantities, lang, onChange
   // from siteIndex -- the single source of truth the validator also reads --
   // and OR it into both legality checks below.
   const openBalrog = useMemo(() => siteIndex(cards).openBalrog, [cards]);
+  // 1.3.F6 / 1.3.B5 ban a named list of cards for the Fallen-wizard and the
+  // Balrog. Those cards are legal by alignment, so nothing else in the filter
+  // catches them — without this they sit in the browser looking playable and
+  // only the validator objects, after the player has already added them.
+  //
+  // Gated on the rule being enabled: turning BANNED off in the rules panel
+  // stops the validator complaining, so it must un-hide them too, or the
+  // browser would keep enforcing a rule the player switched off. The gate is
+  // read into a boolean rather than depending on capCtx, which App rebuilds on
+  // every render and would re-walk all 1683 cards each time.
+  const banEnforced = Boolean(side) && isRuleEnabled('BANNED', (capCtx && capCtx.ruleOverrides) || {});
+  const bannedIds = useMemo(
+    () => (banEnforced ? resolveBanned(cards).bySide[side] : undefined),
+    [cards, side, banEnforced],
+  );
   // Legality filter: on by default in deckbuilding, hides cards that aren't
   // legal for the chosen side. `showAll` reveals the rest, visibly marked
   // (never disabled — the app advises, it never blocks what can be added).
-  const visible = side && !showAll ? filtered.filter((c) => isLegalForSide(c, side, openBalrog)) : filtered;
+  const legal = (c) => isLegalForSide(c, side, openBalrog, bannedIds);
+  const visible = side && !showAll ? filtered.filter(legal) : filtered;
   const shown = visible.slice(0, CAP);
   const { previewRef, previewImgRef, stampRef, trackPointer, hidePreview } = useCardPreview(lang, proxyMode);
 
@@ -113,7 +131,7 @@ export default function CardBrowser({ cards, filters, quantities, lang, onChange
           const anySelected = deckbuilding
             ? qty > 0 || (zones.sideboard[c.id] || 0) > 0 || (zones.pool[c.id] || 0) > 0
             : qty > 0;
-          const illegal = deckbuilding && side && showAll && !isLegalForSide(c, side, openBalrog);
+          const illegal = deckbuilding && side && showAll && !legal(c);
           return (
             <div key={c.id} className={`cardcell ${anySelected ? 'selected' : ''} ${illegal ? 'illegal' : ''}`}>
               {/* Click image to select (qty 1) / deselect. Use −/+ for copies once selected.

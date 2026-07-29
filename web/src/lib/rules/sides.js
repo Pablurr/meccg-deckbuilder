@@ -115,15 +115,22 @@ export const SIDES = {
 // finer messages; here they stay visible (legal) so the filter never hides
 // what a rule merely restricts per-avatar.
 //
-// `openBalrog` is optional: the five Balrog sites 1.4.1 opens to every side
-// (no hero or minion counterpart). It has no default here because deriving it
-// means walking the full card array (siteIndex) -- callers that already have
-// that Set (the card browser) pass it through; callers that don't (existing
-// tests, non-site checks) are unaffected, since a card's id is never in an
-// undefined Set.
-export function isLegalForSide(card, sideId, openBalrog) {
+// `openBalrog` and `bannedIds` are both optional Sets, for the same reason:
+// deriving either means walking the full card array (siteIndex / resolveBanned)
+// and this function must stay pure and per-card. Callers that already have them
+// (the card browser) pass them through; callers that don't (existing tests,
+// non-site checks) are unaffected, since a card's id is never in an undefined
+// Set.
+//   - openBalrog: the five Balrog sites 1.4.1 opens to every side (no hero or
+//     minion counterpart).
+//   - bannedIds: this side's ban list (1.3.F6 / 1.3.B5), resolved to ids.
+export function isLegalForSide(card, sideId, openBalrog, bannedIds) {
   const side = SIDES[sideId];
   if (!side || !card) return true;
+  // A ban is unconditional, so it is checked before every pass below: a banned
+  // card is no more playable for being an avatar, Balrog-specific, or an open
+  // 1.4.1 site.
+  if (bannedIds && bannedIds.has(card.id)) return false;
   const a = card.attributes || {};
   if (a.avatar === true) return card.alignment === side.avatarAlignment;
   if (sideId === 'balrog' && a.specific === 'Balrog') return true;
