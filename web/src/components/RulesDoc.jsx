@@ -17,6 +17,31 @@ function StatusChip({ status, t }) {
   return <span className={`status-chip ${status}`}>{t(`status.${status}`)}</span>;
 }
 
+// Glossary of the terms the interface uses for things the rules name
+// differently in English. Each entry names the term by the SAME i18n key the
+// interface renders it from, never a copy of the word: the tab, the warning
+// and this table are then one string, so the glossary cannot document a word
+// the app has stopped using.
+const GLOSSARY = [
+  { termKey: 'zones.play', defKey: 'docs.glossary.play' },
+  { termKey: 'zones.sideboard', defKey: 'docs.glossary.sideboard' },
+  { termKey: 'zones.pool', defKey: 'docs.glossary.pool' },
+  { termKey: 'panel.group.Hazard', defKey: 'docs.glossary.hazard' },
+  { termKey: 'alignment.Minion', defKey: 'docs.glossary.minion' },
+  { termKey: 'alignment.Stage', defKey: 'docs.glossary.stage' },
+];
+
+// What the app does NOT check. Both are Section 1 clauses with no working
+// implementation: 1.3.1's last sentence has no grouping field in the card data
+// (partial detection would produce silent false negatives, worse than an
+// absent rule), and 1.4.B2 has no deck-construction effect at all. Listing
+// them is the only way a player can tell an unchecked rule from a satisfied
+// one -- every other clause on this page reports.
+const GAPS = [
+  { key: 'docs.gap.manifestations', ref: '1.3.1' },
+  { key: 'docs.gap.geann', ref: '1.4.B2' },
+];
+
 // Full-screen documentation modal: prose (hand-written) plus tables rendered
 // straight from the same RULES/SIDES/LENGTHS/BANNED data the validator
 // consumes, so the page can never say something the validator doesn't do.
@@ -45,6 +70,16 @@ export default function RulesDoc({ deck, onToggleRule, onClose }) {
           <p>{t('docs.deckbuilding')}</p>
           <h3>{t('docs.zonesTitle')}</h3>
           <p>{t('docs.zones')}</p>
+          <h3>{t('docs.glossaryTitle')}</h3>
+          <p>{t('docs.glossaryIntro')}</p>
+          <dl className="doc-glossary">
+            {GLOSSARY.map(({ termKey, defKey }) => (
+              <React.Fragment key={termKey}>
+                <dt>{t(termKey)}</dt>
+                <dd>{t(defKey)}</dd>
+              </React.Fragment>
+            ))}
+          </dl>
           <h3>{t('docs.warningsTitle')}</h3>
           <p>{t('docs.warnings')}</p>
           <h3>{t('docs.enforcementTitle')}</h3>
@@ -103,15 +138,32 @@ export default function RulesDoc({ deck, onToggleRule, onClose }) {
         </section>
 
         <section className="doc-section">
-          <h3>{t('docs.notCheckedTitle')}</h3>
-          <p>{t('docs.notCheckedIntro')}</p>
+          <h3>{t('docs.gapsTitle')}</h3>
+          <p>{t('docs.gapsIntro')}</p>
           <ul className="doc-notchecked">
-            {notChecked.map((r) => (
-              <li key={r.id}>
-                <code>{r.id}</code> <StatusChip status={r.status} t={t} /> — {t(`rules.${r.id}.doc`)}
+            {GAPS.map((g) => (
+              <li key={g.key}>
+                {/* refText takes the rule-shaped object (it reads .ref/.refs),
+                    not a bare string — so these render "CoE §1.3.1" exactly
+                    like every other clause citation on the page. */}
+                <a href={COE} target="_blank" rel="noreferrer">{refText(t, g)}</a> — {t(g.key)}
               </li>
             ))}
           </ul>
+          {/* Every rule is sourced today, so this list is empty -- it is kept,
+              behind a length guard, for whenever an unsourced rule is added. */}
+          {notChecked.length > 0 && (
+            <>
+              <p>{t('docs.notCheckedIntro')}</p>
+              <ul className="doc-notchecked">
+                {notChecked.map((r) => (
+                  <li key={r.id}>
+                    <code>{r.id}</code> <StatusChip status={r.status} t={t} /> — {t(`rules.${r.id}.doc`)}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </section>
 
         <section className="doc-section">

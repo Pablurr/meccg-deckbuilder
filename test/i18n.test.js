@@ -98,6 +98,91 @@ describe('terminology guards', () => {
       }
     }
   });
+
+  // The owner's FR glossary. Three of these are a ROTATION, not renames:
+  // "talon" used to name the play deck and now names the sideboard, whose old
+  // name "réserve" now names the pool. So a retired word is not merely
+  // obsolete — it is actively wrong, because it now denotes a different zone.
+  // That is why each retired term is banned outright rather than left to
+  // reviewer attention: a single surviving "réserve" meaning sideboard sends
+  // the player to the wrong tab.
+  const RETIRED_FR = [
+    { bad: /\bdeck de jeu\b/i, use: 'pioche' },
+    { bad: /\bsbires?\b/i, use: 'séide' },
+    { bad: /\bmise en scène\b/i, use: 'progression' },
+    { bad: /\bdangers?\b/i, use: 'péril' },
+    // "pool" and "sideboard" left untranslated in a FR string
+    { bad: /\bpools?\b/i, use: 'réserve' },
+    { bad: /\bsideboards?\b/i, use: 'talon' },
+    { bad: /\bplay decks?\b/i, use: 'pioche' },
+  ];
+
+  it('the retired-term patterns catch what they must and spare lookalikes', () => {
+    for (const bad of ['deck de jeu', 'Sbire', 'sbires', 'Mise en scène', 'danger', 'Dangers', 'pool', 'Sideboard', 'Play deck']) {
+      expect(RETIRED_FR.some((r) => r.bad.test(bad))).toBe(true);
+    }
+    // Words that merely contain a retired term as a substring must survive:
+    // "dangereux" is ordinary French, and "Liverpool" shows the \b anchor
+    // matters. Without the anchors this guard would ban legitimate prose.
+    for (const ok of ['dangereux', 'dangereuse', 'Liverpool', 'poolside']) {
+      expect(RETIRED_FR.some((r) => r.bad.test(ok))).toBe(false);
+    }
+  });
+
+  // The glossary entries cite the English term on purpose ("en anglais « play
+  // deck »") -- naming the word being retired is what a glossary is for, and
+  // MECCG cards are printed in English, so a player needs the mapping. These
+  // are the ONLY keys allowed to contain a retired term, and only inside that
+  // citation. Do not extend this list to silence a failure elsewhere: outside
+  // the glossary, a retired word is not obsolete but wrong, since "réserve"
+  // and "talon" now denote different zones than they used to.
+  const GLOSSARY_KEYS = new Set([
+    'docs.glossary.play', 'docs.glossary.sideboard', 'docs.glossary.pool',
+    'docs.glossary.hazard', 'docs.glossary.minion', 'docs.glossary.stage',
+  ]);
+
+  it('no FR string outside the glossary uses a retired term', () => {
+    const offences = [];
+    for (const [key, value] of Object.entries(translations.fr)) {
+      if (GLOSSARY_KEYS.has(key)) continue;
+      for (const { bad, use } of RETIRED_FR) {
+        if (bad.test(value)) offences.push(`fr:${key} = "${value}"  -> use "${use}"`);
+      }
+    }
+    expect(offences).toEqual([]);
+  });
+
+  // The exemption is scoped: a glossary entry may name the English term, but
+  // only inside the « … » citation. Prose outside the guillemets is ordinary
+  // UI text and must use the new vocabulary like everything else.
+  it('a glossary entry uses a retired term only inside its « … » citation', () => {
+    // Offences are collected rather than asserted inline: the assertion
+    // subject would otherwise interpolate the key ("docs.glossary.sideboard"),
+    // which contains a retired term and fails the test against itself.
+    const offences = [];
+    for (const key of GLOSSARY_KEYS) {
+      const outside = translations.fr[key].replace(/«[^»]*»/g, '');
+      for (const { bad, use } of RETIRED_FR) {
+        if (bad.test(outside)) offences.push(`${key} (outside citation) -> use "${use}"`);
+      }
+    }
+    expect(offences).toEqual([]);
+  });
+
+  // The rotation's own trap: the three zone words must not be assigned to two
+  // different zones. Pinning the exact strings is what makes a future edit
+  // that "fixes" one tab without the others fail loudly.
+  it('the three deck zones carry their glossary names, and no two share one', () => {
+    expect(translations.fr['zones.play']).toBe('Pioche');
+    expect(translations.fr['zones.sideboard']).toBe('Talon');
+    expect(translations.fr['zones.pool']).toBe('Réserve');
+    const zoneNames = ['zones.play', 'zones.sideboard', 'zones.pool'].map((k) => translations.fr[k]);
+    expect(new Set(zoneNames).size).toBe(3);
+    // The short tab labels must agree with the full names, not drift from them.
+    expect(translations.fr['zoneShort.deck']).toBe('Pioche');
+    expect(translations.fr['zoneShort.sideboard']).toBe('Talon');
+    expect(new Set(['zoneShort.deck', 'zoneShort.sideboard', 'zoneShort.pool'].map((k) => translations.fr[k])).size).toBe(3);
+  });
 });
 
 // The key-set parity check above (`fr, en and es have identical key sets`)
