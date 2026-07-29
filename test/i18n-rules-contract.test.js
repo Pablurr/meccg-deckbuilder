@@ -14,7 +14,7 @@ import { parseCards } from '../web/src/lib/parseCards.js';
 import { validateDeck } from '../web/src/lib/rules/validate.js';
 import { RULE_BY_ID } from '../web/src/lib/rules/catalog.js';
 import { translations, makeT } from '../web/src/lib/i18n.js';
-import { localizeParams } from '../web/src/components/DeckPanel.jsx';
+import { localizeParams, warningKey } from '../web/src/components/DeckPanel.jsx';
 
 const { cards, index } = parseCards(raw);
 const cardsById = index;
@@ -322,4 +322,60 @@ describe('i18n rule-message placeholder contract', () => {
       }
     }
   );
+});
+
+// The rule-warning cards fold shut by default and remember which ones the
+// player opened. That memory is keyed by warningKey, so the key has to survive
+// the re-validation that runs on every deck edit, and has to tell apart two
+// warnings that share a rule.
+describe('warningKey', () => {
+  it('is stable for the same warning across re-validation', () => {
+    const w = { ruleId: 'POOL-ITEMS', code: 'POOL-ITEMS.unique', params: { id: 'TW-1', name: 'x' } };
+    // A fresh object with the same content is what the next validateDeck emits.
+    expect(warningKey({ ...w, params: { ...w.params } })).toBe(warningKey(w));
+  });
+
+  it('separates two warnings of the same rule about different cards', () => {
+    const a = { ruleId: 'POOL-ITEMS', code: 'POOL-ITEMS.unique', params: { id: 'TW-1' } };
+    const b = { ruleId: 'POOL-ITEMS', code: 'POOL-ITEMS.unique', params: { id: 'TW-2' } };
+    expect(warningKey(a)).not.toBe(warningKey(b));
+  });
+
+  it('separates two codes of the same rule', () => {
+    const a = { ruleId: 'POOL-ITEMS', code: 'POOL-ITEMS.unique', params: {} };
+    const b = { ruleId: 'POOL-ITEMS', code: 'POOL-ITEMS.hoard', params: {} };
+    expect(warningKey(a)).not.toBe(warningKey(b));
+  });
+
+  it('does not depend on position, so a vanishing warning cannot pass its state on', () => {
+    const w = { ruleId: 'DECKSIZE-RESOURCES', code: 'DECKSIZE-RESOURCES', params: { count: 0 } };
+    // Same warning, different surrounding list: the key must not change.
+    expect(warningKey(w)).toBe(warningKey({ ...w, params: { count: 12 } }));
+  });
+
+  it('is total for a malformed warning rather than throwing', () => {
+    expect(() => warningKey({})).not.toThrow();
+    expect(() => warningKey({ ruleId: 'X' })).not.toThrow();
+  });
+
+  it('every warning a real deck produces gets a key, and equal keys mean equal rule+code', () => {
+    const ws = validateDeck({
+      side: 'wizard',
+      length: 'standard',
+      quantities: { 'TW-1': 1 },
+      zones: { sideboard: {}, pool: {} },
+      cardsById,
+    });
+    expect(ws.length).toBeGreaterThan(0);
+    const byKey = new Map();
+    for (const w of ws) {
+      const k = warningKey(w);
+      expect(k).toBeTruthy();
+      if (byKey.has(k)) {
+        const prev = byKey.get(k);
+        expect([prev.ruleId, prev.code]).toEqual([w.ruleId, w.code]);
+      }
+      byKey.set(k, w);
+    }
+  });
 });

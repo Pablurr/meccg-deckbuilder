@@ -67,6 +67,19 @@ export function localizeParams(w, { cardsById, lang, t }) {
   return p;
 }
 
+// Stable identity for one warning, so which cards are unfolded survives the
+// re-validation that runs on every edit.
+//
+// ruleId + code is not enough on its own: POOL-ITEMS.unique and the
+// multi-name codes fire once per offending card, so the card the warning is
+// about joins the key. Keyed on ruleId alone, unfolding one card's warning
+// would unfold its siblings; keyed on the array index, a warning disappearing
+// would hand its unfolded state to whichever warning shifted into its slot.
+export function warningKey(w) {
+  const p = (w && w.params) || {};
+  return [w && w.ruleId, w && w.code, p.id || p.avatarId || ''].join(':');
+}
+
 function reportUrl(w) {
   const title = encodeURIComponent(`[rule] ${w.ruleId}`);
   const body = encodeURIComponent(JSON.stringify(w.params));
@@ -150,6 +163,16 @@ export default function DeckPanel({
   // trigger lives in that strip rather than next to the title because the
   // strip is already 44px tall on touch, so it costs no extra height there.
   const [showZoom, setShowZoom] = useState(false);
+  // Which rule warnings are unfolded, by warningKey. Folded is the default:
+  // five warnings on a 14-card deck already filled 574px before the 35vh cap,
+  // and the block grows with the deck, so the full text of every one of them
+  // is more than the panel can show at once.
+  const [openWarns, setOpenWarns] = useState(() => new Set());
+  const toggleWarn = (key) => setOpenWarns((prev) => {
+    const next = new Set(prev);
+    if (next.has(key)) next.delete(key); else next.add(key);
+    return next;
+  });
   // The deck's mode can change (setup dialog) after mount, and a freeform
   // deck's pool/sideboard tabs can appear or disappear as those zones empty
   // out; if the current tab no longer exists, fall back to the first tab
@@ -349,22 +372,54 @@ export default function DeckPanel({
       {ruleWarnings.length > 0 && (
         <div className="rule-warns" role="status">
           {ruleWarnings.map((w, i) => {
+            const key = warningKey(w);
+            const open = openWarns.has(key);
             const params = localizeParams(w, { cardsById, lang, t });
             const ref = refText(t, RULE_BY_ID.get(w.ruleId) || {});
             return (
-              <div key={i} className={`rule-warn ${w.severity}`}>
-                <span className="rule-sev" title={t(`rules.severity.${w.severity}`)}>
-                  <span aria-hidden="true">{SEV_ICON[w.severity]}</span> {t(`rules.severity.${w.severity}`)}
-                </span>
-                <span className="msg">{t(`rules.${w.code}`, params)}</span>
-                <span className="rule-meta">
+              <div key={`${key}:${i}`} className={`rule-warn ${w.severity} ${open ? 'open' : ''}`}>
+                {/* Always-visible line: severity icon, rule id, and -- folded
+                    only -- a shortcut to silence the rule. Unfolded, the same
+                    action is the labelled link below, so showing both would
+                    put one destructive action twice in one card. */}
+                <div className="rule-head">
+                  <button
+                    type="button"
+                    className="rule-disclose"
+                    onClick={() => toggleWarn(key)}
+                    aria-expanded={open}
+                    aria-label={t('rules.details')}
+                  >{open ? '▾' : '▸'}</button>
+                  <span className="rule-sev">
+                    <span aria-hidden="true">{SEV_ICON[w.severity]}</span>
+                    {/* The severity word is dropped from the folded line to keep
+                        it to one row, so it stays for assistive tech only --
+                        the icon alone carries no accessible name. */}
+                    <span className="sr-only">{t(`rules.severity.${w.severity}`)}</span>
+                  </span>
                   <code>{w.ruleId}</code>
-                  {ref && (
-                    <a className="linklike" href={COE} target="_blank" rel="noreferrer">{ref}</a>
+                  {!open && (
+                    <button
+                      type="button"
+                      className="rule-ignore"
+                      onClick={() => onToggleRule(w.ruleId, false)}
+                      aria-label={t('rules.disable')}
+                      title={t('rules.disable')}
+                    >⊘</button>
                   )}
-                  <button className="linklike" onClick={() => onToggleRule(w.ruleId, false)}>{t('rules.disable')}</button>
-                  <a className="linklike" href={reportUrl(w)} target="_blank" rel="noreferrer">{t('rules.report')}</a>
-                </span>
+                </div>
+                {open && (
+                  <>
+                    <span className="msg">{t(`rules.${w.code}`, params)}</span>
+                    <span className="rule-meta">
+                      {ref && (
+                        <a className="linklike" href={COE} target="_blank" rel="noreferrer">{ref}</a>
+                      )}
+                      <button className="linklike" onClick={() => onToggleRule(w.ruleId, false)}>{t('rules.disable')}</button>
+                      <a className="linklike" href={reportUrl(w)} target="_blank" rel="noreferrer">{t('rules.report')}</a>
+                    </span>
+                  </>
+                )}
               </div>
             );
           })}

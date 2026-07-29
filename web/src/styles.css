@@ -379,6 +379,41 @@ body {
 .rule-warn.error { border-left: 3px solid var(--danger); }
 .rule-warn.warning { border-left: 3px solid var(--warn); }
 .rule-warn.info { border-left: 3px solid var(--info); }
+/* Folded, a warning is one line: disclosure, severity icon, rule id, and a
+   shortcut to silence it. The message and the links appear only unfolded --
+   see the .rule-warns cap above for why the full text of every warning at once
+   is more than the panel can hold. */
+.rule-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rule-head code { flex: 1 1 auto; min-width: 0; }
+.rule-disclose, .rule-ignore {
+  flex: none;
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+  font-size: 13px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+}
+.rule-disclose { width: 16px; }
+.rule-ignore { width: 20px; font-size: 15px; }
+.rule-disclose:hover, .rule-ignore:hover { color: var(--accent); }
+/* Text that must be announced but not shown: the folded line drops the
+   severity word for space, leaving an icon with no accessible name. */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0; border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 .rule-warn .rule-sev {
   display: inline-flex;
   align-items: center;
@@ -980,6 +1015,11 @@ code {
   .ztabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .ztab { min-height: 44px; white-space: nowrap; }
   .ztabs-zoom { min-height: 44px; }
+
+  /* Folded, that one line is the whole control surface for a warning, so both
+     its buttons take the full target -- the ignore shortcut most of all, since
+     a single tap silences a rule for the deck. */
+  .rule-disclose, .rule-ignore { min-height: 44px; min-width: 44px; }
 
   /* Each warning's footer holds three links, one of which disables a rule
      for the deck -- too consequential for a 31px target. */
