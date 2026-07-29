@@ -663,6 +663,36 @@ body {
 .deck-mini-confirm .btn { padding: 8px 6px; font-size: 14px; font-weight: 600; }
 .btn.danger { background: var(--danger); color: #fff; }
 
+/* "Move to" reuses the confirmation overlay's shape, but lists one button per
+   destination zone, so it can hold three where the confirmation holds two --
+   hence the tighter padding and the scroll fallback at small zoom levels. */
+.deck-mini-move { gap: 4px; overflow-y: auto; }
+.deck-mini-move .btn { padding: 6px 4px; font-size: 13px; }
+/* Bottom-left, opposite the .qty-ctrl stack on the right. That clears it at
+   this 20px size, but NOT at the 44px touch size below: 44 + the ~22px stack
+   exceeds the 60px minimum card width, so the mobile block also lifts the
+   stack to the top edge and the two clear each other vertically instead. */
+/* The tile is a query container so its controls can size against the CARD
+   rather than the viewport -- the zoom slider scales these tiles freely, so
+   viewport-based sizing says nothing about the room actually available. */
+.deck-mini { container-type: inline-size; }
+.deck-mini-move-btn {
+  position: absolute;
+  left: 4px; bottom: 4px;
+  width: 20px; height: 18px;
+  display: grid; place-items: center;
+  padding: 0;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--text);
+  background: rgba(0,0,0,.7);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  z-index: 3;
+}
+.deck-mini-move-btn:hover { color: var(--accent); }
+
 /* ---- Modal ---- */
 .modal-backdrop {
   position: fixed; inset: 0;
@@ -818,18 +848,44 @@ code {
   object-fit: contain;
   border-radius: 8px;
 }
+/* A column, not a row: the bar now holds one counter per zone the card may
+   occupy (one for a Site, three for a non-avatar Character), and laying a
+   variable number of them side by side would squeeze the 44px buttons below
+   a usable size on a narrow phone. */
 .card-modal-bar {
   flex: 0 0 auto;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 18px;
+  gap: 10px;
   padding: 12px;
   background: var(--panel);
   border-top: 1px solid var(--line);
 }
 .qty-btn.big { width: 44px; height: 44px; font-size: 26px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-2); }
 .card-modal-count { font-weight: 700; font-size: 20px; color: var(--accent); min-width: 28px; text-align: center; }
+.card-modal-zone { width: 100%; max-width: 420px; }
+.card-modal-zone-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.card-modal-zone-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 600;
+  font-size: 15px;
+}
+/* The cap reason is on-screen text rather than the title= tooltip it used to
+   be: a tooltip is unreachable by touch, and the disabled + button it explains
+   cannot take focus either, so a blocked + had no way to say why. */
+.card-modal-zone-reason {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--muted);
+  padding-top: 3px;
+}
 
 /* ---- Deck panel as full-screen bottom sheet (mobile) ---- */
 .deckpanel.sheet {
@@ -864,8 +920,16 @@ code {
   .filterbar { padding: 8px 10px; }
   .brand-logo { height: 26px; }
   .filters-toggle { align-self: flex-start; }
-  /* Comfortable touch targets for the filter controls. */
-  .filters-toggle, .facet > button, .chip-toggle { min-height: 44px; }
+  /* Chrome buttons -- the filter row, the drawer, modal actions -- are sized
+     to 36px rather than the 44px Apple/WCAG-AAA target. They are wide,
+     text-labelled, low-frequency controls, and on a phone the header and
+     footer they fill are pure overhead competing with the card grid. 36px is
+     also the height these buttons take unforced (8px padding + a 14px line),
+     so this is really the removal of an override rather than a new size.
+     The floor that matters is WCAG 2.2 AA 2.5.8, which is 24x24: 36 leaves
+     half again as much room. Controls that are icon-only, repeated, or
+     consequential keep 44 -- see .qty-btn.big, .ztab and .rule-meta below. */
+  .filters-toggle, .facet > button, .chip-toggle { min-height: 36px; }
 
   /* Card grid: ~3 columns, tighter gaps/padding. */
   .browser { padding: 8px; }
@@ -873,12 +937,12 @@ code {
 
   /* Bottom drawer: wraps, comfortable touch targets. */
   .drawer { gap: 8px; padding: 8px 10px; }
-  .drawer .btn { padding: 10px 12px; min-height: 44px; }
+  .drawer .btn { padding: 7px 12px; min-height: 36px; }
   .drawer-viewdeck { order: -1; }
 
   /* Modals: use more of the screen, bigger touch targets, no h-overflow. */
   .modal { width: min(560px, 96vw); padding: 16px; }
-  .modal .btn { min-height: 44px; }
+  .modal .btn { min-height: 36px; }
   .import-textarea, .import-list select { width: 100%; }
 
   /* ---- Deckbuilding surfaces ----
@@ -909,4 +973,28 @@ code {
      card modal to own zone editing instead. */
   .qty-ctrl.zoned .zlbl { font-size: 12px; }
   .zone-expander { font-size: 12px; padding: 6px 8px; }
+
+  /* The only touch route to moving a copy between zones -- the card is not
+     draggable on mobile -- so it gets a full 44px target even though it costs
+     a visible corner of the thumbnail. */
+  /* Sized against the CARD, not the viewport: the zoom slider scales these
+     tiles independently of screen width, so a flat 44px here collided with
+     the qty stack at low zoom -- measured at the 60px floor, the button
+     spanned x 18-62 across a stack at x 44-66, making a tap there ambiguous.
+     Stacking them vertically does not rescue it either: the stack is 54px
+     tall and the card only 84px at that size.
+     So the touch size applies only once the card can hold it beside the stack
+     (44 + ~22 + margins), and below that the compact button stays. A target
+     smaller than the guideline is a compromise; two overlapping targets are a
+     defect. */
+  @container (min-width: 80px) {
+    .deck-mini-move-btn { width: 44px; height: 44px; font-size: 20px; border-radius: 8px; }
+  }
+  /* Destination buttons fill the tile, so they can afford the full height;
+     the overlay scrolls if a three-zone card is shown at a small zoom. */
+  .deck-mini-move .btn { min-height: 44px; font-size: 15px; }
+  /* Zone rows in the card modal: keep the name from crowding the 44px
+     buttons on a narrow phone. */
+  .card-modal-zone-name { font-size: 14px; }
+  .card-modal-zone-row { gap: 10px; }
 }

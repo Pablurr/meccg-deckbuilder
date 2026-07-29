@@ -6,7 +6,9 @@ import { I18nProvider } from './i18n.jsx';
 import { makeT } from './lib/i18n.js';
 import { validateDeck } from './lib/rules/validate.js';
 import { remainingCopies } from './lib/rules/copies.js';
+import { zoneTargets } from './lib/rules/zones.js';
 import { bumpCount, applyDelta, applyToggle, applySelectAll } from './lib/deckMutations.js';
+import { parseStoredZoom, defaultZoom, ZOOM_STORAGE_KEY } from './lib/zoom.js';
 import FilterBar from './components/FilterBar.jsx';
 import CardBrowser from './components/CardBrowser.jsx';
 import DeckDrawer from './components/DeckDrawer.jsx';
@@ -35,9 +37,17 @@ export default function App() {
   const [showDocs, setShowDocs] = useState(false);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [panelWidth, setPanelWidth] = useState(360); // right deck panel width in px
-  const [cardZoom, setCardZoom] = useState(50); // deck-panel card size, % of original image
-  const [error, setError] = useState(null);
+  // Declared before cardZoom on purpose: the zoom default differs per surface,
+  // so the lazy initializer below needs isMobile to already be resolved.
   const isMobile = useIsMobile();
+  // Deck-panel card size, as a % of the width available to the deck list (not
+  // of the source image — see lib/zoom.js). Persisted like proxyMode so the
+  // choice sticks; validated on read because localStorage is user-writable,
+  // and zoom was never persisted before, so there is no legacy value to migrate.
+  const [cardZoom, setCardZoom] = useState(() => {
+    try { return parseStoredZoom(localStorage.getItem(ZOOM_STORAGE_KEY), isMobile); } catch { return defaultZoom(isMobile); }
+  });
+  const [error, setError] = useState(null);
   const [deckSheetOpen, setDeckSheetOpen] = useState(false);
   const [previewCard, setPreviewCard] = useState(null);
   // Proxy mode: cover the copyright/set-name with a "Proxy" stamp everywhere
@@ -48,6 +58,9 @@ export default function App() {
   useEffect(() => {
     try { localStorage.setItem('meccg.proxyMode', proxyMode ? '1' : '0'); } catch { /* storage unavailable */ }
   }, [proxyMode]);
+  useEffect(() => {
+    try { localStorage.setItem(ZOOM_STORAGE_KEY, String(cardZoom)); } catch { /* storage unavailable */ }
+  }, [cardZoom]);
 
   // When the deck empties the mobile sheet unmounts; reset its flag so re-adding
   // a card doesn't pop the sheet back open unprompted.
@@ -336,14 +349,20 @@ export default function App() {
       {previewCard && (
         <CardPreviewModal
           card={previewCard}
-          qty={quantities[previewCard.id] || 0}
           lang={uiLang}
-          onChangeQty={changeQty}
+          // One counter per zone this card may legally occupy, from the same
+          // zoneTargets list drag-and-drop validates against, so the modal can
+          // never offer a zone a drop would have refused.
+          rows={zoneTargets(previewCard).map((zone) => ({
+            zone,
+            qty: (zone === 'deck' ? quantities : zones[zone] || {})[previewCard.id] || 0,
+            room: capCtx
+              ? remainingCopies(previewCard, zone, { quantities, zones }, capCtx)
+              : { remaining: Infinity, ruleId: null },
+          }))}
+          onChangeZoneQty={changeZoneQty}
           onClose={() => setPreviewCard(null)}
           proxyMode={proxyMode}
-          room={previewCard && capCtx
-            ? remainingCopies(previewCard, 'deck', { quantities, zones }, capCtx)
-            : { remaining: Infinity, ruleId: null }}
         />
       )}
     </div>

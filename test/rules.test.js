@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import raw from '../web/public/cards.json';
 import { parseCards } from '../web/src/lib/parseCards.js';
-import { zonesFor } from '../web/src/lib/rules/zones.js';
+import { zonesFor, zoneTargets, moveTargets, ZONE_LABEL_KEY } from '../web/src/lib/rules/zones.js';
 import { SIDES, GENERAL, SPECIFIC_TO_SIDES, isLegalForSide, raceAllowed } from '../web/src/lib/rules/sides.js';
 import { LENGTHS } from '../web/src/lib/rules/formats.js';
 import { BANNED, resolveBanned } from '../web/src/lib/rules/banned.js';
@@ -79,6 +79,82 @@ describe('zonesFor', () => {
       const z = zonesFor(index.get(id));
       expect(z.extra).not.toContain('pool');
     }
+  });
+});
+
+describe('zoneTargets / moveTargets', () => {
+  // The zone list the touch UI offers -- the card modal's per-zone counters and
+  // the deck card's "move to" menu both read it, so a card can never be offered
+  // a zone the drag-and-drop path would have refused.
+  it('a Site may only ever be in the deck, so it can be moved nowhere', () => {
+    const site = cards.find((c) => c.type === 'Site');
+    expect(site).toBeTruthy();
+    expect(zoneTargets(site)).toEqual(['deck']);
+    // An empty list is what tells MiniCard to render no move action at all.
+    expect(moveTargets(site, 'deck')).toEqual([]);
+  });
+  it('an avatar Character offers the deck and the sideboard, never the pool (1.7)', () => {
+    const avatar = index.get('TW-156'); // Gandalf
+    expect(avatar).toBeTruthy();
+    expect(avatar.attributes.avatar).toBe(true);
+    expect(zoneTargets(avatar)).toEqual(['deck', 'sideboard']);
+    expect(zoneTargets(avatar)).not.toContain('pool');
+    expect(moveTargets(avatar, 'deck')).toEqual(['sideboard']);
+  });
+  it('a non-avatar Character leads with the pool, then the deck and sideboard', () => {
+    const chr = cards.find((c) => c.type === 'Character' && !(c.attributes || {}).avatar);
+    expect(chr).toBeTruthy();
+    // Primary first: the pool is where a starting character normally goes, so
+    // it must be the zone the UI lists at the top.
+    expect(zoneTargets(chr)).toEqual(['pool', 'deck', 'sideboard']);
+    expect(moveTargets(chr, 'pool')).toEqual(['deck', 'sideboard']);
+  });
+  it('a Minor Item Resource reaches all three zones (1.7)', () => {
+    const item = cards.find((c) => c.type === 'Resource' && (c.attributes || {}).subtype === 'Minor Item');
+    expect(item).toBeTruthy();
+    expect(zoneTargets(item)).toEqual(['deck', 'sideboard', 'pool']);
+    expect(moveTargets(item, 'sideboard')).toEqual(['deck', 'pool']);
+  });
+  it('an ordinary Hazard offers the deck and the sideboard', () => {
+    const hz = cards.find((c) => c.type === 'Hazard');
+    expect(hz).toBeTruthy();
+    expect(zoneTargets(hz)).toEqual(['deck', 'sideboard']);
+    expect(moveTargets(hz, 'sideboard')).toEqual(['deck']);
+  });
+  it('lists each zone once, so a card can never show two counters for one zone', () => {
+    for (const c of cards) {
+      const targets = zoneTargets(c);
+      expect(new Set(targets).size).toBe(targets.length);
+      expect(targets).toContain('deck');
+    }
+  });
+  it('moveTargets never contains the zone moved from, for every card and zone', () => {
+    for (const c of cards) {
+      for (const from of ['deck', 'sideboard', 'pool']) {
+        expect(moveTargets(c, from)).not.toContain(from);
+      }
+    }
+  });
+  it('agrees with isDropAllowed for every card and every tab', () => {
+    // This is the test that stops the drag path and the touch path drifting
+    // into two subtly different answers about where a card may go.
+    for (const c of cards) {
+      const targets = zoneTargets(c);
+      for (const tab of ['play', 'location', 'cards', 'pool', 'sideboard']) {
+        expect(isDropAllowed(c, tab)).toBe(targets.includes(resolveDropTarget(tab)));
+      }
+    }
+  });
+  it('every zone a card may occupy has a label key, so no row renders untranslated', () => {
+    for (const c of cards) {
+      for (const zone of zoneTargets(c)) {
+        expect(ZONE_LABEL_KEY[zone]).toBeTruthy();
+      }
+    }
+  });
+  it('returns an empty list for a missing card rather than throwing', () => {
+    expect(zoneTargets(null)).toEqual([]);
+    expect(moveTargets(null, 'deck')).toEqual([]);
   });
 });
 

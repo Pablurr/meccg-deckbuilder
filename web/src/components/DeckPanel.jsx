@@ -6,6 +6,7 @@ import MiniCard from './MiniCard.jsx';
 import ZoneTabs from './ZoneTabs.jsx';
 import DeckNotes from './DeckNotes.jsx';
 import { isDropAllowed, resolveDropTarget } from '../lib/rules/dropTargets.js';
+import { moveTargets } from '../lib/rules/zones.js';
 import { LENGTHS } from '../lib/rules/formats.js';
 import { SIDES } from '../lib/rules/sides.js';
 import { backGroupForType } from '../lib/deck.js';
@@ -14,6 +15,7 @@ import { REPORT_ISSUES_URL } from '../lib/constants.js';
 import { COE, RULE_BY_ID } from '../lib/rules/catalog.js';
 import { refText } from '../lib/rules/docText.js';
 import { remainingCopies } from '../lib/rules/copies.js';
+import { cardWidthFor, deckZoneWidth, MIN_ZOOM, MAX_ZOOM, DEFAULT_ZOOM_DESKTOP } from '../lib/zoom.js';
 
 const SEV_ICON = { error: '⛔', warning: '⚠', info: 'ℹ' };
 
@@ -75,8 +77,6 @@ const MIN_WIDTH = 280;
 const DEFAULT_WIDTH = 360;
 // Fraction of the viewport the panel may cover at most (and the "maximize" size).
 const MAX_FRACTION = 0.97;
-// Natural source-image width; the zoom slider is a percentage of this.
-const SOURCE_WIDTH = 570;
 
 function warningText(t, w) {
   if (w.code === 'emptyDeck') return t('warn.emptyDeck');
@@ -117,7 +117,7 @@ export default function DeckPanel({
   onToggleCollapsed,
   width = DEFAULT_WIDTH,
   onResize,
-  zoom = 50,
+  zoom = DEFAULT_ZOOM_DESKTOP,
   onZoom,
   onChangeQty,
   onToggle,
@@ -159,22 +159,38 @@ export default function DeckPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deckbuilding, hasPool, hasSideboard]);
 
-  // Card width driven by the zoom slider (% of the source image). min(…,100%)
-  // keeps a card from overflowing when the panel is dragged narrower than it.
-  const cardW = Math.round((SOURCE_WIDTH * zoom) / 100);
+  // Card width driven by the zoom slider, which is now a percentage of the
+  // width available to the deck list rather than of the 570px source image:
+  // one setting therefore means one visual density whether the panel is at its
+  // 280px minimum or maximised, instead of the old absolute width that gave a
+  // single card per row in a narrow panel and six in a wide one.
+  //
+  // The zone's outer width comes from data we already hold — the `width` prop
+  // on desktop, the viewport on the full-screen sheet — rather than from a
+  // measured DOM node, which keeps cardWidthFor a pure function and mirrors
+  // how `maxW` below already reads window.innerWidth. A viewport change the
+  // component doesn't re-render for only makes the grid slightly less dense
+  // than intended; min(…,100%) still stops a card overflowing its column.
+  const outerWidth = asSheet
+    ? (typeof window !== 'undefined' ? window.innerWidth : DEFAULT_WIDTH)
+    : width;
+  const cardW = cardWidthFor(deckZoneWidth(outerWidth), zoom);
   const thumbW = deckThumbWidth(cardW);
   const gridStyle = { gridTemplateColumns: `repeat(auto-fill, minmax(min(${cardW}px, 100%), ${cardW}px))` };
 
   // One definition, two placements: inline in the head on desktop, in a
   // disclosure row under the tabs on the sheet. Duplicating the markup would
   // let the two drift apart (min/max/step are the slider's contract).
+  // min/max come from zoom.js because they are also the range parseStoredZoom
+  // accepts: a bound that lived only here could drift out of sync and make the
+  // slider emit values its own reader would reject as corrupt.
   const zoomControl = (
     <label className="deckpanel-zoom">
       {t('panel.zoom')}
       <input
         type="range"
-        min="15"
-        max="100"
+        min={MIN_ZOOM}
+        max={MAX_ZOOM}
         step="5"
         value={zoom}
         onChange={(e) => onZoom(Number(e.target.value))}
@@ -389,6 +405,10 @@ export default function DeckPanel({
                       room={capCtx
                         ? remainingCopies(card, activeZone, { quantities, zones }, capCtx)
                         : { remaining: Infinity, ruleId: null }}
+                      // The touch equivalent of dragging this card onto another
+                      // zone tab; both routes end in the same moveCopy.
+                      moveTargets={moveTargets(card, activeZone)}
+                      onMove={(toZone) => moveCopy(card.id, activeZone, toZone)}
                     />
                   ))}
                 </div>
