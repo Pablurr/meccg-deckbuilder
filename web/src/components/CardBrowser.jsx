@@ -135,7 +135,7 @@ export default function CardBrowser({ cards, filters, quantities, lang, onChange
                   if (next) el.src = next;
                 }}
               />
-              <ProxyStamp card={c} lang={lang} on={proxyMode} src={cardThumbSrc(c, lang)} />
+              <ProxyStamp card={c} lang={lang} on={proxyMode} />
               {deckbuilding ? (
                 <ZoneCtrls card={c} zones={zones} quantities={quantities} changeZoneQty={changeZoneQty} t={t} capCtx={capCtx} />
               ) : (

@@ -10,3 +10,5 @@ data/imgcache/
 # Large local assets (kept on disk, not versioned)
 cards/
 deckA/
+
+scripts/proxy-patch-qa.png

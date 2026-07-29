@@ -5,7 +5,8 @@ import { fetchBytes, fetchCardImageBytes, dataUrlToBytes, mapLimit } from './lib
 import { toMpcPng, toStampedJpeg } from './lib/export/bleedCanvas.js';
 import { buildDeckZip } from './lib/export/zip.js';
 import { buildSheetPdf } from './lib/export/pdf.js';
-import { isStampable, cloneSrcFor, rectFor } from './lib/proxy.js';
+import { swatchKeyForCard } from './lib/proxy.js';
+import { loadPatchBitmaps, closePatchBitmaps } from './lib/export/proxyDraw.js';
 
 let _index = null; // id -> card, set by getCards(); used by the export functions
 
@@ -94,46 +95,62 @@ async function prefetchFronts(cards, lang, process) {
   };
 }
 
-// (card) => { lang } | null. Null when proxy mode is off or the card takes no
-// stamp (Regions). Self-clone variant: no assets to load, so this is sync.
-function makeStampFor(lang, proxyMode) {
-  if (!proxyMode) return () => null;
-  // Label colour is chosen at bake time from the pasted patch's luminance.
-  return (card) =>
-    isStampable(card) ? { lang, rect: rectFor(card, lang), src: cloneSrcFor(card, lang) } : null;
+// (card) => { patchBmp, key } | null. Null when proxy mode is off or the card
+// takes no stamp (Regions). Loads only the patches this deck needs, in the
+// export's image language. Returns { stampFor, closePatches } so callers can
+// free the bitmaps after export.
+async function makeStampFor(cards, lang, proxyMode) {
+  if (!proxyMode) return { stampFor: () => null, closePatches: () => {} };
+  const keys = new Set(cards.map(swatchKeyForCard).filter(Boolean));
+  const patches = await loadPatchBitmaps(keys, lang);
+  return {
+    stampFor: (card) => {
+      const key = swatchKeyForCard(card);
+      return key ? { patchBmp: patches.get(key), key } : null;
+    },
+    closePatches: () => closePatchBitmaps(patches),
+  };
 }
 
 // Builds the MPC ZIP in the browser and triggers the download.
 export async function exportDeck({ deckName, cardIds, backAssignments, lang = 'en', proxyMode = false }) {
   const index = requireIndex();
   const cards = cardIds.map((id) => index.get(id)).filter(Boolean);
-  const stampFor = makeStampFor(lang, proxyMode);
-  const getFrontPng = await prefetchFronts(cards, lang, (bytes, card) => toMpcPng(bytes, stampFor(card)));
-  const getBackBytes = makeGetBackBytes(backAssignments);
-  const getBackPng = async (group) => toMpcPng(await getBackBytes(group)); // backs are never stamped
-  const { bytes, counts, failures } = await buildDeckZip({ deckName, cards, getFrontPng, getBackPng });
-  downloadBlob(new Blob([bytes], { type: 'application/zip' }), `${safeName(deckName)}_${lang}_MPC.zip`);
-  return { counts, failures };
+  const { stampFor, closePatches } = await makeStampFor(cards, lang, proxyMode);
+  try {
+    const getFrontPng = await prefetchFronts(cards, lang, (bytes, card) => toMpcPng(bytes, stampFor(card)));
+    const getBackBytes = makeGetBackBytes(backAssignments);
+    const getBackPng = async (group) => toMpcPng(await getBackBytes(group)); // backs are never stamped
+    const { bytes, counts, failures } = await buildDeckZip({ deckName, cards, getFrontPng, getBackPng });
+    downloadBlob(new Blob([bytes], { type: 'application/zip' }), `${safeName(deckName)}_${lang}_MPC.zip`);
+    return { counts, failures };
+  } finally {
+    closePatches();
+  }
 }
 
 // Builds the print-sheet PDF in the browser and triggers the download.
 export async function exportPdf({ deckName, cardIds, backAssignments, includeBacks, format = 'letter', lang = 'en', proxyMode = false }) {
   const index = requireIndex();
   const cards = cardIds.map((id) => index.get(id)).filter(Boolean);
-  const stampFor = makeStampFor(lang, proxyMode);
-  // Proxy off: raw CDN bytes, the PDF scales them (no resampling — unchanged).
-  // Proxy on: bake the stamp into a cut-size JPEG face instead.
-  const getFrontBytes = await prefetchFronts(cards, lang, (bytes, card) => {
-    const stamp = stampFor(card);
-    return stamp ? toStampedJpeg(bytes, stamp) : bytes;
-  });
-  const { bytes, failures, pageCount } = await buildSheetPdf({
-    cards,
-    getFrontBytes,
-    getBackBytes: makeGetBackBytes(backAssignments),
-    includeBacks,
-    format,
-  });
-  downloadBlob(new Blob([bytes], { type: 'application/pdf' }), `${safeName(deckName)}_${format}_${lang}_sheets.pdf`);
-  return { pages: pageCount, failures };
+  const { stampFor, closePatches } = await makeStampFor(cards, lang, proxyMode);
+  try {
+    // Proxy off: raw CDN bytes, the PDF scales them (no resampling — unchanged).
+    // Proxy on: bake the stamp into a cut-size JPEG face instead.
+    const getFrontBytes = await prefetchFronts(cards, lang, (bytes, card) => {
+      const stamp = stampFor(card);
+      return stamp ? toStampedJpeg(bytes, stamp) : bytes;
+    });
+    const { bytes, failures, pageCount } = await buildSheetPdf({
+      cards,
+      getFrontBytes,
+      getBackBytes: makeGetBackBytes(backAssignments),
+      includeBacks,
+      format,
+    });
+    downloadBlob(new Blob([bytes], { type: 'application/pdf' }), `${safeName(deckName)}_${format}_${lang}_sheets.pdf`);
+    return { pages: pageCount, failures };
+  } finally {
+    closePatches();
+  }
 }
