@@ -28,8 +28,9 @@ function ZoneCtrls({ card, zones, quantities, changeZoneQty, t, capCtx }) {
     <div className="zone-ctrls">
       <div className="qty-ctrl zoned">
         <span className="zlbl">{t(`zoneShort.${z.primary}`)}</span>
-        <button className="qty-btn" onClick={() => changeZoneQty(z.primary, card.id, -1)} aria-label={t('browser.removeCopy')}>−</button>
-        <span className="qty-count">{zoneQty(z.primary)}</span>
+        {/* + above, − below: .qty-ctrl stacks vertically, and up-means-more is
+            what the freeform browser and the deck list's MiniCard already do.
+            (The mobile preview modal is a horizontal bar, so it keeps −/+.) */}
         {(() => {
           const r = room(z.primary);
           return (
@@ -42,6 +43,8 @@ function ZoneCtrls({ card, zones, quantities, changeZoneQty, t, capCtx }) {
             >+</button>
           );
         })()}
+        <span className="qty-count">{zoneQty(z.primary)}</span>
+        <button className="qty-btn" onClick={() => changeZoneQty(z.primary, card.id, -1)} aria-label={t('browser.removeCopy')}>−</button>
       </div>
       {z.extra.length > 0 && !expanded && (
         <button className="zone-expander" onClick={() => setExpanded(true)}>
@@ -51,8 +54,6 @@ function ZoneCtrls({ card, zones, quantities, changeZoneQty, t, capCtx }) {
       {expanded && z.extra.map((zn) => (
         <div key={zn} className="qty-ctrl zoned muted">
           <span className="zlbl">{t(`zoneShort.${zn}`)}</span>
-          <button className="qty-btn" onClick={() => changeZoneQty(zn, card.id, -1)} aria-label={t('browser.removeCopy')}>−</button>
-          <span className="qty-count">{zoneQty(zn)}</span>
           {(() => {
             const r = room(zn);
             return (
@@ -65,6 +66,8 @@ function ZoneCtrls({ card, zones, quantities, changeZoneQty, t, capCtx }) {
               >+</button>
             );
           })()}
+          <span className="qty-count">{zoneQty(zn)}</span>
+          <button className="qty-btn" onClick={() => changeZoneQty(zn, card.id, -1)} aria-label={t('browser.removeCopy')}>−</button>
         </div>
       ))}
     </div>
