@@ -999,7 +999,15 @@ code {
   /* Bottom drawer: icons instead of labels. The six labels measured 588px of
      width against 355 available, so the bar always wrapped onto a second row
      and cost 97px of a screen the card grid needs. */
-  .drawer { gap: 6px; padding: 8px 8px; }
+  /* nowrap makes one row structural rather than arithmetic: the buttons carry
+     a min-width well under the track, so they compress instead of dropping a
+     second 44px row onto a screen the grid needs. */
+  .drawer { gap: 6px; padding: 8px 8px; flex-wrap: nowrap; }
+  /* The spacer right-aligns the actions on desktop. On mobile it was taking
+     64px -- the whole margin the icons had just freed -- and pushing the last
+     button onto a second row. It is also the gap between "view deck" and the
+     actions that looked like a layout bug in the report. */
+  .drawer .spacer { display: none; }
   /* min-width spends the room the icons freed: the glyphs alone gave 28-36px
      targets. 40 rather than the full 44, and tighter gaps and padding with
      it, because fitting on one row at 375px is not the same as fitting on a
