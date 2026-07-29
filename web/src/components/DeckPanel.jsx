@@ -145,6 +145,11 @@ export default function DeckPanel({
     ? ['play', 'pool', 'sideboard', 'location', 'notes']
     : ['cards', ...(hasPool ? ['pool'] : []), ...(hasSideboard ? ['sideboard'] : []), 'notes'];
   const [tab, setTab] = useState(deckbuilding ? 'play' : 'cards');
+  // Sheet only: the zoom slider is a secondary control, so it hides behind a
+  // toggle in the tab strip instead of taking a third row in the head. The
+  // trigger lives in that strip rather than next to the title because the
+  // strip is already 44px tall on touch, so it costs no extra height there.
+  const [showZoom, setShowZoom] = useState(false);
   // The deck's mode can change (setup dialog) after mount, and a freeform
   // deck's pool/sideboard tabs can appear or disappear as those zones empty
   // out; if the current tab no longer exists, fall back to the first tab
@@ -159,6 +164,24 @@ export default function DeckPanel({
   const cardW = Math.round((SOURCE_WIDTH * zoom) / 100);
   const thumbW = deckThumbWidth(cardW);
   const gridStyle = { gridTemplateColumns: `repeat(auto-fill, minmax(min(${cardW}px, 100%), ${cardW}px))` };
+
+  // One definition, two placements: inline in the head on desktop, in a
+  // disclosure row under the tabs on the sheet. Duplicating the markup would
+  // let the two drift apart (min/max/step are the slider's contract).
+  const zoomControl = (
+    <label className="deckpanel-zoom">
+      {t('panel.zoom')}
+      <input
+        type="range"
+        min="15"
+        max="100"
+        step="5"
+        value={zoom}
+        onChange={(e) => onZoom(Number(e.target.value))}
+      />
+      <span className="deckpanel-zoom-val">{zoom}%</span>
+    </label>
+  );
 
   // Drag the left edge to resize; released listeners live only for the drag.
   function startResize(e) {
@@ -282,29 +305,30 @@ export default function DeckPanel({
           <span className="count-pill">{t('drawer.playdeck')} <b>{counts.byGroup.playdeck}</b></span>
           <span className="count-pill">{t('drawer.location')} <b>{counts.byGroup.locationdeck}</b></span>
         </div>
-        <label className="deckpanel-zoom">
-          {t('panel.zoom')}
-          <input
-            type="range"
-            min="15"
-            max="100"
-            step="5"
-            value={zoom}
-            onChange={(e) => onZoom(Number(e.target.value))}
-          />
-          <span className="deckpanel-zoom-val">{zoom}%</span>
-        </label>
+        {!asSheet && zoomControl}
       </div>
 
-      <ZoneTabs
-        tabs={tabs}
-        active={tab}
-        onSelect={setTab}
-        onDrop={onDropOnTab}
-        labels={tabLabels}
-        counts={tabCounts}
-        caps={tabCaps}
-      />
+      <div className="ztabs-row">
+        <ZoneTabs
+          tabs={tabs}
+          active={tab}
+          onSelect={setTab}
+          onDrop={onDropOnTab}
+          labels={tabLabels}
+          counts={tabCounts}
+          caps={tabCaps}
+        />
+        {asSheet && (
+          <button
+            type="button"
+            className={`ztabs-zoom ${showZoom ? 'on' : ''}`}
+            onClick={() => setShowZoom((v) => !v)}
+            aria-expanded={showZoom}
+            aria-label={t('panel.zoom')}
+          >{zoom}%</button>
+        )}
+      </div>
+      {asSheet && showZoom && <div className="sheet-zoom">{zoomControl}</div>}
 
       {ruleWarnings.length > 0 && (
         <div className="rule-warns" role="status">

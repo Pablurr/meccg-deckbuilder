@@ -342,12 +342,26 @@ body {
    never colour-only — each row also carries an icon + text label, since
    colour-inverting browser extensions and colour-vision deficiency both
    make colour-only encoding unreadable. */
+/* The panel is a flex column of free-height blocks, and this one grows with
+   the deck, so without a cap it starves the card list: measured at 574px for
+   five warnings on a 14-card deck, which left the list 55px on the phone
+   sheet and 20px in the 648px desktop panel -- for 5769px of content. The cap
+   is therefore not cosmetic, and it applies at every width for the same
+   reason. 35vh shows roughly one full warning plus the next, and scrolls.
+
+   flex: none is load-bearing: giving the block a scroll container also drops
+   its automatic minimum size, and the column then shrinks it to ~97px, which
+   hides the warnings instead of bounding them. Pinning it yields
+   min(content, 35vh) and leaves the remainder to the list. */
 .rule-warns {
   display: flex;
   flex-direction: column;
   gap: 6px;
   padding: 8px 12px;
   border-bottom: 1px solid var(--line);
+  flex: none;
+  max-height: 35vh;
+  overflow-y: auto;
 }
 .rule-warn {
   display: flex;
@@ -555,6 +569,28 @@ body {
 /* Zone tabs: the tab bar IS the drop target (zones live in separate tabs, so
    source and destination are never both visible — this also works when the
    destination zone is empty). */
+/* The tab strip and, on the sheet, the zoom disclosure trigger pinned after
+   it. The border sits on the row so the trigger shares it with the tabs. */
+.ztabs-row {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid var(--line);
+}
+.ztabs-row > .ztabs { flex: 1; min-width: 0; border-bottom: none; }
+.ztabs-zoom {
+  flex: none;
+  background: none;
+  border: none;
+  border-left: 1px solid var(--line);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  padding: 0 10px;
+}
+.ztabs-zoom:hover, .ztabs-zoom.on { color: var(--accent); }
+.sheet-zoom { padding: 8px 12px; border-bottom: 1px solid var(--line); }
+.sheet-zoom .deckpanel-zoom { width: 100%; }
 .ztabs {
   display: flex;
   flex-wrap: wrap;
@@ -844,4 +880,33 @@ code {
   .modal { width: min(560px, 96vw); padding: 16px; }
   .modal .btn { min-height: 44px; }
   .import-textarea, .import-list select { width: 100%; }
+
+  /* ---- Deckbuilding surfaces ----
+     The rules above predate deck mode, so its controls never got a touch
+     pass. (The warnings cap that makes room for the card list is not here:
+     the same starvation happens on desktop, so it lives on .rule-warns
+     itself.) Everything below is touch-specific and deliberately stops at
+     this breakpoint -- 44px targets would only inflate the desktop panel. */
+
+  /* Zone tabs: one scrollable row rather than two wrapped ones. Wrapping to
+     a second row at 44px each would cost more height than it saves. */
+  .ztabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .ztab { min-height: 44px; white-space: nowrap; }
+  .ztabs-zoom { min-height: 44px; }
+
+  /* Each warning's footer holds three links, one of which disables a rule
+     for the deck -- too consequential for a 31px target. */
+  .rule-warn .rule-meta { flex-wrap: wrap; gap: 4px 10px; }
+  .rule-warn .rule-meta .linklike,
+  .rule-warn .rule-meta a {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* 9px is below what a phone can comfortably read. The buttons these label
+     stay small: 44px targets do not fit a 116x162 tile, which needs the
+     card modal to own zone editing instead. */
+  .qty-ctrl.zoned .zlbl { font-size: 12px; }
+  .zone-expander { font-size: 12px; padding: 6px 8px; }
 }
