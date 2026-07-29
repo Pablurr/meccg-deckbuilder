@@ -23,6 +23,20 @@ export function expandQuantities(quantities = {}) {
   return out;
 }
 
+// Every copy held anywhere in the deck: play deck plus sideboard plus pool.
+//
+// Distinct from deckCounts().total, which counts the play deck alone because
+// it feeds the per-type/per-alignment breakdown of that deck. Anything gating
+// on "does this deck have cards" must use THIS one: a card added only to the
+// pool or the sideboard is genuinely in the deck -- the panel lists it and the
+// export prints it -- so a play-deck-only total wrongly reported an empty deck
+// and left the drawer's "view deck" button disabled, which on mobile is the
+// only way to reach those zones at all.
+export function totalCopies(quantities = {}, zones = {}) {
+  const sum = (m) => Object.values(m || {}).reduce((a, b) => a + b, 0);
+  return sum(quantities) + sum(zones.sideboard) + sum(zones.pool);
+}
+
 // Rebuild a { id: count } map from a (possibly repeated) list of ids.
 export function countOccurrences(cardIds = []) {
   const q = {};

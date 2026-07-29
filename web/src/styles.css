@@ -920,16 +920,32 @@ code {
   .filterbar { padding: 8px 10px; }
   .brand-logo { height: 26px; }
   .filters-toggle { align-self: flex-start; }
+  /* Three rows, not four. Left to wrap on its own the top row broke into
+     logo / searches / proxy+languages+?, and with the Filtres button below it
+     that put four rows of chrome above the grid. The search pair takes a full
+     row of its own so the other four items share the first: measured at 375px
+     they need 293px of the 355 available, so nothing has to shrink.
+     `order` moves the searches visually below controls that follow them in the
+     DOM; the DOM order is kept as-is because reaching the search box early is
+     the better keyboard path, and desktop still wants it beside the logo. */
+  .search-group { flex: 1 0 100%; order: 1; }
   /* Chrome buttons -- the filter row, the drawer, modal actions -- are sized
      to 36px rather than the 44px Apple/WCAG-AAA target. They are wide,
      text-labelled, low-frequency controls, and on a phone the header and
      footer they fill are pure overhead competing with the card grid. 36px is
      also the height these buttons take unforced (8px padding + a 14px line),
      so this is really the removal of an override rather than a new size.
-     The floor that matters is WCAG 2.2 AA 2.5.8, which is 24x24: 36 leaves
-     half again as much room. Controls that are icon-only, repeated, or
-     consequential keep 44 -- see .qty-btn.big, .ztab and .rule-meta below. */
-  .filters-toggle, .facet > button, .chip-toggle { min-height: 36px; }
+     The floor that matters is WCAG 2.2 AA 2.5.8, which is 24x24: 32 still
+     leaves a third more than that. Controls that are icon-only, repeated, or
+     consequential keep 44 -- see .qty-btn.big, .ztab and .rule-meta below.
+     The padding is trimmed with the min-height on purpose: at 7px these were
+     36px tall from their content alone, so lowering only the min-height would
+     have changed nothing. */
+  .filters-toggle, .facet > button, .chip-toggle {
+    min-height: 32px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+  }
 
   /* Card grid: ~3 columns, tighter gaps/padding. */
   .browser { padding: 8px; }

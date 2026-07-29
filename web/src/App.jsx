@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import * as api from './api.js';
-import { expandQuantities, countOccurrences, deckCounts, deckWarnings, normalizeDeck, EMPTY_NOTES } from './lib/deck.js';
+import { expandQuantities, countOccurrences, deckCounts, deckWarnings, normalizeDeck, totalCopies, EMPTY_NOTES } from './lib/deck.js';
 import { baseOptions } from './lib/tags.js';
 import { I18nProvider } from './i18n.jsx';
 import { makeT } from './lib/i18n.js';
@@ -291,7 +291,12 @@ export default function App() {
         />
       )}
       <DeckDrawer
-        total={counts.total}
+        // Every zone, not counts.total: the drawer disables "view deck" and
+        // "export" on this number, and both are wrong for a deck whose cards
+        // sit only in the pool or the sideboard. The export already prints
+        // those zones (deckSections reads them), so the button was refusing
+        // work it could do.
+        total={totalCopies(quantities, zones)}
         onManage={() => setShowManager(true)}
         onExport={() => setShowExport(true)}
         onImport={() => setShowImport(true)}
