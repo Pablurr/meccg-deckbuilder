@@ -951,6 +951,9 @@ code {
 }
 
 .drawer-viewdeck { display: inline-flex; align-items: center; gap: 8px; }
+/* Desktop shows the labels alone: there is room for them, and the icons exist
+   to shrink the mobile bar, not to redecorate a layout that already fits. */
+.drawer .ico { display: none; }
 
 /* ================= Mobile layout (keep in sync with MOBILE_QUERY) ============ */
 /* Width-only: a wide touchscreen desktop stays on the desktop layout. */
@@ -993,10 +996,27 @@ code {
   .browser { padding: 8px; }
   .grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 6px; }
 
-  /* Bottom drawer: wraps, comfortable touch targets. */
+  /* Bottom drawer: icons instead of labels. The six labels measured 588px of
+     width against 355 available, so the bar always wrapped onto a second row
+     and cost 97px of a screen the card grid needs. */
   .drawer { gap: 8px; padding: 8px 10px; }
-  .drawer .btn { padding: 7px 12px; min-height: 36px; }
+  /* min-width spends the room the icons freed: without it the glyphs alone
+     gave 28-36px targets, and one row of six needs only 325px of the 355. */
+  .drawer .btn { padding: 7px 10px; min-height: 36px; min-width: 44px; }
   .drawer-viewdeck { order: -1; }
+  .drawer .ico { display: inline; font-size: 16px; line-height: 1; }
+  /* Same declarations as .sr-only, applied by the layout rather than by a
+     class in the markup: the label must stay visually hidden AND announced,
+     because it is what names an otherwise icon-only button. display:none
+     would drop it from the accessibility tree and leave no name at all. */
+  .drawer .lbl {
+    position: absolute;
+    width: 1px; height: 1px;
+    margin: -1px; padding: 0; border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 
   /* Modals: use more of the screen, bigger touch targets, no h-overflow. */
   .modal { width: min(560px, 96vw); padding: 16px; }
