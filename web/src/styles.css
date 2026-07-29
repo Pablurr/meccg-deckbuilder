@@ -60,9 +60,8 @@ body {
   display: block;
   margin-right: 4px;
 }
-/* Proxy toggle and language link sit at the far right of the top row. */
+/* Proxy toggle, language picker and ? sit at the far right of the top row. */
 .filterbar-top .proxy-toggle { margin-left: auto; margin-right: 10px; flex: 0 0 auto; }
-.filterbar-top .lang-link { margin-left: 0; }
 /* The two search boxes share one line and shrink together. */
 .search-group {
   display: flex;
@@ -161,24 +160,29 @@ body {
 }
 .btn.small { padding: 5px 10px; font-size: 13px; }
 
-/* Compact language selector: small text links, not a chunky toggle. */
-.lang-link {
-  display: inline-flex;
+/* Language picker: the trigger shows only the flag, so it costs about half of
+   the three side-by-side buttons it replaces. It reuses .facet / .facet-menu
+   for its shell; only the menu rows need styling, since those are buttons
+   rather than the checkbox labels a facet menu holds. */
+.lang-facet > button { display: inline-flex; align-items: center; gap: 4px; }
+.lang-flag { font-size: 15px; line-height: 1; }
+.lang-menu { min-width: 0; }
+.lang-menu button {
+  display: flex;
   align-items: center;
-  gap: 2px;
-}
-.lang-link button {
+  gap: 8px;
+  width: 100%;
   background: none;
   border: none;
-  color: var(--muted);
-  padding: 4px 6px;
-  cursor: pointer;
+  color: var(--text);
+  font: inherit;
   font-weight: 600;
-  font-size: 13px;
+  padding: 6px 8px;
   border-radius: 4px;
+  cursor: pointer;
 }
-.lang-link button:hover { color: var(--text); }
-.lang-link button.on { color: var(--accent); text-decoration: underline; }
+.lang-menu button:hover { background: var(--panel); }
+.lang-menu button.on { color: var(--accent); }
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -946,6 +950,9 @@ code {
     padding-top: 5px;
     padding-bottom: 5px;
   }
+  /* The picker's rows are a menu, not chrome: three infrequent choices where a
+     mis-tap switches language, so they keep the full target. */
+  .lang-menu button { min-height: 44px; }
 
   /* Card grid: ~3 columns, tighter gaps/padding. */
   .browser { padding: 8px; }

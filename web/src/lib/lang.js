@@ -11,10 +11,15 @@ export const LIST_LANGUAGES = [
 // Card-name display languages offered by the language selector. Names in
 // cards.json cover en/fr/es fully, and card images exist for all three.
 // (UI chrome text is only translated fr/en; 'es' maps to 'en' — see App.jsx.)
+//
+// `flag` is a regional-indicator pair, which Windows does not render as a flag
+// — it falls back to the two letters, i.e. the same thing `label` says. That
+// degradation is why the label is kept: the menu always names the language in
+// text, and the flag is decoration on the platforms that draw it.
 export const UI_LANGUAGES = [
-  { code: 'fr', label: 'FR' },
-  { code: 'en', label: 'EN' },
-  { code: 'es', label: 'ES' },
+  { code: 'fr', label: 'FR', flag: '🇫🇷' },
+  { code: 'en', label: 'EN', flag: '🇬🇧' },
+  { code: 'es', label: 'ES', flag: '🇪🇸' },
 ];
 
 // Languages for which card IMAGES exist (imageBaseUrl en/es/fr only).

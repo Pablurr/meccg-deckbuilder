@@ -55,6 +55,7 @@ export const translations = {
     // Proxy mode
     'proxy.label': 'Proxy',
     'proxy.tooltip': 'Mode Proxy : recouvre le copyright par « Proxy » (requis pour MPC)',
+    'lang.pick': 'Langue des cartes',
 
     // Card browser
     'browser.count': '{n} carte(s)',
@@ -402,6 +403,7 @@ export const translations = {
     // Proxy mode
     'proxy.label': 'Proxy',
     'proxy.tooltip': 'Proxy mode: covers the copyright with "Proxy" (required by MPC)',
+    'lang.pick': 'Card language',
 
     'browser.count': '{n} card(s)',
     'browser.capped': ' — showing the first {cap}, refine the filters',
@@ -747,6 +749,7 @@ export const translations = {
     // Proxy mode
     'proxy.label': 'Proxy',
     'proxy.tooltip': 'Modo Proxy: cubre el copyright con «Proxy» (requerido por MPC)',
+    'lang.pick': 'Idioma de las cartas',
 
     // Card browser
     'browser.count': '{n} carta(s)',
