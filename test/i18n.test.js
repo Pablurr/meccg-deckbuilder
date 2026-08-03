@@ -169,6 +169,26 @@ describe('terminology guards', () => {
     expect(offences).toEqual([]);
   });
 
+  // "Fallen-wizard" is one camp with one French name. It had two: side.* and
+  // the rule docs said "Sorcier déchu" while alignment.* and race.* said
+  // "Magicien déchu". Nothing surfaced the disagreement until the filter menus
+  // began localizing alignments and races, which put both spellings on screen
+  // in the same session. One name, checked wherever the camp is named.
+  //
+  // Scoped to the two-word term, not to "magicien" alone: race.Wizard is
+  // legitimately "Magicien" -- that is the race, not the camp. A guard that
+  // banned the bare word would fail on a correct string, which is how a guard
+  // gets loosened until it stops guarding anything.
+  it('the Fallen-wizard camp has a single French name', () => {
+    const offenders = Object.entries(translations.fr)
+      .filter(([, v]) => /magiciens?\s+déchus?/i.test(v))
+      .map(([k, v]) => `${k} = "${v}"`);
+    expect(offenders).toEqual([]);
+    for (const key of ['side.fallen-wizard', 'alignment.Fallen-wizard', 'race.Fallen-wizard']) {
+      expect(translations.fr[key]).toBe('Sorcier déchu');
+    }
+  });
+
   // The rotation's own trap: the three zone words must not be assigned to two
   // different zones. Pinning the exact strings is what makes a future edit
   // that "fixes" one tab without the others fail loudly.

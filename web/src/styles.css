@@ -204,13 +204,16 @@ body {
    visibly marked — this filter never blocks. (Copy caps do, separately,
    via the + button.) */
 .cardcell.illegal img { filter: grayscale(.6); }
-.cardcell.illegal::after {
-  content: '⚠';
+/* Was a ::after on .cardcell.illegal. Generated content cannot carry a text
+   alternative, so the marker that a card is illegal was purely visual; it is
+   now a real element with screen-reader text beside the glyph. */
+.illegal-mark {
   position: absolute;
   top: 4px; right: 4px;
   z-index: 5;
   font-size: 14px;
   line-height: 1;
+  pointer-events: none;
   filter: drop-shadow(0 1px 2px rgba(0,0,0,.8));
 }
 /* Proxy-mode overlay: the card frame's own patch repainted over the copyright
@@ -311,6 +314,23 @@ body {
   color: var(--accent);
   line-height: 1.4;
 }
+/* Touch variants: a count with no controls, because the card modal owns
+   quantity editing there. pointer-events:none is what makes them work: the
+   tally sits over the image, and a tap has to pass through it to the image's
+   own handler, which is what opens that modal. Without it the badge would be
+   a dead zone on the card. */
+.zone-ctrls.readonly { gap: 2px; pointer-events: none; }
+.zone-tally {
+  background: rgba(0,0,0,.72);
+  border-radius: 6px;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 3px 5px;
+  white-space: nowrap;
+}
+.qty-ctrl.readonly { pointer-events: none; padding: 3px 6px; height: auto; }
 .qty-ctrl.zoned.muted { background: rgba(0,0,0,.55); }
 .qty-ctrl.zoned.muted .zlbl { color: var(--muted); }
 .zone-expander {
@@ -1033,6 +1053,10 @@ code {
   /* Modals: use more of the screen, bigger touch targets, no h-overflow. */
   .modal { width: min(560px, 96vw); padding: 16px; }
   .modal .btn { min-height: 36px; }
+  /* The card modal is not a .modal, so the rule above never reached its Done
+     button: it stayed at 31px, the one sub-standard target on a surface whose
+     other controls are all 44. It also has room -- the bar is a column. */
+  .card-modal-bar .btn { min-height: 44px; }
   .import-textarea, .import-list select { width: 100%; }
 
   /* ---- Deckbuilding surfaces ----
@@ -1063,11 +1087,9 @@ code {
     align-items: center;
   }
 
-  /* 9px is below what a phone can comfortably read. The buttons these label
-     stay small: 44px targets do not fit a 116x162 tile, which needs the
-     card modal to own zone editing instead. */
-  .qty-ctrl.zoned .zlbl { font-size: 12px; }
-  .zone-expander { font-size: 12px; padding: 6px 8px; }
+  /* The tile's zone buttons and their 9px labels no longer render on touch --
+     the card modal owns that editing now, so the rules that used to enlarge
+     them are gone rather than left behind matching nothing. */
 
   /* The only touch route to moving a copy between zones -- the card is not
      draggable on mobile -- so it gets a full 44px target even though it costs

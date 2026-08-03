@@ -17,10 +17,29 @@ const CAP = 600; // safety cap on rendered cells
 // Deckbuilding-only zone controls for one card cell. State is local to this
 // component instance so expanding one card's extra zones never affects any
 // other cell in the grid.
-function ZoneCtrls({ card, zones, quantities, changeZoneQty, t, capCtx }) {
+function ZoneCtrls({ card, zones, quantities, changeZoneQty, t, capCtx, isMobile }) {
   const [expanded, setExpanded] = useState(false);
   const z = zonesFor(card);
   const zoneQty = (zone) => (zone === 'deck' ? (quantities[card.id] || 0) : (zones[zone][card.id] || 0));
+
+  // Touch: the tile reports counts and nothing more. A tap already opens the
+  // card modal (see the img onClick below), and that modal owns quantity
+  // editing there because it has room for 44px buttons and for saying WHY a +
+  // is blocked. Neither fits a 116x162 tile: these controls needed 20x18
+  // buttons, their cap reason lived in a title= tooltip touch can never
+  // surface, and the overlay covered 64% of the artwork. Desktop keeps them --
+  // a mouse is precise and hover shows the tooltip.
+  if (isMobile) {
+    const held = [z.primary, ...z.extra].filter((zn) => zoneQty(zn) > 0);
+    if (held.length === 0) return null;
+    return (
+      <div className="zone-ctrls readonly">
+        {held.map((zn) => (
+          <span key={zn} className="zone-tally">{t(`zoneShort.${zn}`)} {zoneQty(zn)}</span>
+        ))}
+      </div>
+    );
+  }
   const room = (zone) => (capCtx
     ? remainingCopies(card, zone, { quantities, zones }, capCtx)
     : { remaining: Infinity, ruleId: null });
@@ -138,6 +157,17 @@ export default function CardBrowser({ cards, filters, quantities, lang, onChange
           const illegal = deckbuilding && side && showAll && !legal(c);
           return (
             <div key={c.id} className={`cardcell ${anySelected ? 'selected' : ''} ${illegal ? 'illegal' : ''}`}>
+              {/* A real element, not the ::after it used to be: generated content
+                  carries no text alternative, so the one thing distinguishing an
+                  illegal card was invisible to assistive tech and to anyone who
+                  cannot read the glyph. The mark is decorative; the sr-only span
+                  is what says what it means. */}
+              {illegal && (
+                <span className="illegal-mark">
+                  <span aria-hidden="true">⚠</span>
+                  <span className="sr-only">{t('browser.illegalMark')}</span>
+                </span>
+              )}
               {/* Click image to select (qty 1) / deselect. Use −/+ for copies once selected.
                   Hover shows a full-size preview. */}
               <img
@@ -159,7 +189,7 @@ export default function CardBrowser({ cards, filters, quantities, lang, onChange
               />
               <ProxyStamp card={c} lang={lang} on={proxyMode} />
               {deckbuilding ? (
-                <ZoneCtrls card={c} zones={zones} quantities={quantities} changeZoneQty={changeZoneQty} t={t} capCtx={capCtx} />
+                <ZoneCtrls card={c} zones={zones} quantities={quantities} changeZoneQty={changeZoneQty} t={t} capCtx={capCtx} isMobile={isMobile} />
               ) : (
                 qty > 0 && (
                   <div className="qty-ctrl">

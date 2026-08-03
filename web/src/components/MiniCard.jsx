@@ -77,21 +77,32 @@ export default function MiniCard({ card, qty, lang, thumbW, onChangeQty, onToggl
         </div>
       ) : (
         <>
-          <div className="qty-ctrl">
-            <button
-              className="qty-btn"
-              disabled={room.remaining <= 0}
-              title={capTitle(t, room.ruleId, room.remaining)}
-              onClick={() => onChangeQty(card.id, +1)}
-              aria-label={t('browser.addCopy')}
-            >+</button>
-            <span className="qty-count">{qty}</span>
-            <button
-              className="qty-btn"
-              onClick={() => onChangeQty(card.id, -1)}
-              aria-label={t('browser.removeCopy')}
-            >−</button>
-          </div>
+          {isMobile ? (
+            // Touch: the count only. Tapping the image opens the card modal,
+            // which owns quantity editing on that layout -- same split as the
+            // browser tile's ZoneCtrls, and for the same reasons: a 105px card
+            // cannot hold 44px buttons, and the cap reason these had was a
+            // title= tooltip that touch never surfaces.
+            <div className="qty-ctrl readonly">
+              <span className="qty-count">{qty}</span>
+            </div>
+          ) : (
+            <div className="qty-ctrl">
+              <button
+                className="qty-btn"
+                disabled={room.remaining <= 0}
+                title={capTitle(t, room.ruleId, room.remaining)}
+                onClick={() => onChangeQty(card.id, +1)}
+                aria-label={t('browser.addCopy')}
+              >+</button>
+              <span className="qty-count">{qty}</span>
+              <button
+                className="qty-btn"
+                onClick={() => onChangeQty(card.id, -1)}
+                aria-label={t('browser.removeCopy')}
+              >−</button>
+            </div>
+          )}
           {moveTargets.length > 0 && (
             // Deliberately a sibling of .qty-ctrl rather than a fourth button
             // inside it: as its own control it can be grown to a 44px touch

@@ -358,7 +358,13 @@ export default function App() {
           // One counter per zone this card may legally occupy, from the same
           // zoneTargets list drag-and-drop validates against, so the modal can
           // never offer a zone a drop would have refused.
-          rows={zoneTargets(previewCard).map((zone) => ({
+          //
+          // Deckbuilding only: freeform has no zones -- it routes every card to
+          // the deck and shows a Pool/Sideboard tab solely when a deck switched
+          // out of deckbuilding left cards there. Offering all three here was
+          // inviting a freeform deck to grow zone data no other freeform
+          // surface can see or edit.
+          rows={(deck.mode === 'deckbuilding' ? zoneTargets(previewCard) : ['deck']).map((zone) => ({
             zone,
             qty: (zone === 'deck' ? quantities : zones[zone] || {})[previewCard.id] || 0,
             room: capCtx

@@ -369,8 +369,15 @@ export default function DeckPanel({
       </div>
       {asSheet && showZoom && <div className="sheet-zoom">{zoomControl}</div>}
 
+      {/* A region, not role="status". As a status the whole block was a live
+          region, so every deck edit re-announced all five warnings in full --
+          and validateDeck re-runs on every edit. Only the short count inside
+          is live now; the cards themselves are navigable content. */}
       {ruleWarnings.length > 0 && (
-        <div className="rule-warns" role="status">
+        <div className="rule-warns" role="region" aria-label={t('rules.warningsRegion')}>
+          <span className="sr-only" aria-live="polite">
+            {t('rules.warningsCount', { n: ruleWarnings.length })}
+          </span>
           {ruleWarnings.map((w, i) => {
             const key = warningKey(w);
             const open = openWarns.has(key);
