@@ -1,0 +1,157 @@
+// What a heading line means. Four families:
+//   zone   -- changes the target zone
+//   group  -- does NOT change the zone; posts a type hint for disambiguation
+//   notes  -- switches to notes mode; no line is ever read as a card again
+//   meta   -- "Key: Value" lines; never read as a card either
+//
+// A heading is recognised by its NORMALIZED CONTENT, never by its markdown
+// level: "## Talon", "### Talon", "Talon:" and "**Talon**" are one heading.
+// That is what lets sections arrive in any order and in any formatting.
+//
+// The canonical English titles are IMPORTED from deckList.js rather than
+// copied, so the writer and the reader of our own export format can never
+// drift apart.
+//
+// TRAP, from ARCHITECTURE.md §9: "réserve" changed referent on 2026-07-29 --
+// it used to mean the sideboard and now means the pool. This table holds the
+// CURRENT meaning only. That is a decision, not an oversight: no hand-written
+// list uses the old sense. Do not "fix" this by adding the old one.
+import { normalizeName } from './normalize.js';
+import { SECTION_TITLES, GROUP_TITLES, NOTE_TITLES, METADATA_TITLE, META_KEYS } from '../deckList.js';
+
+const zone = (z) => ({ family: 'zone', zone: z });
+const group = (type) => ({ family: 'group', type });
+const notes = (field) => ({ family: 'notes', field });
+const meta = () => ({ family: 'meta' });
+
+// Localized words are taken from i18n.js (zones.*, zoneShort.*,
+// panel.group.*, notes.*) and not written from memory, so the parser's
+// vocabulary and the interface's cannot diverge.
+const TABLE = [
+  // -- zone: play deck. `quantities` also holds the location deck; play deck
+  // vs locations is derived from the card type (ARCHITECTURE.md §4), so both
+  // point here.
+  [['Playdeck', 'Play deck', 'Deck', 'Main deck', 'Maindeck', 'Pioche', 'Mazo', 'Mazo de juego', 'Baraja', SECTION_TITLES.play], zone('quantities')],
+  [['Locations', 'Location deck', 'Location', 'Site deck', 'Lieux', 'Localizaciones', SECTION_TITLES.locations], zone('quantities')],
+  // -- zone: sideboard. Spanish keeps the English word (i18n zones.sideboard).
+  [['Sideboard', 'Side', 'SB', 'Talon', SECTION_TITLES.sideboard], zone('sideboard')],
+  // -- zone: pool
+  [['Pool', 'Starting pool', 'Réserve', 'Reserva', SECTION_TITLES.pool], zone('pool')],
+
+  // -- groups: the hint is always a TYPE_ORDER value, never a finer category.
+  [['Characters', 'Personnages', 'Personajes', GROUP_TITLES.characters], group('Character')],
+  [['Resources', 'Ressources', 'Recursos', GROUP_TITLES.resources], group('Resource')],
+  [['Hazards', 'Périls', 'Peligros', GROUP_TITLES.hazards], group('Hazard')],
+  [['Sites', 'Sitios', GROUP_TITLES.sites], group('Site')],
+  [['Regions', 'Régions', 'Regiones', GROUP_TITLES.regions], group('Region')],
+  [['Minor objects', 'Minor items', 'Objets mineurs', 'Objetos menores'], group('Resource')],
+  [['Stage events', 'Permanent events', 'Progressions', 'Eventos de etapa'], group('Resource')],
+  // No type hint: these do not reduce to one type, and no hint beats a wrong one.
+  [['Avatars', 'Avatares', GROUP_TITLES.avatars], group(null)],
+  [['Other', 'Autres', 'Otros', GROUP_TITLES.other], group(null)],
+
+  // -- notes: generic openers select no field; named ones select theirs.
+  [['Notes', 'Notas', 'Description', 'Descripción', 'Strategy', 'Stratégie', 'Estrategia',
+    'Comments', 'Commentaires', 'Comentarios', 'Intro', 'Introduction', 'Introducción',
+    'Overview', 'Résumé', 'Resumen'], notes(null)],
+  [[NOTE_TITLES.starting, 'Notes de départ', 'Notas iniciales'], notes('starting')],
+  [[NOTE_TITLES.resourceStrategy, 'Stratégie ressources', 'Estrategia de recursos'], notes('resourceStrategy')],
+  [[NOTE_TITLES.hazardStrategy, 'Stratégie périls', 'Estrategia de peligros'], notes('hazardStrategy')],
+  [[NOTE_TITLES.other, 'Autres notes', 'Otras notas'], notes('other')],
+
+  // -- metadata. NOT "Deck": that word is already the play deck above.
+  [[METADATA_TITLE, 'Métadonnées', 'Deck info', 'Infos', 'Información'], meta()],
+];
+
+export const HEADINGS = new Map();
+for (const [words, entry] of TABLE) {
+  for (const w of words) {
+    const key = normalizeName(w);
+    if (!key) continue;
+    const existing = HEADINGS.get(key);
+    // First writer wins, so a canonical title repeated in its own list (e.g.
+    // GROUP_TITLES.sites === 'Sites') is a no-op rather than a duplicate --
+    // but a DIFFERENT entry claiming an already-taken word is a real
+    // cross-family collision (the trap "Deck" vs metadata would have been)
+    // and must fail loudly at import time. A test that only re-scans
+    // HEADINGS' own keys afterwards could never see this: a Map cannot hold
+    // a duplicate key, so that check alone would be a tautology.
+    if (existing && existing !== entry) {
+      throw new Error(`vocabulary.js: "${key}" is claimed by two different headings`);
+    }
+    if (!existing) HEADINGS.set(key, entry);
+  }
+}
+
+// Strip the markdown level, a trailing colon and a trailing "(12)" count --
+// the last one is what our own exports write on group headings.
+function headingWord(raw) {
+  return String(raw || '')
+    .trim()
+    .replace(/^#{1,6}\s*/, '')
+    .replace(/^\*\*(.+)\*\*$/, '$1')
+    .replace(/\s*\(\s*\d+\s*\)\s*$/, '')
+    .replace(/\s*:\s*$/, '')
+    .trim();
+}
+
+export function lookupHeading(raw) {
+  const word = headingWord(raw);
+  if (!word) return null;
+  return HEADINGS.get(normalizeName(word)) || null;
+}
+
+// -- metadata keys and values -------------------------------------------------
+// Keys use i18n's setup.side / setup.length wording; note that setup.length in
+// English is already "Game length", the canonical key.
+const META_KEY_WORDS = [
+  [[META_KEYS.mode, 'Mode', 'Modo'], 'mode'],
+  [[META_KEYS.side, 'Side', 'Camp', 'Bando'], 'side'],
+  [[META_KEYS.length, 'Game length', 'Length', 'Longueur', 'Longueur de partie', 'Duración', 'Duración de partida'], 'length'],
+];
+
+const META_KEY_BY_WORD = new Map();
+for (const [words, field] of META_KEY_WORDS) {
+  for (const w of words) META_KEY_BY_WORD.set(normalizeName(w), field);
+}
+
+export function lookupMetaKey(raw) {
+  return META_KEY_BY_WORD.get(normalizeName(raw)) || null;
+}
+
+// Accept the canonical English value, the raw id, and the localized label.
+// `length.standard` displays as "Short" in all three languages while its
+// canonical value is "Standard" -- both have to resolve, which is exactly why
+// this is a table and not a toLowerCase().
+const META_VALUES = {
+  mode: [
+    [['Freeform', 'freeform', 'Libre'], 'freeform'],
+    [['Deckbuilding', 'deckbuilding'], 'deckbuilding'],
+  ],
+  side: [
+    [['Wizard', 'wizard', 'Sorcier', 'Mago'], 'wizard'],
+    [['Ringwraith', 'ringwraith', "Spectre de l'Anneau", 'Espectro del Anillo'], 'ringwraith'],
+    [['Fallen-wizard', 'fallen-wizard', 'Sorcier déchu', 'Mago caído'], 'fallen-wizard'],
+    [['Balrog', 'balrog'], 'balrog'],
+  ],
+  length: [
+    [['Starter', 'starter'], 'starter'],
+    [['Standard', 'standard', 'Short'], 'standard'],
+    [['Long', 'long', 'Longue', 'Larga'], 'long'],
+    [['Campaign', 'campaign', 'Campagne', 'Campaña'], 'campaign'],
+  ],
+};
+
+const META_VALUE_INDEX = {};
+for (const [field, rows] of Object.entries(META_VALUES)) {
+  META_VALUE_INDEX[field] = new Map();
+  for (const [words, id] of rows) {
+    for (const w of words) META_VALUE_INDEX[field].set(normalizeName(w), id);
+  }
+}
+
+export function parseMetaValue(field, raw) {
+  const idx = META_VALUE_INDEX[field];
+  if (!idx) return null;
+  return idx.get(normalizeName(raw)) || null;
+}
