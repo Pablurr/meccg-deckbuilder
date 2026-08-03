@@ -7,7 +7,13 @@ import { parseDocument } from '../web/src/lib/import/document.js';
 const HERO = { id: 'AS-58', setCode: 'AS', type: 'Character', alignment: 'Hero', name: { en: 'Angmarim', fr: 'Angmarim' } };
 const MINION = { id: 'AS-62', setCode: 'AS', type: 'Hazard', alignment: 'Minion', name: { en: 'Angmarim', fr: 'Angmarim' } };
 const BURAT = { id: 'TW-119', setCode: 'TW', type: 'Character', alignment: 'Hero', name: { en: 'Bûrat', fr: 'Bûrat' } };
-const CARDS = [HERO, MINION, BURAT];
+// A name shared by a fallen-wizard card and a hero card, for the
+// fallen-wizard alignment path -- the fiddliest bit of classifyHint, since
+// "fallen-wizard" survives normalizeName stripping its hyphen and must be
+// reconstructed with one.
+const ITANGAST_FW = { id: 'BA-1', setCode: 'BA', type: 'Character', alignment: 'Fallen-wizard', name: { en: 'Itangast', fr: 'Itangast' } };
+const ITANGAST_HERO = { id: 'BA-2', setCode: 'BA', type: 'Character', alignment: 'Hero', name: { en: 'Itangast', fr: 'Itangast' } };
+const CARDS = [HERO, MINION, BURAT, ITANGAST_FW, ITANGAST_HERO];
 
 const ctx = (over = {}) => ({
   nameIndex: buildNameIndex(CARDS, 'fr'),
@@ -84,6 +90,28 @@ describe('resolveLines — rank 3, the side', () => {
     const { resolved } = one('1x Angmarim', { side: 'wizard', alignPref: 'minion' });
     expect(resolved[0].matches[0].id).toBe('AS-58');
   });
+
+  it('a known-but-untabled side never falls through to the manual preference', () => {
+    // Simulates a typo, or a fifth side added to rules/sides.js without
+    // updating PREF_BY_SIDE: the side lookup comes up empty, and that must
+    // not silently promote alignPref('minion') to decide a side-bound
+    // import -- if it did, this would resolve to the minion instead of
+    // staying ambiguous.
+    const { resolved } = one('1x Angmarim', { side: 'renegade', alignPref: 'minion' });
+    expect(resolved[0].status).toBe('ambiguous');
+  });
+
+  it('the fallen-wizard preference tie between a lone hero and a lone minion stays ambiguous', () => {
+    // fallenWizard's table ranks hero and minion equally (rank 2): a
+    // fallen-wizard deck can play either, so the tie is the player's to
+    // break, not the resolver's.
+    const { resolved } = one('1x Angmarim', { side: 'fallen-wizard' });
+    expect(resolved[0].status).toBe('ambiguous');
+  });
+
+  it('a (Fallen-wizard) hint narrows to the fallen-wizard reading', () => {
+    expect(one('1x Itangast (Fallen-wizard)').resolved[0].matches[0].id).toBe('BA-1');
+  });
 });
 
 describe('resolveLines — a rank that would empty the set is ignored', () => {
@@ -127,5 +155,30 @@ describe('resolveLines — prose', () => {
     expect(prose).toEqual(['Plan de jeu']);
     expect(resolved[0]).toMatchObject({ target: 'sideboard' });
     expect(resolved[0].matches[0].id).toBe('TW-119');
+  });
+});
+
+describe('resolveLines — a trailing parenthetical is not by itself a mark', () => {
+  // line.js's peeler treats every trailing "(...)" as a hint, marked or not.
+  // A remark in parentheses must still count as prose, or pasting a forum
+  // post with commentary like this becomes a wall of red.
+  it('prose ending in a parenthetical remark is still prose, not a reported miss', () => {
+    const { resolved, prose } = one('Contrôler les havres tôt (stratégie principale)');
+    expect(resolved).toHaveLength(0);
+    expect(prose).toEqual(['Contrôler les havres tôt (stratégie principale)']);
+  });
+
+  // (AS) is a real set code, so classifyHint says 'set', not 'unknown' -- the
+  // player plainly meant a card here, and the typo must still be reported.
+  it('a real set code in parentheses proves intent, so a typo is still reported', () => {
+    const { resolved, prose } = one('Machinchose (AS)');
+    expect(prose).toHaveLength(0);
+    expect(resolved[0].status).toBe('notfound');
+  });
+
+  it('an explicit quantity still reports a miss, unaffected by the parenthetical rule', () => {
+    const { resolved, prose } = one('3x Machinchose');
+    expect(prose).toHaveLength(0);
+    expect(resolved[0].status).toBe('notfound');
   });
 });

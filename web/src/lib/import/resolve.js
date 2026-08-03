@@ -79,7 +79,6 @@ export function classifyHint(text, { cardsById, setNames } = {}) {
   if (ALIGNMENTS.includes(norm.replace(/wizard$/, '-wizard'))) {
     return { kind: 'alignment', value: norm.replace(/^fallenwizard$/, 'fallen-wizard') };
   }
-  if (ALIGNMENTS.includes(norm)) return { kind: 'alignment', value: norm };
   for (const [code, names] of Object.entries(setNames || {})) {
     if (normalizeName(code) === norm) return { kind: 'set', value: code };
     for (const n of Object.values(names || {})) {
@@ -124,7 +123,13 @@ function resolveOne(line, ctx) {
   // is the freeform path: no side to infer from, so the player picks).
   // preferredMatchId is reused rather than reimplemented: it already encodes
   // the fallen-wizard tie the player must settle.
-  const pref = (side && PREF_BY_SIDE[side]) || alignPref || null;
+  //
+  // A known side NEVER falls through to alignPref, even if it is somehow
+  // missing from PREF_BY_SIDE (a typo, or a fifth side added to
+  // rules/sides.js without updating this table) -- alignPref is the
+  // freeform player's manual choice and must not silently leak onto a
+  // side-bound import just because the table lookup came up empty.
+  const pref = side ? (PREF_BY_SIDE[side] || null) : (alignPref || null);
   if (matches.length > 1 && pref) {
     const picked = preferredMatchId(matches, pref);
     if (picked) matches = matches.filter((c) => c.id === picked);
@@ -143,8 +148,18 @@ function resolveOne(line, ctx) {
 // prose, not a missing card -- pasting a forum post must import its cards and
 // keep its commentary, without a wall of red. A line the user DID mark stays a
 // reported miss: the intent there was plainly a card, and a typo must show.
-function isMarked(line) {
-  return line.candidates.some((c) => c.qty > 1) || /^\s*\d/.test(line.raw) || line.candidates[0].hints.length > 0;
+//
+// A trailing "(...)" is NOT by itself a mark: line.js's peeler treats every
+// trailing parenthetical as a hint, so a plain remark like "Contrôler les
+// havres tôt (stratégie principale)" would otherwise count as "marked" and
+// come back as a reported miss instead of prose -- the exact wall-of-red
+// outcome this function exists to prevent. A hint only proves intent when it
+// actually looks like a disambiguator, so it is run through classifyHint and
+// only 'id'/'set'/'alignment' count; 'unknown' is a remark, not a marking.
+function isMarked(line, { cardsById, setNames }) {
+  if (line.candidates.some((c) => c.qty > 1)) return true;
+  if (/^\s*\d/.test(line.raw)) return true;
+  return line.candidates[0].hints.some((h) => classifyHint(h, { cardsById, setNames }).kind !== 'unknown');
 }
 
 export function resolveLines(lines, ctx) {
@@ -152,7 +167,7 @@ export function resolveLines(lines, ctx) {
   const prose = [];
   for (const line of lines) {
     const r = resolveOne(line, ctx);
-    if (r.status === 'notfound' && !isMarked(line)) prose.push(line.raw);
+    if (r.status === 'notfound' && !isMarked(line, ctx)) prose.push(line.raw);
     else resolved.push(r);
   }
   return { resolved, prose };
