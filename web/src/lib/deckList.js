@@ -24,8 +24,9 @@
 
 import { cardName } from './lang.js';
 import { deckSections } from './export/deckSections.js';
+import { TYPE_ORDER } from './constants.js';
 
-export const TYPE_ORDER = ['Character', 'Resource', 'Hazard', 'Site', 'Region'];
+export { TYPE_ORDER } from './constants.js';
 
 // Canonical (English) section/group/note headings — must match the reverse
 // lookups in importDeck.js exactly.

@@ -15,5 +15,11 @@ export const CARD_H_CUT = CARD_H_BLEED - 2 * BLEED_PX; // 1050
 export const SIDE_IDS = ['wizard', 'ringwraith', 'fallen-wizard', 'balrog'];
 export const LENGTH_IDS = ['starter', 'standard', 'long', 'campaign'];
 
+// Play order, not alphabetical order. Authoritative for the deck panel's
+// grouping, every export, and the Type filter menu — which is why it lives
+// here and not in deckList.js: the filter bar has no business importing an
+// export-layer module for a constant that belongs to neither.
+export const TYPE_ORDER = ['Character', 'Resource', 'Hazard', 'Site', 'Region'];
+
 // Target for the "Report this rule" link in rule-warning rows (DeckPanel).
 export const REPORT_ISSUES_URL = 'https://github.com/Pablurr/meccg-deckbuilder/issues/new';
