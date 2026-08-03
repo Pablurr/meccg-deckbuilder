@@ -24,10 +24,18 @@ const group = (type) => ({ family: 'group', type });
 const notes = (field) => ({ family: 'notes', field });
 const meta = () => ({ family: 'meta' });
 
-// Localized words are taken from i18n.js (zones.*, zoneShort.*,
-// panel.group.*, notes.*) and not written from memory, so the parser's
-// vocabulary and the interface's cannot diverge.
-const TABLE = [
+// Two kinds of word in this table, and they are sourced differently.
+// - Translations of an existing UI concept (zone names, group names, note
+//   field names) are taken from i18n.js (zones.*, zoneShort.*,
+//   panel.group.*, notes.*) and not written from memory, so the parser's
+//   vocabulary and the interface's cannot diverge.
+// - Community aliases (e.g. the generic notes openers "Description",
+//   "Strategy"/"Stratégie"/"Estrategia", "Comments"/"Commentaires", "Intro",
+//   "Overview"/"Résumé"/"Resumen", and the "Length"/"Longueur"/"Duración"
+//   metadata shorthands below) have no UI concept to translate: they exist
+//   only so a pasted forum post or LLM-generated list is understood. They
+//   are additive and deliberate, not sourced from i18n.
+export const TABLE = [
   // -- zone: play deck. `quantities` also holds the location deck; play deck
   // vs locations is derived from the card type (ARCHITECTURE.md §4), so both
   // point here.
@@ -67,19 +75,13 @@ export const HEADINGS = new Map();
 for (const [words, entry] of TABLE) {
   for (const w of words) {
     const key = normalizeName(w);
-    if (!key) continue;
-    const existing = HEADINGS.get(key);
     // First writer wins, so a canonical title repeated in its own list (e.g.
-    // GROUP_TITLES.sites === 'Sites') is a no-op rather than a duplicate --
-    // but a DIFFERENT entry claiming an already-taken word is a real
-    // cross-family collision (the trap "Deck" vs metadata would have been)
-    // and must fail loudly at import time. A test that only re-scans
-    // HEADINGS' own keys afterwards could never see this: a Map cannot hold
-    // a duplicate key, so that check alone would be a tautology.
-    if (existing && existing !== entry) {
-      throw new Error(`vocabulary.js: "${key}" is claimed by two different headings`);
-    }
-    if (!existing) HEADINGS.set(key, entry);
+    // GROUP_TITLES.sites === 'Sites') is a no-op rather than a duplicate.
+    // Whether two DIFFERENT rows can safely share a word is a build-time
+    // question, not a production one -- see the "one reading per word" test
+    // in importVocabulary.test.js, which checks TABLE itself rather than
+    // this already-deduplicated map.
+    if (key && !HEADINGS.has(key)) HEADINGS.set(key, entry);
   }
 }
 

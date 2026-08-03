@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { lookupHeading, lookupMetaKey, parseMetaValue, HEADINGS } from '../web/src/lib/import/vocabulary.js';
+import { lookupHeading, lookupMetaKey, parseMetaValue, TABLE } from '../web/src/lib/import/vocabulary.js';
+import { normalizeName } from '../web/src/lib/import/normalize.js';
 
 describe('lookupHeading — a heading is its content, not its markdown level', () => {
   it('reads the same word through every wrapping', () => {
@@ -61,16 +62,56 @@ describe('lookupHeading — a heading is its content, not its markdown level', (
   });
 });
 
-describe('HEADINGS — one reading per word', () => {
-  it('no normalized word belongs to two families', () => {
-    // This is the assertion that would have caught "Deck" being both the play
-    // deck and the metadata block heading.
-    const seen = new Map();
-    for (const [word, entry] of HEADINGS) {
-      expect(seen.has(word)).toBe(false);
-      seen.set(word, entry);
+describe('TABLE — one reading per word', () => {
+  // vocabulary.js builds HEADINGS from TABLE with first-writer-wins, which
+  // silently drops the loser of a real collision -- so checking HEADINGS
+  // afterwards can never find one: a Map can't hold a duplicate key by
+  // construction. To genuinely catch a mistake like "Deck" being registered
+  // as both the play deck and the metadata heading, this has to look at
+  // every claim in TABLE before any of them are dropped.
+  //
+  // Two different rows sharing a word is only a problem if they disagree on
+  // what the word means. `zone('quantities')` from the play-deck row and
+  // from the locations row are two different objects but the SAME reading,
+  // so that has to be allowed -- comparing by value, not by reference, is
+  // what makes "add a synonym to an existing row's neighbor" safe.
+  function sameReading(a, b) {
+    return a.family === b.family && a.zone === b.zone && a.type === b.type && a.field === b.field;
+  }
+
+  function collidingWords(table) {
+    const claimed = new Map(); // normalized word -> first entry that claimed it
+    const collisions = [];
+    for (const [words, entry] of table) {
+      for (const w of words) {
+        const key = normalizeName(w);
+        if (!key) continue;
+        const existing = claimed.get(key);
+        if (existing === undefined) claimed.set(key, entry);
+        else if (!sameReading(existing, entry)) collisions.push(key);
+      }
     }
-    expect(seen.size).toBe(HEADINGS.size);
+    return collisions;
+  }
+
+  it('no normalized word in the real vocabulary is claimed by two different headings', () => {
+    expect(collidingWords(TABLE)).toEqual([]);
+  });
+
+  it('two rows sharing a word is not a collision when they mean the same thing', () => {
+    const table = [
+      [['Foo'], { family: 'zone', zone: 'quantities' }],
+      [['Foo', 'Bar'], { family: 'zone', zone: 'quantities' }],
+    ];
+    expect(collidingWords(table)).toEqual([]);
+  });
+
+  it('two rows sharing a word IS a collision when they disagree on its meaning', () => {
+    const table = [
+      [['Foo'], { family: 'zone', zone: 'sideboard' }],
+      [['Foo'], { family: 'group', type: 'Character' }],
+    ];
+    expect(collidingWords(table)).toEqual(['foo']);
   });
 });
 
