@@ -50,10 +50,15 @@ npx wrangler pages deploy web/dist
    Compétences, Mots-clés, Unique + recherche par nom en/fr). La **recherche ignore les
    accents** (« burat » trouve « Bûrat »).
 2. **Sélectionner (quantités)** : **1er clic** sur l'image = ajoute la carte, **2e clic** =
-   la retire. Les boutons **− / +** en bas de la carte ajustent la quantité. Limites de copies :
-   **3 max** par défaut, **1** pour les cartes **Unique** et pour tous les **Sites**, mais **3**
-   pour les **avatars** (magiciens, Nazgûl, magiciens déchus, Balrog) bien qu'ils soient uniques.
-   Le tiroir du bas affiche les compteurs live (les copies sont comptées).
+   la retire. Les boutons **− / +** en bas de la carte ajustent la quantité, et le tiroir du
+   bas affiche les compteurs live. **Les limites de copies dépendent du mode du deck** (voir
+   « Modes de deck » plus bas) : en **impression libre**, il n'y en a aucune ; en
+   **construction de deck**, le bouton **+** refuse de dépasser le plafond de la carte —
+   **1** exemplaire pour une carte **unique** ou un **site** ordinaire, **3** pour un
+   **avatar** (les avatars échappent à la règle d'unicité), **3** pour le reste (2 pour les
+   personnages et les ressources héros/séide quand tu joues **sorcier déchu**), et **aucune
+   limite** pour les **havres** ni pour les sites de sorcier déchu de ce même camp. Ces
+   plafonds se comptent sur **l'ensemble des zones** réunies, pas zone par zone.
 3. **Importer une liste** : bouton « Importer » → colle une liste `Nx nom de carte`
    (accents ignorés, nom complet). L'écran d'analyse signale les cartes introuvables et, quand
    un nom correspond à plusieurs cartes (ex. version héros / serviteur), propose un menu pour
@@ -97,12 +102,15 @@ nommant la carte concernée. **Rien n'est jamais bloqué.** Par deck, tu peux **
 (elle ne sera plus signalée pour ce deck précis) ou **la signaler** (ouvre un ticket GitHub
 pré-rempli si tu penses qu'elle est fausse).
 
-**Important — les valeurs des règles sont des stubs.** Elles viennent d'une base de connaissances
-utilisée comme piste de départ, pas comme source faisant autorité : la vérification contre une
-source officielle est encore en cours. Toute règle non confirmée démarre **désactivée** et ne
-produit aucun avertissement. La page **Règles et modes** (bouton `?` en haut) documente chaque
-règle — description, sévérité, source — à partir des mêmes données que le validateur, et permet
-de cocher, deck par deck, celles que tu veux appliquer quand même une fois vérifiées de ton côté.
+**Les 30 règles ont été vérifiées** contre la section 1 du
+[Council of Elrond](https://www.councilofelrond.org/rules/#Section1), et chacune cite la clause
+dont elle vient. Elles sont donc **toutes actives par défaut**. Quelques-unes sont explicitement
+marquées comme des **interprétations** (une lecture plus stricte que la lettre du texte) ou comme
+des **avis maison** — ces derniers n'affichent aucune citation, justement parce qu'ils ne
+viennent pas de la source. La page **Règles et modes** (bouton `?` en haut) documente chaque
+règle — description, sévérité, statut, clause citée — à partir des mêmes données que le
+validateur, et la case à cocher de chaque ligne permet d'en **désactiver** une pour ce deck si tu
+n'es pas d'accord avec elle.
 
 ### Notes
 
@@ -236,7 +244,17 @@ npm test
 ## Structure
 
 - `web/` — front Vite + React (toute l'app, y compris la logique d'export en `web/src/lib/export/`)
-- `web/src/lib/rules/` — moteur de règles pur (validation en mode Construction de deck) ; les
-  valeurs sont des stubs à vérifier, voir la page « Règles et modes » dans l'app
-- `web/public/` — assets statiques servis tels quels : `cards.json`, `card-backs/`, `_redirects`
-- `docs/superpowers/` — spec et plan d'implémentation
+- `web/src/lib/rules/` — moteur de règles pur (validation en mode Construction de deck) ;
+  chaque règle cite sa clause, voir la page « Règles et modes » dans l'app
+- `web/public/` — assets statiques servis tels quels : `cards.json`, `card-backs/`,
+  `proxy-patches/`, `_redirects`
+- `docs/superpowers/` — specs et plans d'implémentation, datés
+- `scripts/` — outillage hors build (génération des patchs proxy)
+
+### Pour contribuer (ou pour un assistant IA)
+
+- [`CLAUDE.md`](CLAUDE.md) — conventions du projet et table de routage vers la doc technique.
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — **la mémoire technique du projet** :
+  architecture, décisions datées, invariants, pièges, état des fonctionnalités, dettes
+  connues. À lire avant de modifier quoi que ce soit, et **à mettre à jour dans le même
+  commit** que le changement.
