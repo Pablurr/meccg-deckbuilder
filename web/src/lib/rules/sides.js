@@ -115,9 +115,6 @@ export const SIDES = {
 
 // Browser-filter legality: is this card even playable in a deck of this side?
 // Avatars: legal only when their alignment IS the side's avatar alignment.
-// Balrog-specific and wizard-specific cards are handled by the validator with
-// finer messages; here they stay visible (legal) so the filter never hides
-// what a rule merely restricts per-avatar.
 //
 // `openBalrog` and `bannedIds` are both optional Sets, for the same reason:
 // deriving either means walking the full card array (siteIndex / resolveBanned)
@@ -137,7 +134,20 @@ export function isLegalForSide(card, sideId, openBalrog, bannedIds) {
   if (bannedIds && bannedIds.has(card.id)) return false;
   const a = card.attributes || {};
   if (a.avatar === true) return card.alignment === side.avatarAlignment;
-  if (sideId === 'balrog' && a.specific === 'Balrog') return true;
+  // 1.3.4 -- a card naming a specific avatar is only playable by a side that
+  // may declare that avatar. This used to be left to the validator on the
+  // grounds that the filter should not hide what a rule merely restricts *per
+  // avatar*; but SPECIFIC_TO_SIDES is a *side*-level fact, and the 46
+  // Balrog-specific cards sat in a Ringwraith browser looking playable under
+  // any avatar, which they are not. The finer, per-avatar case (a card
+  // specific to Gandalf in a Saruman deck) stays with SPECIFIC-AVATAR: the
+  // browser does not know which avatar the deck declares, and three distinct
+  // avatars are allowed.
+  // An unrecognised `specific` value restricts nothing -- data we do not know
+  // about must not silently hide cards.
+  if (a.specific && SPECIFIC_TO_SIDES[a.specific]) {
+    return SPECIFIC_TO_SIDES[a.specific].includes(sideId);
+  }
   if (openBalrog && openBalrog.has(card.id)) return true;
   return side.alignments.includes(card.alignment);
 }

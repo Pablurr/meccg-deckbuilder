@@ -378,6 +378,36 @@ describe('sides data', () => {
     expect(isLegalForSide(specificBalrog, 'balrog')).toBe(true);
   });
 
+  it('isLegalForSide: a Balrog-specific card is hidden from a Ringwraith deck', () => {
+    const card = { id: 'X-1', type: 'Character', alignment: 'Minion', attributes: { specific: 'Balrog' } };
+    expect(isLegalForSide(card, 'ringwraith')).toBe(false);
+    expect(isLegalForSide(card, 'balrog')).toBe(true);
+  });
+
+  it('isLegalForSide: a wizard-specific card is legal for both sides that may declare that avatar', () => {
+    const card = { id: 'X-2', type: 'Resource', alignment: 'Hero', attributes: { specific: 'Gandalf' } };
+    expect(isLegalForSide(card, 'wizard')).toBe(true);
+    expect(isLegalForSide(card, 'fallen-wizard')).toBe(true);
+    expect(isLegalForSide(card, 'ringwraith')).toBe(false);
+    expect(isLegalForSide(card, 'balrog')).toBe(false);
+  });
+
+  it('isLegalForSide: an unknown `specific` value restricts nothing, rather than hiding the card everywhere', () => {
+    const card = { id: 'X-3', type: 'Resource', alignment: 'Neutral', attributes: { specific: 'Unlisted' } };
+    for (const side of ['wizard', 'ringwraith', 'fallen-wizard', 'balrog']) {
+      expect(isLegalForSide(card, side)).toBe(true);
+    }
+  });
+
+  it('isLegalForSide: every real Balrog-specific card is hidden from the three other sides', () => {
+    const specifics = cards.filter((c) => (c.attributes || {}).specific === 'Balrog');
+    expect(specifics.length).toBeGreaterThan(40); // 46 in the current data
+    for (const c of specifics) {
+      expect(isLegalForSide(c, 'balrog')).toBe(true);
+      expect(isLegalForSide(c, 'ringwraith')).toBe(false);
+    }
+  });
+
   it('isLegalForSide: an open Balrog site (1.4.1) reads illegal for a non-Balrog camp without the open set, legal with it', () => {
     const { openBalrog } = siteIndex(cards);
     const openSite = index.get('BA-83');
