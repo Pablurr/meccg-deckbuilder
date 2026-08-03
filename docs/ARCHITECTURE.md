@@ -7,7 +7,8 @@
 > Public : LLM. Style : dense, factuel, pas de prose d'introduction.
 > Doc utilisateur : [`README.md`](../README.md). Ce fichier-ci décrit le *comment* et le *pourquoi*.
 
-**Dernière mise à jour : 2026-08-02** — création du document et reprise du `README.md`
+**Dernière mise à jour : 2026-08-02** — contrôles de zone en lignes horizontales, panneau
+de survol des avertissements, vocabulaire FR (Sorcier / Spectre / Séide)
 (état : branche `polish-ui-a11y`).
 
 ---
@@ -603,6 +604,25 @@ bannit les anciens termes purement et simplement au lieu de les laisser à la re
 de carte. Le mot juste est **camp** (`side`). Un test vérifie qu'aucune chaîne liée aux
 camps n'emploie « faction ».
 
+**`Nazgûl` et `Ringwraith` sont deux races, pas deux orthographes.** `Nazgûl` porte les
+9 hazards METW (Creature/Permanent-event), `Ringwraith` les 9 personnages MELE : les mêmes
+individus, mais on joue les uns **contre** l'adversaire et les autres **comme** avatar.
+La facette Race doit donc les séparer — **ne jamais les replier l'un sur l'autre dans
+`RACE_ALIASES`** ([`tags.js`](../web/src/lib/tags.js)), qui n'existe que pour les vrais
+doublons (pluriels : `Orcs`→`Orc`, `Dúnedain`→`Dúnadan`). En FR : « Nazgûl » et
+« Spectre », les noms des cartes elles-mêmes (« Adûnaphel la Spectre ») ; en ES,
+« Espectro del Anillo ». Avant 2026-08-02 les deux s'affichaient « Nazgûl » en FR, ce qui
+donnait deux entrées identiques dans le menu.
+
+**« Magicien » est interdit : *Wizard* se dit « Sorcier »**, pour le camp (`side.wizard`)
+comme pour la race (`race.Wizard`), et « Sorcier déchu » pour *Fallen-wizard*. Le mot
+était partagé en deux — `side.*` et les docs de règles disaient « Sorcier », `alignment.*`
+et `race.*` disaient « Magicien » — et rien ne l'a révélé tant que les menus de filtres
+n'ont pas localisé alignements et races, ce qui a mis les deux mots à l'écran dans la même
+session. « Magicien » est maintenant dans `RETIRED_FR` (banni), et un test épingle en plus
+les chaînes exactes : le bannissement seul serait satisfait par n'importe quel autre mot,
+et ce sont les assertions positives qui font échouer bruyamment une correction partielle.
+
 **Les identifiants de règles restent en anglais** (`AVATAR-SIDEBOARD`, `SIDEBOARD-MAX`) :
 les joueurs les citent quand ils signalent une règle, et ils apparaissent en `<code>`.
 
@@ -616,7 +636,7 @@ les joueurs les citent quand ils signalent une règle, et ils apparaissent en `<
 App
 ├── FilterBar          (facettes, recherche, LangPicker, ProxyToggle, bouton « ? »)
 ├── CardBrowser        (grille filtrée)
-│   ├── ZoneCtrls      (compteurs par zone, interne)
+│   ├── ZoneCtrls      (compteurs par zone, interne) → ZoneRow (× n)
 │   └── ProxyStamp
 ├── DeckPanel          (panneau latéral desktop / feuille plein écran mobile)
 │   ├── ZoneTabs       (onglets + compteurs + plafonds + cibles de drop)
@@ -643,6 +663,57 @@ Différences de forme :
 - `MiniCard` réduit `− / count / +` à un simple compteur ; le bouton `⇄` (déplacer) reste.
 - `FilterBar` replie les facettes derrière un bouton « Filtres ».
 - `DeckDrawer` affiche d'abord « voir le deck » avec le total, puis **des icônes seules**.
+
+### Contrôles de zone sur une tuile (`ZoneRow`, desktop)
+
+**Une ligne horizontale par zone — `LABEL − n +`, ~22 px.** C'était une pile verticale
+(label / + / compteur / −) coûtant ~65 px par zone : les trois zones réclamaient donc
+~200 px dans une tuile de 168 px, et déplier n'en montrait qu'une. Mesuré après :
+85,7 px de haut pour les trois dans une tuile de 192 px. La largeur d'une ligne est dictée
+par son contenu, pas par la cellule — 100 px avec les libellés FR, les plus longs des trois
+langues (`Pioche`) — donc elle tient dans le minimum de 120 px de la grille
+(`minmax(120px, 1fr)`), vérifié à 125,7 px.
+
+L'ordre `−/compteur/+` va de gauche à droite parce que c'est le sens dans lequel le nombre
+se déplace, et c'est déjà celui de la barre de `CardPreviewModal`. **L'argument
+« vers le haut = plus » ne valait que tant que le contrôle était une pile verticale.**
+
+Le bouton d'expansion est une **bascule** : il ne l'était pas, `setExpanded(true)` était
+sans retour, donc ouvrir pour vérifier un compteur confisquait l'illustration jusqu'à la
+fin de la vie de la cellule. Replié il liste les zones cachées avec leurs compteurs,
+déplié seulement leurs noms — les compteurs sont alors juste en dessous, et les répéter
+est du bruit sur une tuile de 116 px. Garder les noms dans les deux états est ce qui donne
+au bouton un nom accessible sans inventer de clé i18n.
+
+Les `aria-label` des boutons **nomment leur zone** (`zoneShort`, la seule clé qui existe
+pour les trois : la pioche est `zoneShort.deck` mais `zones.play`) : trois lignes sont
+visibles à la fois, sans quoi un lecteur d'écran annonce trois boutons homonymes.
+
+### Panneau de survol des avertissements ([`popover.js`](../web/src/lib/popover.js))
+
+Survoler une carte d'avertissement **pliée** en affiche le texte complet. Le repliement a
+rendu la liste lisible mais a mis le message derrière un clic, ce qui est cher quand on a
+déjà la souris en main.
+
+**`position: fixed` n'est pas un raccourci, c'est le fond du problème :** `.rule-warns` est
+un conteneur de défilement (`max-height: 35vh`, `overflow-y: auto`), donc un enfant en
+position absolue serait rogné **exactement quand la liste est assez longue pour défiler**,
+c'est-à-dire dans le cas qui justifie le panneau. Une boîte `fixed` prend le viewport comme
+bloc conteneur et échappe à ce rognage — **à condition qu'aucun ancêtre n'ait `transform`,
+`filter`, `contain` ou `will-change`**, qui deviendraient le bloc conteneur à sa place.
+`.deckpanel` n'en a aucun (vérifié en direct). Le calcul des coordonnées vit dans un module
+pur, `placePopover()`, testable sans DOM.
+
+Volontairement **`pointer-events: none` et `aria-hidden`** : c'est une commodité souris, en
+lecture seule. Les actions (ignorer, signaler, lien CoE) restent dans la carte dépliée,
+donc rien ici n'a besoin d'être atteignable, le pointeur n'a jamais à voyager jusqu'à un
+panneau qui pourrait se dérober, et le même texte reste accessible via le bouton de
+dépliage — l'exposer deux fois dupliquerait toute la liste aux technologies d'assistance.
+
+Masqué au `mouseleave` **et à tout défilement** (`capture: true`, même piège que
+`useCardPreview` : le défilement n'émet pas d'événements souris fiables et invalide le
+rectangle d'ancrage). Délai de 180 ms. Supprimé si l'avertissement est déjà déplié, et sur
+tactile — où le tap-pour-déplier reste le seul chemin.
 
 ### Accessibilité — patterns en place
 
@@ -677,8 +748,12 @@ quelle que soit la largeur du panneau. `parseStoredZoom` valide la valeur stock�
 
 ## §11 — Tests
 
-`npm test` → Vitest, **26 fichiers, 370 tests**. Node pur, pas de DOM : les composants ne
+`npm test` → Vitest, **27 fichiers, 494 tests**. Node pur, pas de DOM : les composants ne
 sont pas montés, ce sont les **modules purs** qui sont testés.
+
+C'est ce qui dicte la façon d'aborder un travail d'interface ici : **on extrait la décision
+dans un module pur, et c'est lui qu'on teste** (`dropTargets.js`, `zoom.js`, `popover.js`).
+Le rendu lui-même n'est vérifié que par mesure en direct dans le navigateur — voir §14.
 
 Fichiers notables :
 
@@ -687,8 +762,10 @@ Fichiers notables :
   peut émettre a une clé dans les trois dictionnaires. C'est ce test qui casse si tu
   ajoutes une règle sans ses traductions. Il importe `DeckPanel.jsx`, donc **une erreur de
   syntaxe JSX le fait échouer à la transformation**, pas à l'assertion.
-- `i18n.test.js` — parité stricte des clés `fr`/`en`/`es`, garde du glossaire FR, interdit
-  « faction ».
+- `i18n.test.js` — parité stricte des clés `fr`/`en`/`es`, parité des `{placeholder}`,
+  garde du glossaire FR, interdit « faction » et « magicien » (§9).
+- `popover.test.js` — `placePopover()` : côté préféré, bascule, bornage dans le viewport,
+  jamais de coordonnée négative.
 - `importDeck.test.js`, `deckList.test.js`, `deckSections.test.js` — le cycle
   export texte → import.
 - `pngDpi.test.js`, `bleedOps.test.js`, `sheetLayout.test.js`, `pdf.test.js`, `zip.test.js`
@@ -789,21 +866,18 @@ proprement, pas restaurer un champ que personne ne consommait.
 
 ## §14 — Dettes connues et travaux différés
 
-1. **`web/src/components/DeckPanel.jsx:373` — erreur de syntaxe JSX dans le travail en
-   cours (constatée 2026-08-02).** Un bloc `{/* … */}` est placé directement à l'intérieur
-   d'une expression `{cond && ( … )}`, où `{}` est lu comme un littéral d'objet et non comme
-   un conteneur d'enfants. `esbuild` échoue (`Expected ")" but found "className"`) et
-   `test/i18n-rules-contract.test.js` ne compile pas. Correctif : sortir le commentaire
-   au-dessus de la ligne `{ruleWarnings.length > 0 && (`, ou l'écrire en commentaire JS.
-   **Non committé** — c'est du travail en cours du propriétaire sur `polish-ui-a11y`,
-   traité dans une autre session. `npm test` échoue tant qu'il est dans l'arbre de travail.
+1. **Localisation partielle des races.** Les données portent **39 valeurs de race
+   distinctes**, et `i18n.js` n'a de clé `race.*` que pour **12** — celles des personnages.
+   Le menu Race mêle donc « Nain », « Elfe », « Sorcier » et « Dragon », « Eagle », « Ent ».
+   Le repli est correct par construction (`localize()` rend la valeur brute, ce qui est
+   **exigé** pour les codes d'extension et les noms d'artistes, qui sont des noms propres),
+   mais la liste est mixte. **Le garde de terminologie ne peut pas le voir** : il n'inspecte
+   que `translations.fr`, et ces chaînes n'y ont jamais été.
 
-2. **Les menus de facettes affichent encore les valeurs anglaises brutes**
-   (« Hazard », « Minion »). Elles sont lues directement dans `cards.json`, pas dans le
-   dictionnaire i18n. C'est le dernier endroit où le vocabulaire retiré reste visible dans
-   l'UI FR, et **le garde de terminologie ne peut pas le voir** : il n'inspecte que
-   `translations.fr`. Un correctif exige donc sa propre vérification.
-   *Différé par le propriétaire (« pas urgent »), 2026-07-29.*
+2. **Pas de tests de composants.** Aucun rendu React n'est monté (§11) : tout le travail
+   d'interface n'est vérifié que par mesure en direct dans le navigateur. C'est une lacune
+   structurelle, pas un oubli — mais elle signifie qu'une régression de rendu ne casse
+   aucun test.
 
 3. **Pas de synchronisation multi-onglets sur `localStorage`.** Deux onglets ouverts sur
    l'app peuvent s'écraser mutuellement (§4). Connu, non traité.
@@ -815,10 +889,20 @@ proprement, pas restaurer un champ que personne ne consommait.
 5. **Qualité d'image plafonnée par la source.** 570×796 @72 DPI agrandis ~1,4×. Rien à
    faire côté code.
 
+6. **La grille n'est pas virtualisée** (`CAP = 600` dans `CardBrowser.jsx`). Au-delà, les
+   cartes sont simplement tronquées avec un message invitant à affiner les filtres.
+
 *Réglé le 2026-08-02 :* le `README.md` décrivait les règles comme des « stubs » non
 vérifiés démarrant désactivés — périmé depuis que les 30 règles portent
 `status: 'verified'`. Les trois passages concernés (limites de copies, avertissements de
 règles, structure) ont été réécrits.
+
+*Réglé le 2026-08-02 (commit `1b1cdea`) :* l'erreur de syntaxe JSX de `DeckPanel.jsx`
+(un `{/* … */}` placé à l'intérieur d'un `{cond && ( … )}`, où `{}` est lu comme un
+littéral d'objet — `esbuild` échouait et `i18n-rules-contract.test.js` ne compilait pas),
+et les menus de facettes qui affichaient les valeurs anglaises brutes. **Le piège de la
+première reste vrai** : une erreur de syntaxe JSX fait échouer un fichier de test *à la
+transformation*, donc lis le compte de **fichiers**, pas seulement celui des tests.
 
 ---
 
@@ -828,5 +912,5 @@ règles, structure) ont été réécrits.
 |---|---|
 | 2026-08-02 | Création. État capturé sur la branche `polish-ui-a11y` (HEAD `3a1d8f5`) : 30 règles vérifiées, 370 tests, 1 erreur de syntaxe non committée consignée en §14. |
 | 2026-08-02 | `README.md` repris : limites de copies décrites par mode de deck (elles n'existent qu'en construction de deck, et les havres comme les sites de sorcier déchu y échappent), paragraphe « stubs » remplacé par l'état vérifié réel, section Structure complétée d'un renvoi vers `CLAUDE.md` et ce document. Dette §14 n°3 réglée, liste renumérotée. |
-</content>
-</invoke>
+| 2026-08-02 | §9 : « Magicien » banni, *Wizard* = « Sorcier » partout. §10 : `ZoneRow` (contrôles de zone en lignes horizontales) et panneau de survol des avertissements (`popover.js`, pourquoi `position: fixed`). §11 : 27 fichiers / 494 tests, et la façon d'aborder un travail d'interface ici. Retrait de deux lignes parasites (`</content>`, `</invoke>`) laissées en fin de fichier à sa création. |
+| 2026-08-02 | §9 : `Nazgûl` ≠ `Ringwraith` (deux races, pas deux orthographes) et pourquoi `RACE_ALIASES` ne doit pas les fusionner ; `race.Ringwraith` FR passe à « Spectre », ES à « Espectro del Anillo », ajout de `race.Nazgûl`. `import.alignPref.*` traduit (FR et ES l'affichaient en anglais, « Minion » compris) et `Fallen Wizard` → `Fallen-wizard` en EN. Garde étendu : les six termes anglais du glossaire, tokens `{placeholder}` exclus de l'inspection. §14 : deux dettes réglées, liste renumérotée. 496 tests. |

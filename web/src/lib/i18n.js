@@ -145,10 +145,14 @@ export const translations = {
     'import.analyze': 'Analyser',
     'import.alignPref': 'Préférence d’alignement (doublons) :',
     'import.alignPref.none': 'Aucune préférence',
-    'import.alignPref.hero': 'Hero',
-    'import.alignPref.minion': 'Minion',
+    // Ces quatre-là nomment des alignements : ils doivent dire exactement ce que
+    // disent les `alignment.*`, sans quoi la même notion porte deux noms selon
+    // l'écran. Ils étaient restés en anglais, « Minion » compris — un terme
+    // retiré (§9) affiché tel quel à un francophone.
+    'import.alignPref.hero': 'Héros',
+    'import.alignPref.minion': 'Séide',
     'import.alignPref.balrog': 'Balrog',
-    'import.alignPref.fallenWizard': 'Fallen Wizard',
+    'import.alignPref.fallenWizard': 'Sorcier déchu',
     'import.summary': '{ok} ligne(s) reconnue(s)',
     'import.summaryNotFound': ', {n} introuvable(s)',
     'import.notFound': '✗ {qty}× {name} — introuvable',
@@ -238,8 +242,15 @@ export const translations = {
     'race.Fallen-wizard': 'Sorcier déchu',
     'race.Hobbit': 'Hobbit',
     'race.Man': 'Homme',
-    'race.Ringwraith': 'Nazgûl',
-    'race.Wizard': 'Magicien',
+    // Deux races distinctes, pas deux orthographes : `Nazgûl` porte les 9 hazards
+    // METW (Creature/Permanent-event), `Ringwraith` les 9 personnages MELE. Mêmes
+    // individus, catégories opposées — on joue les uns CONTRE l'adversaire et les
+    // autres COMME avatar. Ne pas les replier l'un sur l'autre dans RACE_ALIASES
+    // (tags.js) : la facette Race perdrait cette distinction. Les noms suivent
+    // ceux des cartes elles-mêmes (« Adûnaphel la Spectre »).
+    'race.Nazgûl': 'Nazgûl',
+    'race.Ringwraith': 'Spectre',
+    'race.Wizard': 'Sorcier',
     'race.Balrog': 'Balrog',
     'rules.details': 'Détails de la règle',
     'rules.warningsRegion': 'Avertissements de règles',
@@ -495,7 +506,8 @@ export const translations = {
     'import.alignPref.hero': 'Hero',
     'import.alignPref.minion': 'Minion',
     'import.alignPref.balrog': 'Balrog',
-    'import.alignPref.fallenWizard': 'Fallen Wizard',
+    // Hyphenated, like alignment.Fallen-wizard and like the value in cards.json.
+    'import.alignPref.fallenWizard': 'Fallen-wizard',
     'import.summary': '{ok} line(s) recognized',
     'import.summaryNotFound': ', {n} not found',
     'import.notFound': '✗ {qty}× {name} — not found',
@@ -584,6 +596,7 @@ export const translations = {
     'race.Fallen-wizard': 'Fallen-wizard',
     'race.Hobbit': 'Hobbit',
     'race.Man': 'Man',
+    'race.Nazgûl': 'Nazgûl',
     'race.Ringwraith': 'Ringwraith',
     'race.Wizard': 'Wizard',
     'race.Balrog': 'Balrog',
@@ -815,10 +828,10 @@ export const translations = {
     'import.analyze': 'Analizar',
     'import.alignPref': 'Preferencia de alineación (duplicados):',
     'import.alignPref.none': 'Sin preferencia',
-    'import.alignPref.hero': 'Hero',
-    'import.alignPref.minion': 'Minion',
+    'import.alignPref.hero': 'Héroe',
+    'import.alignPref.minion': 'Secuaz',
     'import.alignPref.balrog': 'Balrog',
-    'import.alignPref.fallenWizard': 'Fallen Wizard',
+    'import.alignPref.fallenWizard': 'Mago caído',
     'import.summary': '{ok} línea(s) reconocida(s)',
     'import.summaryNotFound': ', {n} no encontrada(s)',
     'import.notFound': '✗ {qty}× {name} — no encontrada',
@@ -939,7 +952,8 @@ export const translations = {
     'race.Fallen-wizard': 'Mago caído',
     'race.Hobbit': 'Hobbit',
     'race.Man': 'Hombre',
-    'race.Ringwraith': 'Nazgûl',
+    'race.Nazgûl': 'Nazgûl',
+    'race.Ringwraith': 'Espectro del Anillo',
     'race.Wizard': 'Mago',
     'race.Balrog': 'Balrog',
     'rules.details': 'Detalles de la regla',
