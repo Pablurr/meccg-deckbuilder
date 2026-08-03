@@ -1,10 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { parseDeckListDocument, buildNameIndex, resolveDeckList, preferredMatchId } from '../lib/importDeck.js';
+import { parseDocument, buildNameIndex, resolveLines } from '../lib/importDeck.js';
+import { isLegalForSide } from '../lib/rules/sides.js';
+import { siteIndex } from '../lib/rules/sites.js';
+import { resolveBanned } from '../lib/rules/banned.js';
+import { SIDE_IDS, LENGTH_IDS } from '../lib/constants.js';
 import { cardName } from '../lib/lang.js';
 import { useT } from '../i18n.jsx';
 
-// Alignment preference options for auto-resolving duplicate-name lines.
-// value '' means "no preference" (keep the first match).
+// Alignment preference, offered in freeform only: with no side there is
+// nothing to infer a preference from. In deckbuilding the side supplies it
+// (PREF_BY_SIDE), so the manual control would be a second, contradictable
+// source for the same decision.
 const ALIGN_OPTIONS = [
   { value: '', key: 'import.alignPref.none' },
   { value: 'hero', key: 'import.alignPref.hero' },
@@ -13,12 +19,14 @@ const ALIGN_OPTIONS = [
   { value: 'fallenWizard', key: 'import.alignPref.fallenWizard' },
 ];
 
-// "Excellance" (not "Excellence") matches the remastered card data's own
-// spelling — see the comment in banned.js:11-12. Using the misspelled-looking
-// form here on purpose so this placeholder actually imports, rather than
-// silently failing to match any card.
-const PLACEHOLDER = `1x Bûrat
+// "Excellance" (not "Excellence") matches the card data's own spelling -- see
+// banned.js:11-12. Deliberately misspelled here so the placeholder actually
+// imports instead of silently matching nothing.
+const PLACEHOLDER = `## Pioche
+1x Bûrat
 2x Beautiful Gold Ring
+
+## Talon
 3x Glamour of Surpassing Excellance`;
 
 function cardLabel(c, lang) {
@@ -26,41 +34,74 @@ function cardLabel(c, lang) {
   return `${c.id} — ${cardName(c, lang)} (${bits})`;
 }
 
-export default function ImportDialog({ cards, lang = 'fr', onClose, onImport }) {
+// A stable reference, not `{}` inline: `setNames` sits in the `result`
+// useMemo's deps, and until App.jsx wires the prop through (next task) it is
+// undefined here on every render. An inline default object literal is a new
+// reference each call, which would defeat that memo every render, produce a
+// new `resolved` array every time, re-fire the choice-seeding effect below,
+// and loop forever since that effect always calls setChoice with a freshly
+// built object.
+const NO_SET_NAMES = {};
+
+export default function ImportDialog({ cards, lang = 'fr', deck, setNames = NO_SET_NAMES, onClose, onImport }) {
   const t = useT();
   const [text, setText] = useState('');
-  const [resolved, setResolved] = useState(null); // array of resolved lines, each tagged with .target zone
-  const [notes, setNotes] = useState(null); // { starting, resourceStrategy, hazardStrategy, other } from ## Notes, or null pre-analysis
-  const [choice, setChoice] = useState({}); // line index -> chosen card id (for ambiguous)
-  const [alignPref, setAlignPref] = useState(''); // '' | hero | minion | balrog | fallenWizard
+  const [doc, setDoc] = useState(null); // parseDocument output, or null pre-analysis
+  const [choice, setChoice] = useState({}); // line index -> chosen card id
+  const [alignPref, setAlignPref] = useState('');
 
+  // The controls only exist after the analysis, so a manual setting can never
+  // contradict the metadata carried by the pasted text.
+  const [target, setTarget] = useState('new');
+  const [mode, setMode] = useState('freeform');
+  const [side, setSide] = useState('wizard');
+  const [length, setLength] = useState('standard');
+
+  const cardsById = useMemo(() => new Map(cards.map((c) => [c.id, c])), [cards]);
   const nameIndex = useMemo(() => buildNameIndex(cards, lang), [cards, lang]);
+  // Both are memoized on `cards` by a WeakMap inside their own modules; the
+  // useMemo here only avoids re-entering them on every keystroke.
+  const openBalrog = useMemo(() => siteIndex(cards).openBalrog, [cards]);
+  const bannedIds = useMemo(() => (mode === 'deckbuilding' ? resolveBanned(cards).bySide[side] : undefined), [cards, mode, side]);
 
+  // Seeding order, for the first resolution -- which runs before anything is
+  // on screen: pasted metadata > the open deck's ruleset > nothing.
   function analyze() {
-    const doc = parseDeckListDocument(text);
-    setNotes(doc.notes);
-    setResolved(resolveDeckList(doc.lines, nameIndex));
+    const parsed = parseDocument(text);
+    const r = (deck && deck.ruleset) || {};
+    setMode(parsed.meta.mode || (deck && deck.mode) || 'freeform');
+    setSide(parsed.meta.side || r.side || 'wizard');
+    setLength(parsed.meta.length || r.length || 'standard');
+    setDoc(parsed);
   }
 
-  // (Re)compute the per-line default selection whenever the results or the
-  // alignment preference change. The preference pre-selects a match for
-  // ambiguous lines; the player can still override any line's dropdown after
-  // (a manual pick survives until the preference changes or the list is
-  // re-analyzed). Falls back to the first match when the preference doesn't
-  // resolve a single winner.
+  const effectiveSide = mode === 'deckbuilding' ? side : null;
+
+  // alignPref is in the deps because in freeform it IS the rank-3 tiebreaker;
+  // in deckbuilding effectiveSide supersedes it and resolve.js ignores it.
+  const result = useMemo(() => {
+    if (!doc) return null;
+    return resolveLines(doc.lines, { nameIndex, cardsById, setNames, side: effectiveSide, alignPref });
+  }, [doc, nameIndex, cardsById, setNames, effectiveSide, alignPref]);
+
+  const resolved = result ? result.resolved : null;
+
+  // Default selection per line. A manual pick SURVIVES a side change unless
+  // the card it names is no longer among the candidates -- the previous
+  // implementation wiped every manual pick whenever the preference moved.
   useEffect(() => {
     if (!resolved) return;
-    const next = {};
-    resolved.forEach((line, i) => {
-      if (line.matches.length === 0) return;
-      next[i] = preferredMatchId(line.matches, alignPref) || line.matches[0].id;
+    setChoice((prev) => {
+      const next = {};
+      resolved.forEach((line, i) => {
+        if (line.matches.length === 0) return;
+        const kept = prev[i] && line.matches.some((c) => c.id === prev[i]) ? prev[i] : null;
+        next[i] = kept || line.matches[0].id;
+      });
+      return next;
     });
-    setChoice(next);
-  }, [resolved, alignPref]);
+  }, [resolved]);
 
-  // Build the final { quantities, zones } maps from resolved+chosen lines
-  // (floored at 1), routing each line to its target zone (main deck, pool,
-  // or sideboard) as recorded by parseDeckListDocument.
   const importable = useMemo(() => {
     const quantities = {};
     const zones = { pool: {}, sideboard: {} };
@@ -76,19 +117,39 @@ export default function ImportDialog({ cards, lang = 'fr', onClose, onImport }) 
     return { quantities, zones };
   }, [resolved, choice]);
 
-  const importCount = Object.values(importable.quantities).reduce((a, b) => a + b, 0)
-    + Object.values(importable.zones.pool).reduce((a, b) => a + b, 0)
-    + Object.values(importable.zones.sideboard).reduce((a, b) => a + b, 0);
+  const importCount = [importable.quantities, importable.zones.pool, importable.zones.sideboard]
+    .reduce((sum, m) => sum + Object.values(m).reduce((a, b) => a + b, 0), 0);
 
   const okCount = resolved ? resolved.filter((l) => l.status !== 'notfound').length : 0;
   const notFoundCount = resolved ? resolved.filter((l) => l.status === 'notfound').length : 0;
+  const proseCount = result ? result.prose.length : 0;
+
+  // Prose collected by the resolver is appended to the "other notes" field, so
+  // pasting a forum post keeps its commentary instead of dropping it.
+  function submit() {
+    const notes = { ...(doc ? doc.notes : {}) };
+    if (result && result.prose.length) {
+      notes.other = [notes.other, result.prose.join('\n')].filter(Boolean).join('\n').trim();
+    }
+    onImport({
+      quantities: importable.quantities,
+      zones: importable.zones,
+      notes,
+      name: (doc && doc.name) || t('import.defaultName'),
+      mode,
+      ruleset: mode === 'deckbuilding'
+        ? { side, length, tournament: !!((deck && deck.ruleset) || {}).tournament, ruleOverrides: ((deck && deck.ruleset) || {}).ruleOverrides || (deck && deck.savedRuleOverrides) || {} }
+        : null,
+      target,
+    });
+  }
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <h2>{t('import.title')}</h2>
         <p className="muted" style={{ marginTop: 0 }}>
-          {t('import.help', { fmt: 'Nx name', ex: 'star glass = Star-glass', sections: '## Pool / ## Sideboard / ## Notes' })}
+          {t('import.help', { fmt: '3x Bûrat · Bûrat - 3', ex: 'burat = Bûrat' })}
         </p>
 
         <textarea
@@ -99,48 +160,81 @@ export default function ImportDialog({ cards, lang = 'fr', onClose, onImport }) 
           rows={7}
         />
 
-        <div className="row" style={{ justifyContent: 'flex-end' }}>
-          <button className="btn secondary" onClick={analyze} disabled={!text.trim()}>{t('import.analyze')}</button>
-        </div>
+        {!doc && (
+          <div className="row" style={{ justifyContent: 'flex-end' }}>
+            <button className="btn secondary" onClick={analyze} disabled={!text.trim()}>{t('import.analyze')}</button>
+          </div>
+        )}
 
-        {resolved && (
+        {doc && (
           <>
+            <fieldset className="import-settings">
+              <legend>{t('import.step2')}</legend>
+              <div className="row">
+                <label>{t('import.target')}
+                  <select value={target} onChange={(e) => setTarget(e.target.value)}>
+                    <option value="new">{t('import.target.new')}</option>
+                    <option value="replace">{t('import.target.replace')}</option>
+                  </select>
+                </label>
+                <label>{t('import.mode')}
+                  <select value={mode} onChange={(e) => setMode(e.target.value)}>
+                    <option value="freeform">{t('setup.mode.freeform')}</option>
+                    <option value="deckbuilding">{t('setup.mode.deckbuilding')}</option>
+                  </select>
+                </label>
+              </div>
+              {mode === 'deckbuilding' ? (
+                <div className="row">
+                  <label>{t('setup.side')}
+                    <select value={side} onChange={(e) => setSide(e.target.value)}>
+                      {SIDE_IDS.map((s) => <option key={s} value={s}>{t(`side.${s}`)}</option>)}
+                    </select>
+                  </label>
+                  <label>{t('setup.length')}
+                    <select value={length} onChange={(e) => setLength(e.target.value)}>
+                      {LENGTH_IDS.map((l) => <option key={l} value={l}>{t(`length.${l}`)}</option>)}
+                    </select>
+                  </label>
+                </div>
+              ) : (
+                <label className="import-alignpref">
+                  {t('import.alignPref')}
+                  <select value={alignPref} onChange={(e) => setAlignPref(e.target.value)}>
+                    {ALIGN_OPTIONS.map((o) => <option key={o.value} value={o.value}>{t(o.key)}</option>)}
+                  </select>
+                </label>
+              )}
+            </fieldset>
+
             <p className="muted">
-              {t('import.summary', { ok: okCount })}{notFoundCount ? t('import.summaryNotFound', { n: notFoundCount }) : ''}.
+              {t('import.summary', { ok: okCount })}
+              {notFoundCount ? t('import.summaryNotFound', { n: notFoundCount }) : ''}
+              {proseCount ? t('import.summaryProse', { n: proseCount }) : ''}.
             </p>
-            <label className="import-alignpref">
-              {t('import.alignPref')}
-              <select value={alignPref} onChange={(e) => setAlignPref(e.target.value)}>
-                {ALIGN_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>{t(o.key)}</option>
-                ))}
-              </select>
-            </label>
+
             <ul className="import-list">
               {resolved.map((line, i) => {
                 if (line.status === 'notfound') {
-                  return (
-                    <li key={i} className="imp-notfound">
-                      {t('import.notFound', { qty: line.qty, name: line.name })}
-                    </li>
-                  );
+                  return <li key={i} className="imp-notfound">{t('import.notFound', { qty: line.qty, name: line.name })}</li>;
                 }
                 if (line.status === 'ambiguous') {
                   return (
                     <li key={i} className="imp-ambiguous">
                       {t('import.ambiguous', { qty: line.qty, name: line.name })}
-                      <select
-                        value={choice[i] || ''}
-                        onChange={(e) => setChoice((prev) => ({ ...prev, [i]: e.target.value }))}
-                      >
-                        {line.matches.map((c) => (
-                          <option key={c.id} value={c.id}>{cardLabel(c, lang)}</option>
-                        ))}
+                      <select value={choice[i] || ''} onChange={(e) => setChoice((prev) => ({ ...prev, [i]: e.target.value }))}>
+                        {line.matches.map((c) => <option key={c.id} value={c.id}>{cardLabel(c, lang)}</option>)}
                       </select>
                     </li>
                   );
                 }
-                const c = line.matches[0];
+                const c = cardsById.get(choice[i]) || line.matches[0];
+                // Marked, never blocked: the card imports either way. Same
+                // call as CardBrowser's, so the two cannot disagree.
+                const illegal = effectiveSide && !isLegalForSide(c, effectiveSide, openBalrog, bannedIds);
+                if (illegal) {
+                  return <li key={i} className="imp-illegal">{t('import.illegal', { qty: line.qty, name: cardName(c, lang), side: t(`side.${effectiveSide}`) })}</li>;
+                }
                 return (
                   <li key={i} className="imp-ok">
                     ✓ {line.qty}× <b>{cardName(c, lang)}</b> <span className="muted">({c.id})</span>
@@ -148,16 +242,19 @@ export default function ImportDialog({ cards, lang = 'fr', onClose, onImport }) 
                 );
               })}
             </ul>
+
+            {proseCount > 0 && (
+              <details className="import-prose">
+                <summary>{t('import.prose')} ({proseCount})</summary>
+                <pre>{result.prose.join('\n')}</pre>
+              </details>
+            )}
           </>
         )}
 
         <div className="row" style={{ justifyContent: 'flex-end' }}>
           <button className="btn secondary" onClick={onClose}>{t('common.cancel')}</button>
-          <button
-            className="btn"
-            onClick={() => onImport({ quantities: importable.quantities, zones: importable.zones, notes: notes || {} })}
-            disabled={!resolved || importCount === 0}
-          >
+          <button className="btn" onClick={submit} disabled={!doc || importCount === 0}>
             {t('import.submit', { n: importCount })}
           </button>
         </div>

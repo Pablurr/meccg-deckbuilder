@@ -902,6 +902,11 @@ input.name {
   font-size: 13px;
   resize: vertical;
 }
+.import-settings { border: 1px solid var(--line); border-radius: 8px; padding: .5rem .75rem; margin: .5rem 0; }
+.import-settings legend { font-size: .85em; padding: 0 .35rem; }
+/* Marked, not hidden: the card still imports. Mirrors .cardcell.illegal. */
+.imp-illegal { color: var(--warn); }
+.import-prose pre { white-space: pre-wrap; font-size: .85em; margin: .25rem 0 0; }
 .import-list {
   list-style: none;
   padding: 0;
