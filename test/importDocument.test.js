@@ -38,7 +38,9 @@ describe('parseDocument — zones', () => {
     expect(at(doc, 'Bûrat').target).toBe('sideboard');
   });
 
-  it.todo('an unknown heading goes to the notes and leaves the zone alone');
+  // The notes half of "an unknown heading goes to the notes and leaves the
+  // zone alone" moved to test/importResolve.test.js, which has the card
+  // index needed to tell "Plan de jeu" from a bare card name.
 
   it('a zone heading clears the previous type hint', () => {
     const doc = parseDocument(['### Hazards', '## Pool', '1x Bûrat'].join('\n'));
@@ -47,12 +49,11 @@ describe('parseDocument — zones', () => {
 });
 
 describe('parseDocument — nothing is lost', () => {
-  // Blocked on Task 7: document.js has no card index, so it cannot tell
-  // "Contrôler les havres tôt" from a bare card name. Reactivate in
-  // test/importResolve.test.js once resolve.js exists.
-  it.todo('prose with no quantity and no match becomes notes, not a card line');
-
-  it.todo('a line WITH an explicit quantity stays a card line, so a typo is still reported');
+  // Both moved to test/importResolve.test.js's 'resolveLines — prose' block,
+  // which has the card index needed to tell "Contrôler les havres tôt" from
+  // a bare card name: 'an unmarked line that matches nothing is prose, and
+  // is returned as such' and 'a marked line that matches nothing stays a
+  // reported miss'.
 
   it('notes mode is absolute: even "3x Gandalf is the plan" is never a card line', () => {
     const doc = parseDocument(['## Notes', '3x Gandalf is the plan'].join('\n'));
