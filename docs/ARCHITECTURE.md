@@ -7,9 +7,10 @@
 > Public : LLM. Style : dense, factuel, pas de prose d'introduction.
 > Doc utilisateur : [`README.md`](../README.md). Ce fichier-ci décrit le *comment* et le *pourquoi*.
 
-**Dernière mise à jour : 2026-08-02** — contrôles de zone en lignes horizontales, panneau
-de survol des avertissements, vocabulaire FR (Sorcier / Spectre / Séide), noms de sets
-localisés dans le filtre (état : branche `polish-ui-a11y`).
+**Dernière mise à jour : 2026-08-03** — import de liste reconstruit en pipeline de cinq
+modules (sections en tout ordre, désambiguïsation à quatre rangs), cartes spécifiques à un
+camp exclues du navigateur d'un camp qui ne peut pas les jouer, bloc `## Metadata` à
+l'export texte, ordre de jeu fixé dans le filtre Type (état : branche `deck-import-zones`).
 
 ---
 
@@ -106,7 +107,7 @@ web/src/            toute l'application
     export/         pipeline d'export pur (10 modules, aucun import React)
     *.js            deck, deckStore, filter, importDeck, lang, proxy, tags, zoom…
 web/public/         servi tel quel : cards.json, card-backs/, proxy-patches/, _redirects
-test/               27 fichiers Vitest, 504 tests
+test/               32 fichiers Vitest, 584 tests
 docs/superpowers/   specs et plans d'implémentation, datés (historique des intentions)
 scripts/            make_proxy_patches.py (génération des patchs proxy, hors build)
 ```
@@ -234,6 +235,52 @@ lecture. Toute évolution du schéma **doit** passer par cette fonction.
 - **Un deck `deckbuilding` dont `side` ou `length` est inconnu retombe en `freeform`**
   plutôt que de lever une exception.
 
+### Pipeline d'import (`web/src/lib/import/`, 2026-08-03)
+
+```
+lib/import/normalize.js → line.js → vocabulary.js → document.js → resolve.js
+lib/importDeck.js = façade, API publique inchangée (263 → 137 lignes)
+```
+
+- **`normalize.js`** — `normalizeName()` seule, sans aucun import. Elle vit dans une feuille
+  à part **pour casser un cycle** : la façade `importDeck.js` ré-exporte `normalizeName` tout
+  en important `vocabulary.js`, et `vocabulary.js` a besoin de `normalizeName` — la faire
+  transiter par la façade créerait le cycle. Même piège que la séparation `catalog.js` /
+  `validate.js` déjà documentée en §6.
+- **`line.js`** — `parseLineCandidates(raw)` renvoie des **lectures candidates**, pas une
+  seule supposition : « Bûrat 2 » est soit deux exemplaires de Bûrat soit une carte nommée
+  « Bûrat 2 », et seul `cards.json` tranche. **Invariant : le DERNIER candidat reproduit
+  l'ancien `parseLine` telle quelle** (quantité en tête seulement, rien retiré en fin de
+  chaîne) — c'est ce qui a laissé `test/importDeck.test.js` passer sans une seule modification
+  pendant tout le refactor.
+- **`vocabulary.js`** — reconnaît un titre par son **contenu normalisé, jamais par le niveau
+  markdown** (`## Talon`, `### Talon`, `Talon :`, `**Talon**` sont un seul titre), en quatre
+  familles : zone / groupe / notes / métadonnées. Les mots qui traduisent un concept déjà
+  dans l'UI (noms de zone, de groupe, de champ de note) viennent de `i18n.js`
+  (`zones.*`/`zoneShort.*`/`panel.group.*`/`notes.*`), jamais réécrits à la main, pour que le
+  vocabulaire du parseur et celui de l'interface ne puissent pas diverger. Les alias
+  communautaires (Description, Strategy, Overview…) n'ont pas d'équivalent UI et sont ajoutés
+  à la main, délibérément, pour comprendre un post de forum ou une liste générée par un LLM.
+- **`document.js`** — `parseDocument(text)` tient deux garanties : le **mode notes est
+  absolu** (aucune ligne n'y est jamais lue comme une carte, même « 3x Gandalf »), et **un
+  titre inconnu part en notes et laisse la zone intacte** — l'ancienne implémentation
+  réinitialisait la cible vers le deck principal sur tout `##` non reconnu, si bien qu'un
+  « Plan de jeu » écrit dans le talon renvoyait toutes les cartes suivantes dans la pioche.
+  Ne sépare pas la prose des cartes (ça a besoin de l'index de cartes, que ce module n'a pas
+  et ne doit pas avoir) : `resolve.js` le fait.
+- **`resolve.js`** — `resolveLines(lines, ctx)` applique une pile de désambiguïsation à
+  **quatre rangs** — lecture candidate, parenthèse, type de sous-section, camp — où **chaque
+  rang réduit l'ensemble et est ignoré s'il le viderait** (un mauvais indice ne doit jamais
+  faire disparaître une carte qui existe), et **la parenthèse est souveraine sur le camp** :
+  ce qui est écrit l'emporte sur ce qui est déduit, même quand le résultat est illégal pour le
+  camp — la carte est importée et marquée, jamais silencieusement substituée. Une ligne sans
+  quantité explicite qui ne matche rien est de la prose, pas un miss ; une ligne marquée
+  (quantité, ou parenthèse `id`/`set`/`alignment`) reste un miss signalé même sans match.
+- **`importDeck.js`** (137 lignes, contre 263 avant) devient une **façade** : ré-exporte les
+  fonctions ci-dessus et garde `parseDeckList`, `parseDeckListDocument`, `resolveDeckList`,
+  `importDeckList` sous leur forme d'origine, pour que les appelants existants et
+  `test/importDeck.test.js` n'aient rien à changer.
+
 ### `localStorage`
 
 | Clé | Contenu | Écrit par |
@@ -270,6 +317,14 @@ copies, `null` hors mode deckbuilding), `ruleWarnings`.
 (`onChangeQty`, `changeZoneQty`, `moveCopy`, `onToggleRule`, `onChangeNote`…). La logique
 pure vit dans [`deckMutations.js`](../web/src/lib/deckMutations.js) (`applyDelta`,
 `applyToggle`, `applySelectAll`), qui consulte systématiquement `roomFor` avant d'appliquer.
+
+**`importDeckData({ quantities, zones, notes, name, mode, ruleset, target })`** (2026-08-03)
+remplace la sélection courante (jamais de fusion — sémantique héritée de l'ancien
+`importQuantities`) et pilote deux cibles : `target: 'replace'` (défaut) garde `id`, `name` et
+`backAssignments` du deck ouvert ; **`target: 'new'` met `id` à `null`**, `backAssignments` à
+`{}` et prend `name` (ou `app.newDeck` à défaut), pour que la sauvegarde crée un enregistrement
+au lieu d'écraser celui en cours — coller une liste de forum, c'est en général « fais-moi un
+deck avec ça », et un import raté ne doit pas détruire un travail en cours.
 
 **Deux exceptions à connaître :**
 
@@ -381,6 +436,21 @@ unlimitedFwSites, requireBalrogVersion}`, `factionRaces`.
 30, long 35, campaign 40). **La longueur de partie n'affecte donc que la taille de la
 réserve, jamais la légalité d'une carte.**
 
+**`isLegalForSide` — la passe `specific` (2026-08-03).** Une carte dont `attributes.specific`
+nomme un avatar est illégale pour tout camp qui ne peut pas déclarer cet avatar
+(`SPECIFIC_TO_SIDES`, table de `sides.js`) : sans cette passe, les 46 cartes BA
+`specific: "Balrog"` restaient visibles (légales) dans un navigateur Spectre de l'Anneau.
+**Volontairement au niveau du camp, pas de l'avatar** : le navigateur ne sait pas quel avatar
+précis le deck a déclaré, et un camp Sorcier autorise trois avatars distincts — le cas plus
+fin (une carte spécifique à Gandalf dans un deck Saruman) reste à la règle `SPECIFIC-AVATAR`,
+qui a ce contexte. Une valeur de `specific` non répertoriée dans `SPECIFIC_TO_SIDES` ne
+restreint rien : une donnée inconnue ne doit jamais cacher une carte silencieusement. Cette
+passe **absorbe l'ancien cas spécial** `if (sideId === 'balrog' && a.specific === 'Balrog')
+return true`, qui ne faisait que garder les cartes Balrog visibles pour ce seul camp ; la
+nouvelle passe généralise à tout `specific` connu et à tout camp. `specificMode:
+'balrog-exempt'` (`SIDES.balrog`) reste utilisé ailleurs, dans `validate.js`, pour
+l'exemption de race/mind du pool — sans rapport avec cette passe du navigateur.
+
 ### Ajouter une règle — ordre des opérations
 
 1. **`catalog.js`** — ajouter l'objet dans `RULES` avec un `id` unique et sa citation.
@@ -483,6 +553,10 @@ includeBacks, format })`.
 
 ```
 # <nom du deck>
+## Metadata         (toujours émis, y compris en freeform)
+- Mode: Deckbuilding
+- Side: Balrog        (seulement en mode deckbuilding)
+- Game length: Standard
 ## Notes            (seulement si au moins une note est non vide)
 ### <titre de note>
 <contenu>
@@ -494,6 +568,18 @@ includeBacks, format })`.
 **Les titres de section et de groupe sont en anglais canonique**, quelle que soit la langue
 choisie, **parce que l'import les reparse**. Seuls les noms de cartes suivent `lang`.
 Casser cette asymétrie casse le cycle export → import.
+
+**Le bloc `## Metadata`** (2026-08-03) est **toujours émis**, y compris en freeform
+(« Mode: Freeform » à lui seul referme le round-trip) : un bloc parfois absent est un
+conditionnel que le lecteur doit reconstruire. `Side` et `Game length` ne sortent qu'en mode
+deckbuilding. Les valeurs sont l'anglais canonique (`META_MODE`/`META_SIDE`/`META_LENGTH`
+dans `deckList.js`), comme tout titre ici, parce que l'import les relit. **`tournament` en
+est délibérément absent** : la fenêtre d'import ne propose aucun réglage tournoi/casual, et
+un champ exporté que l'import ne peut pas restaurer est une asymétrie — le round-trip ne doit
+promettre que ce qu'il tient vraiment. **Le titre est « Metadata » et non « Deck »** : le
+vocabulaire de l'import (`lib/import/vocabulary.js`) lit déjà le mot nu « deck » comme visant
+le play deck (voir §4), et une seule lecture par mot est ce qui garde ce vocabulaire une table
+plate plutôt qu'une résolution contextuelle.
 
 ### Cibles d'impression
 
@@ -628,6 +714,15 @@ autres facettes, donc l'ordre du menu change avec la langue ; le champ `order` d
 (ordre de sortie : TW, TD, DM, LE, AS, WH, BA) existe si un tri chronologique est un jour
 préféré.
 
+**Exception : le filtre Type (2026-08-03).** Son tri n'est plus alphabétique sur le libellé
+mais **fixé sur l'ordre de jeu**, identique dans les trois langues : `TYPE_ORDER` dans
+`constants.js` (`Character, Resource, Hazard, Site, Region`). `sortFacetOptions()`
+(`lib/filter.js`) prend un `order` optionnel ; sans lui elle trie par libellé comme les
+autres facettes, avec lui elle range par rang dans `order` puis par libellé pour départager,
+et **place en queue toute valeur absente de `order`** plutôt qu'en tête, pour qu'une valeur
+de donnée ajoutée reste visible sans sauter au sommet du menu. `FacetDropdown` ne reçoit ce
+prop que pour Type.
+
 **`Nazgûl` et `Ringwraith` sont deux races, pas deux orthographes.** `Nazgûl` porte les
 9 hazards METW (Creature/Permanent-event), `Ringwraith` les 9 personnages MELE : les mêmes
 individus, mais on joue les uns **contre** l'adversaire et les autres **comme** avatar.
@@ -649,6 +744,25 @@ et ce sont les assertions positives qui font échouer bruyamment une correction 
 
 **Les identifiants de règles restent en anglais** (`AVATAR-SIDEBOARD`, `SIDEBOARD-MAX`) :
 les joueurs les citent quand ils signalent une règle, et ils apparaissent en `<code>`.
+
+### Nouvelles clés `import.*` (2026-08-03)
+
+`import.step2`, `import.target`/`.target.new`/`.target.replace`, `import.mode`,
+`import.defaultName`, `import.summaryProse`, `import.illegal`, `import.prose` habillent le
+second temps de la fenêtre d'import (§10) : cible, mode, résumé des lignes gardées en notes,
+marque d'illégalité. `import.alignPref.*` existait déjà (branche précédente).
+
+**Le vocabulaire du parseur (`lib/import/vocabulary.js`) reprend les libellés de `i18n.js`,
+il ne les réécrit pas.** Les noms de zone, de groupe et de champ de note que le parseur
+reconnaît viennent de `zones.*`/`zoneShort.*`/`panel.group.*`/`notes.*`, jamais recopiés à la
+main — voir §4. Seuls les alias communautaires (Description, Strategy, Overview…), qui
+n'ont pas d'équivalent dans l'UI, sont écrits en dur.
+
+**Piège « réserve ».** Le tableau du parseur ne connaît que le sens **courant** du mot —
+pool, depuis le 2026-07-29 (glossaire ci-dessus) — jamais l'ancien (sideboard). Un texte
+collé qui écrit « Réserve » en pensant au sideboard sera lu comme visant le pool, sans
+avertissement : c'est une décision (aucune liste écrite à la main n'utilise plus l'ancien
+sens), pas un oubli à corriger en ajoutant l'ancienne entrée.
 
 ---
 
@@ -752,6 +866,24 @@ tactile — où le tap-pour-déplier reste le seul chemin.
   compteur court est `aria-live="polite"` désormais ; les avertissements eux-mêmes sont du
   contenu navigable.
 
+### Fenêtre d'import en deux temps (`ImportDialog.jsx`, 2026-08-03)
+
+Coller-puis-**Analyser** précède les réglages : `target`/`mode`/`side`/`length` ne sont
+montés qu'après que `analyze()` a produit un `doc` (`parseDocument`). **C'est ce qui élimine
+tout message « ceci contredit cela » nulle part dans l'écran** : un réglage manuel ne peut
+pas contredire le texte collé s'il n'existe pas encore au moment où le texte est lu.
+`analyze()` amorce les valeurs dans cet ordre de préséance : métadonnées collées
+(`## Metadata`, §7) > deck ouvert (`deck.mode`/`deck.ruleset`) > défauts (`freeform` /
+`wizard` / `standard`).
+
+Tout changement de camp ou de longueur après l'analyse relance `resolveLines` (le `useMemo`
+dépend d'`effectiveSide`), donc la désambiguïsation et les marques de légalité restent
+synchronisées avec le réglage courant plutôt que figées sur l'état de l'analyse initiale. Un
+choix manuel de carte ambiguë **survit** à ce changement, sauf si la carte choisie n'est plus
+parmi les candidats. Les marques de légalité réutilisent `isLegalForSide` avec les mêmes
+`openBalrog`/`bannedIds` que `CardBrowser`, sous la même garde `isRuleEnabled('BANNED', …)`,
+pour que les deux écrans ne puissent jamais se contredire sur ce qui est légal.
+
 ### Zoom du panneau ([`zoom.js`](../web/src/lib/zoom.js))
 
 Le zoom est un **pourcentage de la largeur disponible** (`deckZoneWidth(outerWidth)`), plus
@@ -772,7 +904,7 @@ quelle que soit la largeur du panneau. `parseStoredZoom` valide la valeur stock�
 
 ## §11 — Tests
 
-`npm test` → Vitest, **27 fichiers, 504 tests**. Node pur, pas de DOM : les composants ne
+`npm test` → Vitest, **32 fichiers, 584 tests**. Node pur, pas de DOM : les composants ne
 sont pas montés, ce sont les **modules purs** qui sont testés.
 
 C'est ce qui dicte la façon d'aborder un travail d'interface ici : **on extrait la décision
@@ -794,7 +926,10 @@ Fichiers notables :
   chaque set offert par la facette porte un nom dans les trois langues. Sans lui, un set
   ajouté sans nom s'afficherait en code nu, dans toutes les langues, sans rien casser.
 - `importDeck.test.js`, `deckList.test.js`, `deckSections.test.js` — le cycle
-  export texte → import.
+  export texte → import. `importLine.test.js`, `importVocabulary.test.js`,
+  `importDocument.test.js`, `importResolve.test.js`, `importDeckSetCode.test.js` (2026-08-03)
+  testent chaque module du pipeline d'import (§4) séparément ; `importDeck.test.js` reste le
+  test de la façade et pins la forme pré-refactor.
 - `pngDpi.test.js`, `bleedOps.test.js`, `sheetLayout.test.js`, `pdf.test.js`, `zip.test.js`
   — la géométrie et les octets d'export.
 - `proxy.test.js`, `proxyPatches.test.js` — classification et présence des 32 patchs.
@@ -857,7 +992,7 @@ ne faut pas en réintroduire un.
 
 ### Décision transverse — `fwExtra` retiré volontairement
 
-`formats.js` portait `fwExtra: 10` (« +10 cartes de réserve contre un adversaire Sorcier
+`formats.js` portait `fwExtra: 10` (« +10 cartes de talon contre un adversaire Sorcier
 déchu »). **Rien ne le lisait**, et l'allocation dépend du camp de l'*adversaire*, que
 l'app ne modélise pas (il n'y a pas de second joueur dans le périmètre). Retiré plutôt que
 recâblé. Si un adversaire est un jour modélisé, il faudra le sourcer et le câbler
@@ -879,7 +1014,7 @@ proprement, pas restaurer un champ que personne ne consommait.
 | Page « Règles et modes » générée depuis les mêmes données que le validateur | **Livré** |
 | Notes de deck (4 champs) + reprises dans l'export texte | **Livré** |
 | Sauvegarde `localStorage`, duplication, réordonnancement par glisser-déposer | **Livré** |
-| Import de liste `Nx nom` avec désambiguïsation et restauration des zones | **Livré** |
+| Import de liste : sections en tout ordre (markdown ou texte brut, FR/EN/ES), quantité aux quatre positions, désambiguïsation et restauration des zones | **Livré** |
 | Export ZIP MPC (822×1122 @300 DPI, bleed, manifeste) | **Livré** |
 | Export planches PDF (letter / a4 / a3 paysage, dos en miroir) | **Livré** |
 | Export deck list texte, ré-importable, 5 langues | **Livré** |
@@ -887,7 +1022,7 @@ proprement, pas restaurer un champ que personne ne consommait.
 | Mode Proxy (écran + exports), 16 cadres × 2 variantes | **Livré** |
 | i18n complète FR / EN / ES (chrome, noms, images) | **Livré** |
 | UI mobile (feuille de deck, modale de carte, barre d'icônes) | **Livré** |
-| Passe accessibilité / polish | **En cours** — branche `polish-ui-a11y` |
+| Passe accessibilité / polish | **Livré** — branche `polish-ui-a11y` fusionnée en `84304fe` |
 
 ---
 
@@ -942,3 +1077,4 @@ transformation*, donc lis le compte de **fichiers**, pas seulement celui des tes
 | 2026-08-02 | §9 : « Magicien » banni, *Wizard* = « Sorcier » partout. §10 : `ZoneRow` (contrôles de zone en lignes horizontales) et panneau de survol des avertissements (`popover.js`, pourquoi `position: fixed`). §11 : 27 fichiers / 494 tests, et la façon d'aborder un travail d'interface ici. Retrait de deux lignes parasites (`</content>`, `</invoke>`) laissées en fin de fichier à sa création. |
 | 2026-08-02 | §9 : `Nazgûl` ≠ `Ringwraith` (deux races, pas deux orthographes) et pourquoi `RACE_ALIASES` ne doit pas les fusionner ; `race.Ringwraith` FR passe à « Spectre », ES à « Espectro del Anillo », ajout de `race.Nazgûl`. `import.alignPref.*` traduit (FR et ES l'affichaient en anglais, « Minion » compris) et `Fallen Wizard` → `Fallen-wizard` en EN. Garde étendu : les six termes anglais du glossaire, tokens `{placeholder}` exclus de l'inspection. §14 : deux dettes réglées, liste renumérotée. 496 tests. |
 | 2026-08-02 | §3 : `parseCards` rend `setNames` (les noms de sets sont dans les données, en fr/en/es). §9 : nouveau tableau des deux sources de libellés de facettes ; le filtre Set affiche « Contre l'Ombre (AS) », les filtres continuent de stocker les codes. §11 : contrat « chaque set a un nom dans les trois langues ». 504 tests. |
+| 2026-08-03 | Trois fonctionnalités, onze commits (`523beb7..40e1c84`). §9 : filtre Type trié sur l'ordre de jeu (`TYPE_ORDER`/`sortFacetOptions`), plutôt que sur le libellé — exception à la règle générale du paragraphe Sets, corrigée en conséquence ; nouvelles clés `import.*` ; piège « réserve » pour le vocabulaire du parseur. §6 : `isLegalForSide` gagne la passe `specific` au niveau camp (46 cartes BA `specific: "Balrog"` quittent un navigateur Spectre de l'Anneau) et absorbe l'ancien cas spécial balrog-only. §7 : bloc `## Metadata` toujours émis à l'export texte, `tournament` volontairement absent. §4 : nouvelle sous-section décrivant le pipeline d'import en cinq modules (`normalize → line → vocabulary → document → resolve`, façade `importDeck.js` réduite à 137 lignes) et ses deux invariants. §10 : fenêtre d'import en deux temps (analyser avant de régler), pourquoi ça élimine tout conflit affiché. §13 : ligne import réécrite, passe accessibilité `polish-ui-a11y` marquée Livrée (déjà fusionnée en `84304fe`, la ligne était restée « En cours »). §2/§11 : compte de tests à jour (32 fichiers, 584 tests) et nouveaux fichiers de test du pipeline d'import listés — stale depuis le 2026-08-02, corrigé en marge de cette tâche. |
