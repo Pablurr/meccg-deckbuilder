@@ -204,13 +204,16 @@ body {
    visibly marked — this filter never blocks. (Copy caps do, separately,
    via the + button.) */
 .cardcell.illegal img { filter: grayscale(.6); }
-.cardcell.illegal::after {
-  content: '⚠';
+/* Was a ::after on .cardcell.illegal. Generated content cannot carry a text
+   alternative, so the marker that a card is illegal was purely visual; it is
+   now a real element with screen-reader text beside the glyph. */
+.illegal-mark {
   position: absolute;
   top: 4px; right: 4px;
   z-index: 5;
   font-size: 14px;
   line-height: 1;
+  pointer-events: none;
   filter: drop-shadow(0 1px 2px rgba(0,0,0,.8));
 }
 /* Proxy-mode overlay: the card frame's own patch repainted over the copyright
@@ -298,21 +301,58 @@ body {
   gap: 3px;
   z-index: 3;
 }
+/* A row, not a column: see ZoneRow in CardBrowser.jsx. The vertical stack this
+   replaced cost ~65px per zone, so the three zones needed more height than the
+   tile has and only the first one was ever visible. */
 .qty-ctrl.zoned {
   position: static;
+  flex-direction: row;
+  align-items: center;
   height: auto;
-  padding: 2px 4px 3px;
+  gap: 2px;
+  padding: 1px 4px;
 }
+.qty-ctrl.zoned .qty-btn { width: 20px; height: 20px; font-size: 16px; }
+.qty-ctrl.zoned .qty-count { min-width: 12px; text-align: center; font-variant-numeric: tabular-nums; }
 .qty-ctrl.zoned .zlbl {
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
   color: var(--accent);
-  line-height: 1.4;
+  line-height: 1;
 }
+/* Touch variants: a count with no controls, because the card modal owns
+   quantity editing there. pointer-events:none is what makes them work: the
+   tally sits over the image, and a tap has to pass through it to the image's
+   own handler, which is what opens that modal. Without it the badge would be
+   a dead zone on the card. */
+.zone-ctrls.readonly { gap: 2px; pointer-events: none; }
+.zone-tally {
+  background: rgba(0,0,0,.72);
+  border-radius: 6px;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 3px 5px;
+  white-space: nowrap;
+}
+.qty-ctrl.readonly { pointer-events: none; padding: 3px 6px; height: auto; }
 .qty-ctrl.zoned.muted { background: rgba(0,0,0,.55); }
 .qty-ctrl.zoned.muted .zlbl { color: var(--muted); }
+/* One panel around the whole set once opened, rather than three chips each
+   with their own backdrop: fewer edges to read and less of the card hidden. */
+.zone-ctrls.expanded {
+  background: rgba(0,0,0,.78);
+  border-radius: 6px;
+  padding: 3px 2px;
+  gap: 0;
+  align-items: stretch;
+}
+.zone-ctrls.expanded .qty-ctrl.zoned,
+.zone-ctrls.expanded .qty-ctrl.zoned.muted { background: none; }
+.zone-ctrls.expanded .zone-expander { background: none; padding: 2px 4px 0; }
 .zone-expander {
   background: rgba(0,0,0,.7);
   border: none;
@@ -379,6 +419,49 @@ body {
 .rule-warn.error { border-left: 3px solid var(--danger); }
 .rule-warn.warning { border-left: 3px solid var(--warn); }
 .rule-warn.info { border-left: 3px solid var(--info); }
+
+/* Hover panel showing a folded warning's full text (desktop pointer only).
+   position: fixed is the point of it, not a shortcut: .rule-warns is a scroll
+   container, and an absolutely positioned child would be clipped by it exactly
+   when the list is long enough to scroll -- the case worth having it for. A
+   fixed box takes the viewport as its containing block and escapes that clip.
+   Nothing between it and the viewport may have a transform, which would make
+   it the containing block instead; .deckpanel has none (the only transform in
+   this file is the mobile sheet's entry animation, and the panel is hover-only
+   so it never renders there).
+
+   Coordinates come from placePopover() in lib/popover.js, applied before paint
+   -- the 0,0 here is only ever the pre-positioning value. */
+.rule-popover {
+  position: fixed;
+  left: 0; top: 0;
+  z-index: 60;
+  max-width: min(340px, 90vw);
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  box-shadow: 0 8px 24px rgba(0,0,0,.45);
+  font-size: 12px;
+  /* The pointer must never reach it: it is a hint about the row underneath,
+     and letting it take hover would flicker as the mouse crossed the gap. */
+  pointer-events: none;
+}
+.rule-popover-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.rule-popover-head code {
+  font-size: 11px;
+  color: var(--muted);
+}
+.rule-popover-ref { margin-left: auto; font-size: 11px; color: var(--muted); }
+.rule-popover p { margin: 0; color: var(--text); line-height: 1.45; }
+.rule-popover .rule-sev.error { color: var(--danger-label); }
+.rule-popover .rule-sev.warning { color: var(--warn); }
+.rule-popover .rule-sev.info { color: var(--info); }
 /* Folded, a warning is one line: disclosure, severity icon, rule id, and a
    shortcut to silence it. The message and the links appear only unfolded --
    see the .rule-warns cap above for why the full text of every warning at once
@@ -1033,6 +1116,10 @@ code {
   /* Modals: use more of the screen, bigger touch targets, no h-overflow. */
   .modal { width: min(560px, 96vw); padding: 16px; }
   .modal .btn { min-height: 36px; }
+  /* The card modal is not a .modal, so the rule above never reached its Done
+     button: it stayed at 31px, the one sub-standard target on a surface whose
+     other controls are all 44. It also has room -- the bar is a column. */
+  .card-modal-bar .btn { min-height: 44px; }
   .import-textarea, .import-list select { width: 100%; }
 
   /* ---- Deckbuilding surfaces ----
@@ -1063,11 +1150,9 @@ code {
     align-items: center;
   }
 
-  /* 9px is below what a phone can comfortably read. The buttons these label
-     stay small: 44px targets do not fit a 116x162 tile, which needs the
-     card modal to own zone editing instead. */
-  .qty-ctrl.zoned .zlbl { font-size: 12px; }
-  .zone-expander { font-size: 12px; padding: 6px 8px; }
+  /* The tile's zone buttons and their 9px labels no longer render on touch --
+     the card modal owns that editing now, so the rules that used to enlarge
+     them are gone rather than left behind matching nothing. */
 
   /* The only touch route to moving a copy between zones -- the card is not
      draggable on mobile -- so it gets a full 44px target even though it costs

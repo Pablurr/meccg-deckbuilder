@@ -13,9 +13,9 @@ let _index = null; // id -> card, set by getCards(); used by the export function
 export async function getCards() {
   const res = await fetch('/cards.json');
   if (!res.ok) throw new Error(`GET /cards.json → ${res.status}`);
-  const { cards, facets, index } = parseCards(await res.json());
+  const { cards, facets, index, setNames } = parseCards(await res.json());
   _index = index;
-  return { cards, facets, defaultBacks: { playdeck: true, locationdeck: true } };
+  return { cards, facets, setNames, defaultBacks: { playdeck: true, locationdeck: true } };
 }
 
 export function requireIndex() {

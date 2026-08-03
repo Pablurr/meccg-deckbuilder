@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cardImageSrc, cardImageEn, cardName, cardThumbSrc, deckThumbWidth } from '../web/src/lib/lang.js';
+import { cardImageSrc, cardImageEn, cardName, cardThumbSrc, deckThumbWidth, setName, setLabel } from '../web/src/lib/lang.js';
 
 const card = {
   id: 'AS-1',
@@ -44,6 +44,41 @@ describe('cardName', () => {
   it('uses the requested language with en fallback', () => {
     expect(cardName(card, 'fr')).toBe('Bûrat-fr');
     expect(cardName({ id: 'X' }, 'fr')).toBe('X');
+  });
+});
+
+describe('setName / setLabel', () => {
+  const SETS = {
+    AS: { en: 'Against the Shadow', fr: "Contre l'Ombre", es: 'Contra la Sombra' },
+    XX: { en: 'English Only' },
+  };
+
+  it('returns the name in the requested language', () => {
+    expect(setName(SETS, 'AS', 'fr')).toBe("Contre l'Ombre");
+    expect(setName(SETS, 'AS', 'es')).toBe('Contra la Sombra');
+    expect(setName(SETS, 'AS', 'en')).toBe('Against the Shadow');
+  });
+
+  it('falls back to English, then French, then the bare code — like cardName', () => {
+    expect(setName(SETS, 'XX', 'fr')).toBe('English Only');
+    expect(setName(SETS, 'NOPE', 'fr')).toBe('NOPE');
+    expect(setName({}, 'NOPE', 'fr')).toBe('NOPE');
+    expect(setName(null, 'NOPE', 'fr')).toBe('NOPE');
+  });
+
+  it('treats a whitespace-only name as absent', () => {
+    // "   " is not a name; without the trim it would render as a blank menu row.
+    expect(setName({ Z: { fr: '   ', en: 'Fallback' } }, 'Z', 'fr')).toBe('Fallback');
+  });
+
+  it('shows the code alongside the name, since ids and text exports use it', () => {
+    expect(setLabel(SETS, 'AS', 'fr')).toBe("Contre l'Ombre (AS)");
+    expect(setLabel(SETS, 'AS', 'en')).toBe('Against the Shadow (AS)');
+  });
+
+  it('does not print "AS (AS)" when the code is all there is', () => {
+    expect(setLabel(SETS, 'NOPE', 'fr')).toBe('NOPE');
+    expect(setLabel({}, 'TW', 'fr')).toBe('TW');
   });
 });
 

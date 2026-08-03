@@ -108,17 +108,53 @@ describe('terminology guards', () => {
   // the player to the wrong tab.
   const RETIRED_FR = [
     { bad: /\bdeck de jeu\b/i, use: 'pioche' },
+    { bad: /\bmagiciens?\b/i, use: 'sorcier' },
     { bad: /\bsbires?\b/i, use: 'séide' },
     { bad: /\bmise en scène\b/i, use: 'progression' },
     { bad: /\bdangers?\b/i, use: 'péril' },
-    // "pool" and "sideboard" left untranslated in a FR string
+    // The English side of the glossary, left untranslated in a FR string. All
+    // six are listed, not just the three that once slipped through: the guard
+    // covered pool/sideboard/play deck but not minion/hazard/stage, which is
+    // exactly how `import.alignPref.minion` shipped as "Minion" to French
+    // users. A half-covered guard reads as a covered one.
     { bad: /\bpools?\b/i, use: 'réserve' },
     { bad: /\bsideboards?\b/i, use: 'talon' },
     { bad: /\bplay decks?\b/i, use: 'pioche' },
+    { bad: /\bminions?\b/i, use: 'séide' },
+    { bad: /\bhazards?\b/i, use: 'péril' },
+    { bad: /\bstages?\b/i, use: 'progression' },
   ];
 
+  // Two races, not two spellings of one: `Nazgûl` labels the nine METW hazards,
+  // `Ringwraith` the nine MELE characters. Same individuals, opposite card
+  // categories — played AGAINST the opponent versus played AS your avatar — so
+  // the Race facet must keep them apart, and neither may be folded onto the
+  // other in RACE_ALIASES (tags.js). The FR/ES names are the cards' own
+  // ("Adûnaphel la Spectre" / "Adûnaphel la Espectro del Anillo").
+  it('Nazgûl and Ringwraith are separate races with separate names', () => {
+    expect(translations.fr['race.Nazgûl']).toBe('Nazgûl');
+    expect(translations.fr['race.Ringwraith']).toBe('Spectre');
+    expect(translations.es['race.Ringwraith']).toBe('Espectro del Anillo');
+    for (const lang of ['fr', 'en', 'es']) {
+      expect(translations[lang]['race.Nazgûl']).not.toBe(translations[lang]['race.Ringwraith']);
+    }
+  });
+
+  // Alignment names must read the same wherever they appear. These four lived
+  // in English in the fr and es dictionaries because nothing compared the two
+  // families of keys against each other.
+  it('import.alignPref.* agrees with alignment.* in every language', () => {
+    const pairs = [['hero', 'Hero'], ['minion', 'Minion'], ['balrog', 'Balrog'], ['fallenWizard', 'Fallen-wizard']];
+    for (const lang of ['fr', 'en', 'es']) {
+      for (const [pref, align] of pairs) {
+        expect(translations[lang][`import.alignPref.${pref}`], `${lang}: import.alignPref.${pref}`)
+          .toBe(translations[lang][`alignment.${align}`]);
+      }
+    }
+  });
+
   it('the retired-term patterns catch what they must and spare lookalikes', () => {
-    for (const bad of ['deck de jeu', 'Sbire', 'sbires', 'Mise en scène', 'danger', 'Dangers', 'pool', 'Sideboard', 'Play deck']) {
+    for (const bad of ['deck de jeu', 'Magicien', 'magiciens', 'Sbire', 'sbires', 'Mise en scène', 'danger', 'Dangers', 'pool', 'Sideboard', 'Play deck', 'Minion', 'minions', 'Hazard', 'Stage']) {
       expect(RETIRED_FR.some((r) => r.bad.test(bad))).toBe(true);
     }
     // Words that merely contain a retired term as a substring must survive:
@@ -141,12 +177,20 @@ describe('terminology guards', () => {
     'docs.glossary.hazard', 'docs.glossary.minion', 'docs.glossary.stage',
   ]);
 
+  // `{placeholder}` tokens are identifiers, not prose: they never reach the
+  // screen, and the parity guard below already forces them to be identical in
+  // all three languages -- so they are code, and renaming them for vocabulary
+  // would be renaming a variable to satisfy a spellchecker. Without this,
+  // rules.DECKSIZE-HAZARDS ("{hazards} périls pour {resources} ressources")
+  // fails on its own token while its French prose is exactly right.
+  const prose = (s) => String(s).replace(/\{\w+\}/g, ' ');
+
   it('no FR string outside the glossary uses a retired term', () => {
     const offences = [];
     for (const [key, value] of Object.entries(translations.fr)) {
       if (GLOSSARY_KEYS.has(key)) continue;
       for (const { bad, use } of RETIRED_FR) {
-        if (bad.test(value)) offences.push(`fr:${key} = "${value}"  -> use "${use}"`);
+        if (bad.test(prose(value))) offences.push(`fr:${key} = "${value}"  -> use "${use}"`);
       }
     }
     expect(offences).toEqual([]);
@@ -161,12 +205,30 @@ describe('terminology guards', () => {
     // which contains a retired term and fails the test against itself.
     const offences = [];
     for (const key of GLOSSARY_KEYS) {
-      const outside = translations.fr[key].replace(/«[^»]*»/g, '');
+      const outside = prose(translations.fr[key]).replace(/«[^»]*»/g, '');
       for (const { bad, use } of RETIRED_FR) {
         if (bad.test(outside)) offences.push(`${key} (outside citation) -> use "${use}"`);
       }
     }
     expect(offences).toEqual([]);
+  });
+
+  // "Wizard" is "Sorcier" in French everywhere: the camp (side.wizard), the
+  // race (race.Wizard) and the derived "Sorcier déchu". It used to be split --
+  // side.* and the rule docs said "Sorcier", alignment.* and race.* said
+  // "Magicien" -- and nothing surfaced the disagreement until the filter menus
+  // began localizing alignments and races, which put both words on screen in
+  // the same session. "Magicien" is now banned outright by RETIRED_FR above,
+  // so this test only pins the positive side: the exact strings, wherever the
+  // camp and the race are named. Both halves matter -- the ban alone would be
+  // satisfied by any other word, and these assertions are what make a partial
+  // edit (one key "fixed", the others left behind) fail loudly.
+  it('Wizard is "Sorcier" in French, camp and race alike', () => {
+    expect(translations.fr['side.wizard']).toBe('Sorcier');
+    expect(translations.fr['race.Wizard']).toBe('Sorcier');
+    for (const key of ['side.fallen-wizard', 'alignment.Fallen-wizard', 'race.Fallen-wizard']) {
+      expect(translations.fr[key]).toBe('Sorcier déchu');
+    }
   });
 
   // The rotation's own trap: the three zone words must not be assigned to two

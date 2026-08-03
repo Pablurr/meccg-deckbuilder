@@ -24,6 +24,7 @@ import { useIsMobile } from './lib/useIsMobile.js';
 export default function App() {
   const [cards, setCards] = useState([]);
   const [facets, setFacets] = useState(null);
+  const [setNames, setSetNames] = useState({}); // set code -> { en, es, fr }
   const [defaultBacks, setDefaultBacks] = useState({});
   const [filters, setFilters] = useState({});
   const [uiLang, setUiLang] = useState('fr'); // display language for card names
@@ -69,7 +70,7 @@ export default function App() {
 
   useEffect(() => {
     api.getCards()
-      .then(({ cards, facets, defaultBacks }) => { setCards(cards); setFacets(facets); setDefaultBacks(defaultBacks || {}); })
+      .then(({ cards, facets, setNames, defaultBacks }) => { setCards(cards); setFacets(facets); setSetNames(setNames || {}); setDefaultBacks(defaultBacks || {}); })
       .catch((e) => setError(e.message));
   }, []);
 
@@ -233,7 +234,7 @@ export default function App() {
   return (
     <I18nProvider lang={textLang}>
     <div className="app">
-      <FilterBar facets={derivedFacets} filters={filters} onChange={setFilters} lang={uiLang} onLangChange={setUiLang} isMobile={isMobile} proxyMode={proxyMode} onProxyChange={setProxyMode} onOpenDocs={() => setShowDocs(true)} />
+      <FilterBar facets={derivedFacets} setNames={setNames} filters={filters} onChange={setFilters} lang={uiLang} onLangChange={setUiLang} isMobile={isMobile} proxyMode={proxyMode} onProxyChange={setProxyMode} onOpenDocs={() => setShowDocs(true)} />
       <div className="main-row">
         <CardBrowser cards={cards} filters={filters} quantities={quantities} lang={uiLang} onChangeQty={changeQty} onToggle={toggleCard} onSelectAll={selectAll} isMobile={isMobile} onPreview={setPreviewCard} proxyMode={proxyMode} deckMode={deck.mode} side={deck.mode === 'deckbuilding' ? deck.ruleset?.side ?? null : null} zones={zones} changeZoneQty={changeZoneQty} capCtx={capCtx} />
         {hasSelection && !isMobile && (
@@ -358,7 +359,13 @@ export default function App() {
           // One counter per zone this card may legally occupy, from the same
           // zoneTargets list drag-and-drop validates against, so the modal can
           // never offer a zone a drop would have refused.
-          rows={zoneTargets(previewCard).map((zone) => ({
+          //
+          // Deckbuilding only: freeform has no zones -- it routes every card to
+          // the deck and shows a Pool/Sideboard tab solely when a deck switched
+          // out of deckbuilding left cards there. Offering all three here was
+          // inviting a freeform deck to grow zone data no other freeform
+          // surface can see or edit.
+          rows={(deck.mode === 'deckbuilding' ? zoneTargets(previewCard) : ['deck']).map((zone) => ({
             zone,
             qty: (zone === 'deck' ? quantities : zones[zone] || {})[previewCard.id] || 0,
             room: capCtx

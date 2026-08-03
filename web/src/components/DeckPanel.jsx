@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { cardName, deckThumbWidth } from '../lib/lang.js';
 import { useCardPreview, CardPreview } from './CardPreview.jsx';
 import { useT } from '../i18n.jsx';
@@ -16,8 +16,13 @@ import { COE, RULE_BY_ID } from '../lib/rules/catalog.js';
 import { refText } from '../lib/rules/docText.js';
 import { remainingCopies } from '../lib/rules/copies.js';
 import { cardWidthFor, deckZoneWidth, MIN_ZOOM, MAX_ZOOM, DEFAULT_ZOOM_DESKTOP } from '../lib/zoom.js';
+import { placePopover } from '../lib/popover.js';
 
 const SEV_ICON = { error: '⛔', warning: '⚠', info: 'ℹ' };
+
+// The hover panel waits this long before appearing, so sweeping the pointer
+// across the warnings list on the way somewhere else never flashes it.
+const WARN_HOVER_DELAY_MS = 180;
 
 // validate.js resolves card names English-first (it has no notion of the
 // user's display language). Where a warning's params carry a card `id` (or,
@@ -168,11 +173,66 @@ export default function DeckPanel({
   // and the block grows with the deck, so the full text of every one of them
   // is more than the panel can show at once.
   const [openWarns, setOpenWarns] = useState(() => new Set());
-  const toggleWarn = (key) => setOpenWarns((prev) => {
-    const next = new Set(prev);
-    if (next.has(key)) next.delete(key); else next.add(key);
-    return next;
-  });
+  const toggleWarn = (key) => {
+    hideWarnPanel(); // else the hover panel lingers beside a card now unfolded
+    setOpenWarns((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
+
+  // Folding the warnings made the list scannable, but it put the message
+  // itself behind a click — a lot to ask of someone with a mouse in hand just
+  // to read one sentence. Hovering a folded card now shows its full text.
+  //
+  // Mouse only, and deliberately read-only: the actions (ignore this rule,
+  // report it, the CoE link) stay in the unfolded card, so nothing here has to
+  // be reachable, and the pointer never has to travel into a panel that could
+  // move out from under it. Touch has no hover and keeps the tap-to-unfold it
+  // already had.
+  const [hoverWarn, setHoverWarn] = useState(null);
+  const warnPopRef = useRef(null);
+  const warnTimerRef = useRef(null);
+  function hideWarnPanel() {
+    clearTimeout(warnTimerRef.current);
+    setHoverWarn(null);
+  }
+  function showWarnPanel(e, w) {
+    // The rect is read now, while the event target is still under the pointer,
+    // and stays valid because any scroll cancels the panel outright (below).
+    const r = e.currentTarget.getBoundingClientRect();
+    const rect = { left: r.left, right: r.right, top: r.top };
+    clearTimeout(warnTimerRef.current);
+    warnTimerRef.current = setTimeout(() => setHoverWarn({ w, rect }), WARN_HOVER_DELAY_MS);
+  }
+  // Positioned after the panel is in the DOM (its height depends on how long
+  // the message is) but before paint, so it never shows up at 0,0 first.
+  useLayoutEffect(() => {
+    const el = warnPopRef.current;
+    if (!el || !hoverWarn) return;
+    const { left, top } = placePopover(
+      hoverWarn.rect,
+      { width: el.offsetWidth, height: el.offsetHeight },
+      { width: window.innerWidth, height: window.innerHeight },
+    );
+    el.style.left = `${left}px`;
+    el.style.top = `${top}px`;
+  }, [hoverWarn]);
+  // Any scroll invalidates the anchor rect, and scrolling does not reliably
+  // fire mouse events — same trap as the card hover preview. capture=true
+  // because scroll from inner containers (the warnings list itself, the deck
+  // body) does not bubble.
+  useEffect(() => {
+    const cancel = () => hideWarnPanel();
+    window.addEventListener('wheel', cancel, true);
+    window.addEventListener('scroll', cancel, true);
+    return () => {
+      window.removeEventListener('wheel', cancel, true);
+      window.removeEventListener('scroll', cancel, true);
+      clearTimeout(warnTimerRef.current);
+    };
+  }, []);
   // The deck's mode can change (setup dialog) after mount, and a freeform
   // deck's pool/sideboard tabs can appear or disappear as those zones empty
   // out; if the current tab no longer exists, fall back to the first tab
@@ -369,15 +429,29 @@ export default function DeckPanel({
       </div>
       {asSheet && showZoom && <div className="sheet-zoom">{zoomControl}</div>}
 
+      {/* A region, not role="status". As a status the whole block was a live
+          region, so every deck edit re-announced all five warnings in full --
+          and validateDeck re-runs on every edit. Only the short count inside
+          is live now; the cards themselves are navigable content. */}
       {ruleWarnings.length > 0 && (
-        <div className="rule-warns" role="status">
+        <div className="rule-warns" role="region" aria-label={t('rules.warningsRegion')}>
+          <span className="sr-only" aria-live="polite">
+            {t('rules.warningsCount', { n: ruleWarnings.length })}
+          </span>
           {ruleWarnings.map((w, i) => {
             const key = warningKey(w);
             const open = openWarns.has(key);
             const params = localizeParams(w, { cardsById, lang, t });
             const ref = refText(t, RULE_BY_ID.get(w.ruleId) || {});
             return (
-              <div key={`${key}:${i}`} className={`rule-warn ${w.severity} ${open ? 'open' : ''}`}>
+              <div
+                key={`${key}:${i}`}
+                className={`rule-warn ${w.severity} ${open ? 'open' : ''}`}
+                // Unfolded, the text is already on screen: a panel repeating it
+                // would just cover the card it belongs to.
+                onMouseEnter={isMobile || open ? undefined : (e) => showWarnPanel(e, w)}
+                onMouseLeave={isMobile || open ? undefined : hideWarnPanel}
+              >
                 {/* Always-visible line: severity icon, rule id, and -- folded
                     only -- a shortcut to silence the rule. Unfolded, the same
                     action is the labelled link below, so showing both would
@@ -423,6 +497,24 @@ export default function DeckPanel({
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* aria-hidden on purpose: every word here is already reachable through
+          the disclosure button above (which carries aria-expanded and reveals
+          the same text plus its actions). Exposing it a second time would
+          duplicate the whole warnings list to assistive tech, and a panel that
+          only a pointer can summon has no keyboard path to it anyway. */}
+      {hoverWarn && (
+        <div className="rule-popover" ref={warnPopRef} aria-hidden="true">
+          <div className="rule-popover-head">
+            <span className={`rule-sev ${hoverWarn.w.severity}`}>{SEV_ICON[hoverWarn.w.severity]}</span>
+            <code>{hoverWarn.w.ruleId}</code>
+            {refText(t, RULE_BY_ID.get(hoverWarn.w.ruleId) || {}) && (
+              <span className="rule-popover-ref">{refText(t, RULE_BY_ID.get(hoverWarn.w.ruleId) || {})}</span>
+            )}
+          </div>
+          <p>{t(`rules.${hoverWarn.w.code}`, localizeParams(hoverWarn.w, { cardsById, lang, t }))}</p>
         </div>
       )}
 
