@@ -141,7 +141,7 @@ export const translations = {
 
     // Import dialog
     'import.title': 'Importer une liste',
-    'import.help': 'Colle une liste au format {fmt}, ou une liste complète exportée : les titres {sections} (facultatifs) dirigent les cartes vers la bonne zone, et tout ce qui suit « ## Notes » est conservé comme texte libre, jamais importé comme des cartes. Le nom doit être complet, mais la casse, les accents, les tirets/espaces et la ponctuation sont ignorés ({ex}). L’import remplace la sélection courante.',
+    'import.help': 'Colle une liste, dans n’importe quel ordre : les titres de section (pioche, talon, réserve, lieux, notes) sont reconnus en français, anglais et espagnol, en markdown ou en texte brut. La quantité peut être devant ou derrière ({fmt}), et vaut 1 par défaut. Le nom doit être complet, mais la casse, les accents, les tirets et la ponctuation sont ignorés ({ex}). Tout ce qui n’est ni un titre ni une carte est conservé en notes.',
     'import.analyze': 'Analyser',
     'import.alignPref': 'Préférence d’alignement (doublons) :',
     'import.alignPref.none': 'Aucune préférence',
@@ -158,6 +158,15 @@ export const translations = {
     'import.notFound': '✗ {qty}× {name} — introuvable',
     'import.ambiguous': '⚠ {qty}× {name} — plusieurs cartes, choisis :',
     'import.submit': 'Importer ({n} cartes)',
+    'import.step2': 'Réglages de l’import',
+    'import.target': 'Cible :',
+    'import.target.new': 'Nouveau deck',
+    'import.target.replace': 'Remplacer le deck ouvert',
+    'import.mode': 'Mode :',
+    'import.defaultName': 'Deck importé',
+    'import.summaryProse': ', {n} ligne(s) gardée(s) en notes',
+    'import.illegal': '⚠ {qty}× {name} — illégale pour le camp {side}',
+    'import.prose': 'Lignes gardées en notes',
 
     // Export dialog
     'export.title': 'Export',
@@ -499,7 +508,7 @@ export const translations = {
     'decks.moveDown': 'Move down',
 
     'import.title': 'Import a list',
-    'import.help': 'Paste a list in the {fmt} format, or a full exported list: optional {sections} headings route cards to the right zone, and everything after "## Notes" is kept as free text, never imported as cards. The name must be complete, but case, accents, hyphens/spaces and punctuation are ignored ({ex}). Importing replaces the current selection.',
+    'import.help': 'Paste a list, in any order: section headings (play deck, sideboard, pool, locations, notes) are recognized in French, English and Spanish, as markdown or as plain text. The quantity may lead or trail ({fmt}), and defaults to 1. The name must be complete, but case, accents, hyphens and punctuation are ignored ({ex}). Anything that is neither a heading nor a card is kept as notes.',
     'import.analyze': 'Analyze',
     'import.alignPref': 'Alignment preference (duplicates):',
     'import.alignPref.none': 'No preference',
@@ -513,6 +522,15 @@ export const translations = {
     'import.notFound': '✗ {qty}× {name} — not found',
     'import.ambiguous': '⚠ {qty}× {name} — several cards, choose:',
     'import.submit': 'Import ({n} cards)',
+    'import.step2': 'Import settings',
+    'import.target': 'Target:',
+    'import.target.new': 'New deck',
+    'import.target.replace': 'Replace the open deck',
+    'import.mode': 'Mode:',
+    'import.defaultName': 'Imported deck',
+    'import.summaryProse': ', {n} line(s) kept as notes',
+    'import.illegal': '⚠ {qty}× {name} — illegal for the {side} side',
+    'import.prose': 'Lines kept as notes',
 
     'export.title': 'Export',
     'export.fmt.mpc': 'Individual MPC images (ZIP) — 822×1122 px, bleed included',
@@ -824,7 +842,7 @@ export const translations = {
 
     // Import dialog
     'import.title': 'Importar una lista',
-    'import.help': 'Pega una lista en el formato {fmt}, o una lista exportada completa: los encabezados {sections} (opcionales) dirigen las cartas a la zona correcta, y todo lo que sigue a «## Notes» se conserva como texto libre, nunca se importa como cartas. El nombre debe estar completo, pero se ignoran mayúsculas, acentos, guiones/espacios y puntuación ({ex}). Importar reemplaza la selección actual.',
+    'import.help': 'Pega una lista, en cualquier orden: los encabezados de sección (mazo de juego, sideboard, reserva, localizaciones, notas) se reconocen en francés, inglés y español, en markdown o en texto plano. La cantidad puede ir delante o detrás ({fmt}), y por defecto es 1. El nombre debe estar completo, pero se ignoran mayúsculas, acentos, guiones y puntuación ({ex}). Todo lo que no sea un encabezado ni una carta se conserva como notas.',
     'import.analyze': 'Analizar',
     'import.alignPref': 'Preferencia de alineación (duplicados):',
     'import.alignPref.none': 'Sin preferencia',
@@ -837,6 +855,15 @@ export const translations = {
     'import.notFound': '✗ {qty}× {name} — no encontrada',
     'import.ambiguous': '⚠ {qty}× {name} — varias cartas, elige:',
     'import.submit': 'Importar ({n} cartas)',
+    'import.step2': 'Ajustes de importación',
+    'import.target': 'Destino:',
+    'import.target.new': 'Nuevo mazo',
+    'import.target.replace': 'Reemplazar el mazo abierto',
+    'import.mode': 'Modo:',
+    'import.defaultName': 'Mazo importado',
+    'import.summaryProse': ', {n} línea(s) guardada(s) como notas',
+    'import.illegal': '⚠ {qty}× {name} — ilegal para el bando {side}',
+    'import.prose': 'Líneas guardadas como notas',
 
     // Export dialog
     'export.title': 'Exportar',
