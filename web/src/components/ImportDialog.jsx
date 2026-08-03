@@ -3,6 +3,7 @@ import { parseDocument, buildNameIndex, resolveLines } from '../lib/importDeck.j
 import { isLegalForSide } from '../lib/rules/sides.js';
 import { siteIndex } from '../lib/rules/sites.js';
 import { resolveBanned } from '../lib/rules/banned.js';
+import { isRuleEnabled } from '../lib/rules/catalog.js';
 import { SIDE_IDS, LENGTH_IDS } from '../lib/constants.js';
 import { cardName } from '../lib/lang.js';
 import { useT } from '../i18n.jsx';
@@ -62,7 +63,24 @@ export default function ImportDialog({ cards, lang = 'fr', deck, setNames = NO_S
   // Both are memoized on `cards` by a WeakMap inside their own modules; the
   // useMemo here only avoids re-entering them on every keystroke.
   const openBalrog = useMemo(() => siteIndex(cards).openBalrog, [cards]);
-  const bannedIds = useMemo(() => (mode === 'deckbuilding' ? resolveBanned(cards).bySide[side] : undefined), [cards, mode, side]);
+
+  // The overrides deck.ruleset carries (or the legacy `savedRuleOverrides` on
+  // a deck predating the rules panel) -- the exact expression submit() below
+  // feeds into the outgoing ruleset, read once here so the two paths cannot
+  // drift apart. Tolerates `deck` being undefined, which it still is until
+  // App.jsx wires the prop through (next task).
+  const ruleOverrides = ((deck && deck.ruleset) || {}).ruleOverrides || (deck && deck.savedRuleOverrides) || {};
+  // BANNED is a rule the player can switch off in the rules panel; when it is
+  // off the validator stops flagging those cards, so the import dialog must
+  // stop marking them illegal too, or it would enforce a rule the player
+  // turned off. Mirrors CardBrowser.jsx's `banEnforced` gate exactly, so the
+  // two views cannot disagree about what's legal. Only the boolean goes in
+  // the memo deps below, not `ruleOverrides` itself -- that object is rebuilt
+  // by the `|| {}` fallback on every render while `deck` is undefined, and
+  // depending on it directly would reintroduce the unstable-identity bug
+  // fixed above for `setNames`.
+  const banEnforced = mode === 'deckbuilding' && isRuleEnabled('BANNED', ruleOverrides);
+  const bannedIds = useMemo(() => (banEnforced ? resolveBanned(cards).bySide[side] : undefined), [cards, side, banEnforced]);
 
   // Seeding order, for the first resolution -- which runs before anything is
   // on screen: pasted metadata > the open deck's ruleset > nothing.
@@ -138,7 +156,7 @@ export default function ImportDialog({ cards, lang = 'fr', deck, setNames = NO_S
       name: (doc && doc.name) || t('import.defaultName'),
       mode,
       ruleset: mode === 'deckbuilding'
-        ? { side, length, tournament: !!((deck && deck.ruleset) || {}).tournament, ruleOverrides: ((deck && deck.ruleset) || {}).ruleOverrides || (deck && deck.savedRuleOverrides) || {} }
+        ? { side, length, tournament: !!((deck && deck.ruleset) || {}).tournament, ruleOverrides }
         : null,
       target,
     });
