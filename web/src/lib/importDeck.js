@@ -95,10 +95,23 @@ export function importDeckList(text, cards, lang = 'en') {
   // raw strings always land on the same side of the split and this
   // Set-difference can't cross-wire two different lines that happen to share
   // text.
+  // `line.candidates[0]` (not the baseline doc.lines carries) on purpose:
+  // that is exactly the reading resolveOne's own notfound fallback reports
+  // (see resolve.js), so a reclaimed miss and a miss resolveOne resolved
+  // itself always agree on `name`/`qty` -- otherwise the SAME kind of line
+  // (e.g. one with a trailing "(...)" hint) would report peeled or unpeeled
+  // depending on the accident of which path it took, which is exactly the
+  // kind of inconsistency a player reading `unmatched[i].name` would notice.
   const resolvedRaws = new Set(resolved.map((r) => r.raw));
   const reclaimed = doc.lines
     .filter((line) => !resolvedRaws.has(line.raw))
-    .map((line) => ({ ...line, matches: [], status: 'notfound' }));
+    .map((line) => ({
+      ...line,
+      qty: line.candidates[0].qty,
+      name: line.candidates[0].name,
+      matches: [],
+      status: 'notfound',
+    }));
 
   const quantities = {};
   const zones = { pool: {}, sideboard: {} };
@@ -106,11 +119,18 @@ export function importDeckList(text, cards, lang = 'en') {
   const ambiguous = [];
 
   for (const line of [...resolved, ...reclaimed]) {
-    if (line.status === 'notfound') { unmatched.push(line); continue; }
-    if (line.status === 'ambiguous') ambiguous.push(line);
-    const id = line.matches[0].id;
-    const bucket = line.target === 'pool' ? zones.pool : line.target === 'sideboard' ? zones.sideboard : quantities;
-    bucket[id] = (bucket[id] || 0) + line.qty;
+    // `line` (from resolveLines or from `reclaimed` above) still carries
+    // `candidates`/`typeHint` -- resolveLines' own input/output shape, which
+    // never existed pre-refactor. Same leak as parseDeckListDocument's, same
+    // fix: strip before this object escapes as a public `unmatched`/
+    // `ambiguous` entry. `quantities`/`zones` never see the object itself
+    // (just `id`/`qty`), so they need no stripping.
+    const { candidates, typeHint, ...clean } = line;
+    if (clean.status === 'notfound') { unmatched.push(clean); continue; }
+    if (clean.status === 'ambiguous') ambiguous.push(clean);
+    const id = clean.matches[0].id;
+    const bucket = clean.target === 'pool' ? zones.pool : clean.target === 'sideboard' ? zones.sideboard : quantities;
+    bucket[id] = (bucket[id] || 0) + clean.qty;
   }
 
   return { quantities, zones, notes: doc.notes, unmatched, ambiguous, meta: doc.meta, name: doc.name };
