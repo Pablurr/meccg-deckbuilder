@@ -36,6 +36,23 @@ export function cardName(card, lang = 'fr') {
   return (n[lang] && n[lang].trim()) || n.en || n.fr || (card && card.id) || '';
 }
 
+// Full set name in the requested language, falling back exactly like cardName
+// does. Returns the bare code when the set has no name at all, so an unnamed
+// set still shows something addressable rather than an empty menu row.
+export function setName(setNames, code, lang = 'fr') {
+  const n = (setNames && setNames[code]) || {};
+  return (n[lang] && n[lang].trim()) || n.en || n.fr || code || '';
+}
+
+// Menu label for a set: "Contre l'Ombre (AS)". The name is what you scan for,
+// but the code is what card ids and the text deck exports use, so dropping it
+// would cut the link between the filter and everything else that names a set.
+// Degrades to the bare code when that is all we have, rather than "AS (AS)".
+export function setLabel(setNames, code, lang = 'fr') {
+  const full = setName(setNames, code, lang);
+  return full === code ? code : `${full} (${code})`;
+}
+
 // CDN image URL for a card: per-set imageBaseUrl (attached by parseCards)
 // + bare filename. Falls back to the English base when the requested
 // language has none (matches the on-screen <img> onError fallback).

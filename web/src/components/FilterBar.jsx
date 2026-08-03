@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { UI_LANGUAGES } from '../lib/lang.js';
+import { UI_LANGUAGES, setLabel } from '../lib/lang.js';
 import { useT } from '../i18n.jsx';
 import { localize } from '../lib/rules/docText.js';
 
@@ -92,7 +92,7 @@ function ProxyToggle({ on, onChange }) {
   );
 }
 
-export default function FilterBar({ facets, filters, onChange, lang, onLangChange, isMobile, proxyMode, onProxyChange, onOpenDocs }) {
+export default function FilterBar({ facets, setNames = {}, filters, onChange, lang, onLangChange, isMobile, proxyMode, onProxyChange, onOpenDocs }) {
   const t = useT();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [openKey, setOpenKey] = useState(null); // which facet menu is open (only one)
@@ -116,6 +116,19 @@ export default function FilterBar({ facets, filters, onChange, lang, onLangChang
     ['sets', 'types', 'alignments', 'rarities', 'artists', 'races', 'subtypes', 'skills', 'keywords']
       .some((k) => (filters[k] || []).length);
 
+  // How a facet's raw data value is turned into what the menu shows. Two
+  // different sources, on purpose: types/alignments/races are closed
+  // vocabularies and live in the dictionary, whereas set names ship inside
+  // cards.json in all three languages — so a new set names itself rather than
+  // waiting on an i18n key. Facets with no entry here (artists, rarities,
+  // subtypes, skills, keywords) show their raw value, which is required for
+  // artist names and is the existing behaviour for the rest.
+  const optionLabel = (key) => {
+    if (key === 'sets') return (v) => setLabel(setNames, v, lang);
+    if (FACET_PREFIX[key]) return (v) => localize(t, FACET_PREFIX[key], v);
+    return undefined;
+  };
+
   // Render a facet dropdown wired to the single-open state.
   const facet = (key, label) => (
     <FacetDropdown
@@ -125,7 +138,7 @@ export default function FilterBar({ facets, filters, onChange, lang, onLangChang
       onChange={(v) => set(key, v)}
       open={openKey === key}
       onToggle={() => setOpenKey((k) => (k === key ? null : key))}
-      optionLabel={FACET_PREFIX[key] ? (v) => localize(t, FACET_PREFIX[key], v) : undefined}
+      optionLabel={optionLabel(key)}
     />
   );
 

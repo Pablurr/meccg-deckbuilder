@@ -8,8 +8,8 @@
 > Doc utilisateur : [`README.md`](../README.md). Ce fichier-ci décrit le *comment* et le *pourquoi*.
 
 **Dernière mise à jour : 2026-08-02** — contrôles de zone en lignes horizontales, panneau
-de survol des avertissements, vocabulaire FR (Sorcier / Spectre / Séide)
-(état : branche `polish-ui-a11y`).
+de survol des avertissements, vocabulaire FR (Sorcier / Spectre / Séide), noms de sets
+localisés dans le filtre (état : branche `polish-ui-a11y`).
 
 ---
 
@@ -106,7 +106,7 @@ web/src/            toute l'application
     export/         pipeline d'export pur (10 modules, aucun import React)
     *.js            deck, deckStore, filter, importDeck, lang, proxy, tags, zoom…
 web/public/         servi tel quel : cards.json, card-backs/, proxy-patches/, _redirects
-test/               26 fichiers Vitest, 370 tests
+test/               27 fichiers Vitest, 504 tests
 docs/superpowers/   specs et plans d'implémentation, datés (historique des intentions)
 scripts/            make_proxy_patches.py (génération des patchs proxy, hors build)
 ```
@@ -133,9 +133,9 @@ nulle part dans le code (pas de `wrangler.toml`, pas de CI).
 Fichier statique de ~3,5 Mo dans `web/public/`, chargé une fois au montage par
 `api.getCards()` → `parseCards()`.
 
-**Forme source :** `{ SETCODE: { imageBaseUrl: {en,es,fr,enOriginal,esOriginal}, cards: { "AS-1": {…} } } }`.
+**Forme source :** `{ SETCODE: { name: {en,es,fr}, order, imageBaseUrl: {en,es,fr,enOriginal,esOriginal}, cards: { "AS-1": {…} } } }`.
 
-**Forme après `parseCards()`** — `{ cards, facets, index }` :
+**Forme après `parseCards()`** — `{ cards, facets, index, setNames }` :
 
 - `cards` : tableau aplati. Chaque carte porte `id`, `set`, `name{en,es,de,fr,it,nl,fi,ja}`,
   `type`, `alignment`, `attributes{}`, `image` (nom de fichier nu), `imageBaseUrl`
@@ -144,6 +144,11 @@ Fichier statique de ~3,5 Mo dans `web/public/`, chargé une fois au montage par
   artists, races, subtypes, skills, keywords).
 - `index` : `Map<id, card>`, mémorisée dans le module `api.js` (`_index`) et requise par
   les exports via `requireIndex()`.
+- `setNames` : `{ AS: {en,es,fr}, … }`, extrait de `setObj.name`. **Les sept sets portent
+  leur nom complet dans les trois langues d'interface, dans les données elles-mêmes** —
+  c'est ce que lit le filtre Set (§9), donc un set ajouté aux données arrive nommé, sans
+  clé i18n à écrire. `flattenCards` ne recopie **pas** ce nom sur chaque carte : c'est une
+  métadonnée de set, et 1683 copies du même objet ne font pas une table de correspondance.
 
 **Répartition :** Resource 767, Hazard 450, Site 220, Character 194, Region 52.
 Alignements : Hero, Minion, Neutral, Stage, Balrog, Fallen-wizard, Dual.
@@ -604,6 +609,25 @@ bannit les anciens termes purement et simplement au lieu de les laisser à la re
 de carte. Le mot juste est **camp** (`side`). Un test vérifie qu'aucune chaîne liée aux
 camps n'emploie « faction ».
 
+### Les libellés des filtres viennent de deux sources
+
+`optionLabel()` dans `FilterBar.jsx` décide, par facette, comment une valeur brute de
+`cards.json` devient ce que le menu affiche :
+
+| Facette | Source du libellé |
+|---|---|
+| types, alignments, races | le **dictionnaire** (`FACET_PREFIX` → `panel.group.` / `alignment.` / `race.`) : vocabulaires fermés |
+| sets | les **données** (`setNames`, §3) via `setLabel()` — « Contre l'Ombre (AS) » |
+| artists, rarities, subtypes, skills, keywords | **valeur brute** — noms propres, à ne pas traduire |
+
+Le code du set est conservé entre parenthèses : c'est lui qu'emploient les ids de cartes
+(`AS-1`) et les exports texte, donc le retirer couperait le lien entre le filtre et tout le
+reste. Les filtres stockent les **codes**, jamais les libellés — changer de langue ne perd
+donc aucune sélection (vérifié). Le tri se fait sur le libellé affiché, comme pour les
+autres facettes, donc l'ordre du menu change avec la langue ; le champ `order` des données
+(ordre de sortie : TW, TD, DM, LE, AS, WH, BA) existe si un tri chronologique est un jour
+préféré.
+
 **`Nazgûl` et `Ringwraith` sont deux races, pas deux orthographes.** `Nazgûl` porte les
 9 hazards METW (Creature/Permanent-event), `Ringwraith` les 9 personnages MELE : les mêmes
 individus, mais on joue les uns **contre** l'adversaire et les autres **comme** avatar.
@@ -748,7 +772,7 @@ quelle que soit la largeur du panneau. `parseStoredZoom` valide la valeur stock�
 
 ## §11 — Tests
 
-`npm test` → Vitest, **27 fichiers, 494 tests**. Node pur, pas de DOM : les composants ne
+`npm test` → Vitest, **27 fichiers, 504 tests**. Node pur, pas de DOM : les composants ne
 sont pas montés, ce sont les **modules purs** qui sont testés.
 
 C'est ce qui dicte la façon d'aborder un travail d'interface ici : **on extrait la décision
@@ -766,6 +790,9 @@ Fichiers notables :
   garde du glossaire FR, interdit « faction » et « magicien » (§9).
 - `popover.test.js` — `placePopover()` : côté préféré, bascule, bornage dans le viewport,
   jamais de coordonnée négative.
+- `parseCards.test.js` — aplatissement, facettes, et **le contrat des noms de sets** :
+  chaque set offert par la facette porte un nom dans les trois langues. Sans lui, un set
+  ajouté sans nom s'afficherait en code nu, dans toutes les langues, sans rien casser.
 - `importDeck.test.js`, `deckList.test.js`, `deckSections.test.js` — le cycle
   export texte → import.
 - `pngDpi.test.js`, `bleedOps.test.js`, `sheetLayout.test.js`, `pdf.test.js`, `zip.test.js`
@@ -914,3 +941,4 @@ transformation*, donc lis le compte de **fichiers**, pas seulement celui des tes
 | 2026-08-02 | `README.md` repris : limites de copies décrites par mode de deck (elles n'existent qu'en construction de deck, et les havres comme les sites de sorcier déchu y échappent), paragraphe « stubs » remplacé par l'état vérifié réel, section Structure complétée d'un renvoi vers `CLAUDE.md` et ce document. Dette §14 n°3 réglée, liste renumérotée. |
 | 2026-08-02 | §9 : « Magicien » banni, *Wizard* = « Sorcier » partout. §10 : `ZoneRow` (contrôles de zone en lignes horizontales) et panneau de survol des avertissements (`popover.js`, pourquoi `position: fixed`). §11 : 27 fichiers / 494 tests, et la façon d'aborder un travail d'interface ici. Retrait de deux lignes parasites (`</content>`, `</invoke>`) laissées en fin de fichier à sa création. |
 | 2026-08-02 | §9 : `Nazgûl` ≠ `Ringwraith` (deux races, pas deux orthographes) et pourquoi `RACE_ALIASES` ne doit pas les fusionner ; `race.Ringwraith` FR passe à « Spectre », ES à « Espectro del Anillo », ajout de `race.Nazgûl`. `import.alignPref.*` traduit (FR et ES l'affichaient en anglais, « Minion » compris) et `Fallen Wizard` → `Fallen-wizard` en EN. Garde étendu : les six termes anglais du glossaire, tokens `{placeholder}` exclus de l'inspection. §14 : deux dettes réglées, liste renumérotée. 496 tests. |
+| 2026-08-02 | §3 : `parseCards` rend `setNames` (les noms de sets sont dans les données, en fr/en/es). §9 : nouveau tableau des deux sources de libellés de facettes ; le filtre Set affiche « Contre l'Ombre (AS) », les filtres continuent de stocker les codes. §11 : contrat « chaque set a un nom dans les trois langues ». 504 tests. |
