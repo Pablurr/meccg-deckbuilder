@@ -90,8 +90,9 @@ describe('sortFacetOptions', () => {
   });
 
   it('sortFacetOptions: with no order it sorts on the label, which is the existing behaviour', () => {
-    // Returns raw values, ordered by what they display as: "Personnages" sorts
-    // before "Périls", so Character comes before Hazard.
-    expect(sortFacetOptions(['Hazard', 'Character'], { label })).toEqual(['Character', 'Hazard']);
+    // Returns raw values, ordered by what they DISPLAY as. French collation
+    // treats "é" as "e", so "Périls" sorts before "Personnages" — which is
+    // exactly why the Type facet needed an explicit order instead.
+    expect(sortFacetOptions(['Hazard', 'Character'], { label })).toEqual(['Hazard', 'Character']);
   });
 });
