@@ -9,7 +9,7 @@ export function safeFileName(name) {
 
 // One .txt per deck. The dedup pass is the whole point of this module:
 // zip.file() on an existing path OVERWRITES it without a word, so two decks
-// named "Draft" -- or "Deck #1" and "Deck (1)", which sanitise to one name --
+// named "Draft" -- or "Deck #1" and "Deck/1", which sanitise to one name --
 // would ship as a single file and the user would have no way to know. Numbering
 // starts at -2 because the first holder keeps the bare name.
 export async function buildDeckListZip(entries = []) {
