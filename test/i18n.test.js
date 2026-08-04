@@ -165,18 +165,6 @@ describe('terminology guards', () => {
     }
   });
 
-  // The glossary entries cite the English term on purpose ("en anglais « play
-  // deck »") -- naming the word being retired is what a glossary is for, and
-  // MECCG cards are printed in English, so a player needs the mapping. These
-  // are the ONLY keys allowed to contain a retired term, and only inside that
-  // citation. Do not extend this list to silence a failure elsewhere: outside
-  // the glossary, a retired word is not obsolete but wrong, since "réserve"
-  // and "talon" now denote different zones than they used to.
-  const GLOSSARY_KEYS = new Set([
-    'docs.glossary.play', 'docs.glossary.sideboard', 'docs.glossary.pool',
-    'docs.glossary.hazard', 'docs.glossary.minion', 'docs.glossary.stage',
-  ]);
-
   // `{placeholder}` tokens are identifiers, not prose: they never reach the
   // screen, and the parity guard below already forces them to be identical in
   // all three languages -- so they are code, and renaming them for vocabulary
@@ -185,29 +173,16 @@ describe('terminology guards', () => {
   // fails on its own token while its French prose is exactly right.
   const prose = (s) => String(s).replace(/\{\w+\}/g, ' ');
 
-  it('no FR string outside the glossary uses a retired term', () => {
+  // Every FR string, no exceptions. The glossary section used to be the one
+  // place allowed to cite a retired English term ("en anglais « sideboard »"),
+  // because a player's cards are printed in English; that section is gone from
+  // the help page, so the exemption went with it rather than lingering as an
+  // empty Set pointing at nothing.
+  it('no FR string uses a retired term', () => {
     const offences = [];
     for (const [key, value] of Object.entries(translations.fr)) {
-      if (GLOSSARY_KEYS.has(key)) continue;
       for (const { bad, use } of RETIRED_FR) {
         if (bad.test(prose(value))) offences.push(`fr:${key} = "${value}"  -> use "${use}"`);
-      }
-    }
-    expect(offences).toEqual([]);
-  });
-
-  // The exemption is scoped: a glossary entry may name the English term, but
-  // only inside the « … » citation. Prose outside the guillemets is ordinary
-  // UI text and must use the new vocabulary like everything else.
-  it('a glossary entry uses a retired term only inside its « … » citation', () => {
-    // Offences are collected rather than asserted inline: the assertion
-    // subject would otherwise interpolate the key ("docs.glossary.sideboard"),
-    // which contains a retired term and fails the test against itself.
-    const offences = [];
-    for (const key of GLOSSARY_KEYS) {
-      const outside = prose(translations.fr[key]).replace(/«[^»]*»/g, '');
-      for (const { bad, use } of RETIRED_FR) {
-        if (bad.test(outside)) offences.push(`${key} (outside citation) -> use "${use}"`);
       }
     }
     expect(offences).toEqual([]);
