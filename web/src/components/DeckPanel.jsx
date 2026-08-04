@@ -7,7 +7,7 @@ import ZoneTabs from './ZoneTabs.jsx';
 import DeckNotes from './DeckNotes.jsx';
 import { isDropAllowed, resolveDropTarget } from '../lib/rules/dropTargets.js';
 import { moveTargets } from '../lib/rules/zones.js';
-import { LENGTHS } from '../lib/rules/formats.js';
+import { LENGTHS, SIDEBOARD_FW_MAX } from '../lib/rules/formats.js';
 import { SIDES } from '../lib/rules/sides.js';
 import { backGroupForType } from '../lib/deck.js';
 import { buildGroups } from '../lib/deckList.js';
@@ -159,9 +159,11 @@ export default function DeckPanel({
   // tab appears whenever its zone is non-empty, in either mode.
   const hasPool = Object.keys(zones.pool || {}).length > 0;
   const hasSideboard = Object.keys(zones.sideboard || {}).length > 0;
+  const hasSideboardFw = Object.keys(zones.sideboardFw || {}).length > 0;
   const tabs = deckbuilding
-    ? ['play', 'pool', 'sideboard', 'location', 'notes']
-    : ['cards', ...(hasPool ? ['pool'] : []), ...(hasSideboard ? ['sideboard'] : []), 'notes'];
+    ? ['play', 'pool', 'sideboard', 'sideboardFw', 'location', 'notes']
+    : ['cards', ...(hasPool ? ['pool'] : []), ...(hasSideboard ? ['sideboard'] : []),
+       ...(hasSideboardFw ? ['sideboardFw'] : []), 'notes'];
   const [tab, setTab] = useState(deckbuilding ? 'play' : 'cards');
   // Sheet only: the zoom slider is a secondary control, so it hides behind a
   // toggle in the tab strip instead of taking a third row in the head. The
@@ -240,7 +242,7 @@ export default function DeckPanel({
   useEffect(() => {
     if (!tabs.includes(tab)) setTab(tabs[0]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deckbuilding, hasPool, hasSideboard]);
+  }, [deckbuilding, hasPool, hasSideboard, hasSideboardFw]);
 
   // Card width driven by the zoom slider, which is now a percentage of the
   // width available to the deck list rather than of the 570px source image:
@@ -317,18 +319,25 @@ export default function DeckPanel({
     location: counts.byGroup.locationdeck,
     pool: poolCharCount(zones.pool, cardsById),
     sideboard: sumQty(zones.sideboard),
+    sideboardFw: sumQty(zones.sideboardFw),
     cards: counts.total,
     notes: null, // the Notes tab carries no count
   };
-  const tabCaps = { play: null, location: null, pool: poolMax, sideboard: sbMax, cards: null, notes: null };
+  // 1.6.1's ten are granted flat, so unlike sideboardMax this cap does not
+  // depend on the ruleset -- it is the same number in freeform, where the tab
+  // only appears at all because the zone is non-empty.
+  const tabCaps = { play: null, location: null, pool: poolMax, sideboard: sbMax, sideboardFw: SIDEBOARD_FW_MAX, cards: null, notes: null };
   const tabLabels = {
     play: t('zones.play'),
     location: t('zones.location'),
     pool: t('zones.pool'),
     sideboard: t('zones.sideboard'),
+    sideboardFw: t('zones.sideboardFw'),
     cards: t('zones.cards'),
     notes: t('zones.notes'),
   };
+  const optionalTabs = new Set(['sideboardFw']);
+  const tabTitles = { sideboardFw: t('zones.sideboardFwFull') };
 
   // Entries + editing wired for whichever tab is active. play/location/cards
   // all edit `quantities` (zone 'deck'); pool/sideboard edit their zone map.
@@ -341,7 +350,7 @@ export default function DeckPanel({
     activeEntries = Object.entries(quantities)
       .map(([id, qty]) => ({ card: cardsById.get(id), qty }))
       .filter((it) => it.card && (wantGroup == null || backGroupForType(it.card.type) === wantGroup));
-  } else if (tab === 'pool' || tab === 'sideboard') {
+  } else if (tab === 'pool' || tab === 'sideboard' || tab === 'sideboardFw') {
     activeZone = tab;
     activeEntries = Object.entries(zones[tab] || {})
       .map(([id, qty]) => ({ card: cardsById.get(id), qty }))
@@ -416,6 +425,8 @@ export default function DeckPanel({
           labels={tabLabels}
           counts={tabCounts}
           caps={tabCaps}
+          optional={optionalTabs}
+          titles={tabTitles}
         />
         {asSheet && (
           <button

@@ -720,22 +720,30 @@ body {
   padding: 8px 12px;
   border-bottom: 1px solid var(--line);
 }
+/* Wider than they were (4px 10px): these are drop targets first and labels
+   second, and a 24px-tall pill is a hard thing to aim a dragged card at. */
 .ztab {
   background: var(--panel-2);
   border: 1px solid var(--line);
   color: var(--text);
   border-radius: var(--radius);
   cursor: pointer;
-  padding: 4px 10px;
+  padding: 8px 14px;
+  min-height: 34px;
   font-size: 13px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 .ztab:hover { border-color: var(--accent); }
 .ztab.on { font-weight: 700; border-color: currentColor; }
 .ztab .cnt { opacity: .65; font-variant-numeric: tabular-nums; }
 .ztab.over .cnt { color: var(--danger); font-weight: 700; opacity: 1; }
+/* An optional zone nobody has put a card in yet: an invitation, not a budget. */
+.ztab.optional { border-style: dashed; color: var(--muted); }
+/* A card is being held over this tab. Without it a tab gives no sign it will
+   accept the drop, which is most of why the pills read as labels. */
+.ztab.drop-over { border-color: var(--accent); border-style: solid; color: var(--text); }
 
 /* Notes tab: four free-text fields (starting/resource/hazard/other). */
 .deck-notes { display: flex; flex-direction: column; gap: 12px; }
