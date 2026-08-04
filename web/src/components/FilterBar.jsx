@@ -3,7 +3,7 @@ import { UI_LANGUAGES, setLabel } from '../lib/lang.js';
 import { useT } from '../i18n.jsx';
 import { localize } from '../lib/rules/docText.js';
 import { sortFacetOptions } from '../lib/filter.js';
-import { TYPE_ORDER } from '../lib/constants.js';
+import { TYPE_ORDER, REPORT_ISSUES_URL } from '../lib/constants.js';
 
 // Facet values come straight from cards.json, so they are English data --
 // "Hazard", "Minion" -- and showed as such in a French or Spanish UI, the last
@@ -171,6 +171,17 @@ export default function FilterBar({ facets, setNames = {}, filters, onChange, la
           onToggle={() => setOpenKey((k) => (k === 'lang' ? null : 'lang'))}
         />
         <button className="chip-toggle docs-btn" onClick={onOpenDocs} title={t('docs.title')} aria-label={t('docs.title')}>?</button>
+        {/* A link, not a button: the destination is a URL, so it opens in a new
+            tab, copies, and announces itself correctly. Built the same way as
+            the per-rule "report" links in RulesDoc. */}
+        <a
+          className="chip-toggle suggest-btn"
+          href={`${REPORT_ISSUES_URL}?labels=enhancement&title=${encodeURIComponent(t('suggest.issueTitle'))}&body=${encodeURIComponent(t('suggest.bodyTemplate'))}`}
+          target="_blank"
+          rel="noreferrer"
+          title={t('suggest.label')}
+          aria-label={t('suggest.label')}
+        >💡</a>
       </div>
       {isMobile && (
         <button

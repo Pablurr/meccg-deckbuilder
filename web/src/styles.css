@@ -536,6 +536,9 @@ body {
 
 /* ---- Rules documentation page (RulesDoc) ---- */
 .docs-btn { font-weight: 700; }
+/* Same footprint as the help button: the logo row is already full on a phone,
+   so the label lives in title/aria-label rather than on screen. */
+.suggest-btn { text-decoration: none; line-height: 1; }
 .modal.doc {
   width: min(1100px, 96vw);
   max-height: 92vh;
