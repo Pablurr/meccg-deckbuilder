@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import * as api from '../api.js';
 import { useT } from '../i18n.jsx';
 import { useIsMobile } from '../lib/useIsMobile.js';
+import { deckPayload } from '../lib/deck.js';
 
 export default function DeckManager({ deck, cardIds, quantities, zones, onClose, onLoad, onSaved }) {
   const t = useT();
@@ -80,10 +81,7 @@ export default function DeckManager({ deck, cardIds, quantities, zones, onClose,
     setBusy(true);
     setError(null);
     try {
-      const payload = {
-        name, cardIds, quantities, backAssignments: deck.backAssignments || {},
-        mode: deck.mode, ruleset: deck.ruleset, zones, notes: deck.notes, order: deck.order,
-      };
+      const payload = deckPayload({ deck, cardIds, quantities, zones, name });
       const saved = deck.id ? await api.updateDeck(deck.id, payload) : await api.createDeck(payload);
       onSaved(saved);
       await refresh();

@@ -123,3 +123,49 @@ export function normalizeDeck(d = {}) {
   const savedRuleOverrides = { ...((ruleset && ruleset.ruleOverrides) || d.savedRuleOverrides || {}) };
   return { ...d, mode, ruleset, zones, notes, savedRuleOverrides, order: typeof d.order === 'number' ? d.order : null };
 }
+
+// Deterministic stringify: object keys are emitted sorted, at every depth.
+// JSON.stringify follows INSERTION order, so two decks holding the same cards
+// added in a different order would produce different text -- and the Save
+// button, which compares this against the last saved value, would light up
+// with nothing to save.
+function stable(value) {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value) ?? 'null';
+  if (Array.isArray(value)) return `[${value.map(stable).join(',')}]`;
+  const keys = Object.keys(value).sort();
+  return `{${keys.map((k) => `${JSON.stringify(k)}:${stable(value[k])}`).join(',')}}`;
+}
+
+// Everything a save persists, and nothing else. `id`, `order` and `updatedAt`
+// are deliberately absent: none is editable from the deck screen, and folding
+// them in would make a deck read as modified the instant storage handed back
+// the id it just assigned.
+export function deckSignature({ deck = {}, quantities = {}, zones = {} } = {}) {
+  return stable({
+    name: deck.name || '',
+    mode: deck.mode || 'freeform',
+    ruleset: deck.ruleset || null,
+    notes: deck.notes || {},
+    backAssignments: deck.backAssignments || {},
+    quantities,
+    zones,
+  });
+}
+
+// The one place that decides what a saved deck contains. Both save paths (the
+// deck panel's button and the deck manager's form) go through it, so a field
+// added here reaches storage from either -- which is exactly what the two
+// hand-built payloads it replaced could not promise.
+export function deckPayload({ deck = {}, cardIds = [], quantities = {}, zones = {}, name } = {}) {
+  return {
+    name: name ?? deck.name,
+    cardIds,
+    quantities,
+    backAssignments: deck.backAssignments || {},
+    mode: deck.mode,
+    ruleset: deck.ruleset,
+    zones,
+    notes: deck.notes,
+    order: deck.order,
+  };
+}
