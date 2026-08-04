@@ -62,15 +62,24 @@ export default function DeckManager({ deck, cardIds, quantities, zones, cardsByI
       // than parallelism nobody would perceive.
       for (const d of decks) {
         if (!selectedIds.has(d.id)) continue;
-        // A deck deleted between the click and its turn in this loop must cost
-        // the user that one deck, not the whole archive: getDeck throws rather
-        // than returning undefined, so an uncaught read would discard every
-        // deck already gathered.
+        // The open deck is exported from what is on SCREEN, not from what is on
+        // disk: the single-deck text export reads App's live quantities/zones,
+        // and a batch that read storage instead would put two different lists
+        // under one deck name depending on which button produced them. It is
+        // also the deck most likely to be ticked with unsaved edits in it.
         let full;
-        try {
-          full = await api.getDeck(d.id);
-        } catch {
-          continue;
+        if (d.id === deck.id) {
+          full = { ...deck, quantities, zones };
+        } else {
+          // A deck deleted between the click and its turn in this loop must cost
+          // the user that one deck, not the whole archive: getDeck throws rather
+          // than returning undefined, so an uncaught read would discard every
+          // deck already gathered.
+          try {
+            full = await api.getDeck(d.id);
+          } catch {
+            continue;
+          }
         }
         entries.push({
           name: full.name,
