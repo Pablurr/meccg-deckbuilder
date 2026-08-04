@@ -672,20 +672,26 @@ Dans `web/src/lib/export/deckSections.js`, remplacer le commentaire d'en-tête p
 // Sideboard vs FW.
 ```
 
+Au-dessus de `GROUP_DEFS`, extraire les groupes du talon, partagés par les deux zones — les copier serait deux tables à garder d'accord pour une seule règle :
+
 ```js
-  sideboard: [
-    { id: 'characters', match: (c) => c.type === 'Character' },
-    { id: 'resources', match: (c) => c.type === 'Resource' },
-    { id: 'hazards', match: (c) => c.type === 'Hazard' },
-  ],
-  // 1.6.1 -- same three groups as the sideboard, because it holds the same
-  // kinds of card; it is a separate SECTION because it is a separate ten-card
-  // allowance the player has to be able to count on its own.
-  sideboardFw: [
-    { id: 'characters', match: (c) => c.type === 'Character' },
-    { id: 'resources', match: (c) => c.type === 'Resource' },
-    { id: 'hazards', match: (c) => c.type === 'Hazard' },
-  ],
+// 1.6.1's Fallen-wizard sideboard holds the same kinds of card as the
+// ordinary one, so it groups the same way. Shared rather than copied: two
+// copies of this list are two things to keep in agreement for one rule.
+const SIDEBOARD_GROUPS = [
+  { id: 'characters', match: (c) => c.type === 'Character' },
+  { id: 'resources', match: (c) => c.type === 'Resource' },
+  { id: 'hazards', match: (c) => c.type === 'Hazard' },
+];
+```
+
+et dans `GROUP_DEFS` :
+
+```js
+  sideboard: SIDEBOARD_GROUPS,
+  // A separate SECTION though it groups identically: it is a separate ten-card
+  // allowance, and the player has to be able to count it on its own.
+  sideboardFw: SIDEBOARD_GROUPS,
 ```
 
 ```js
@@ -1140,8 +1146,8 @@ describe('deckCardWidth', () => {
   });
 
   it('fits more columns as the panel grows', () => {
-    // 776px usable: six columns (6*120 + 5*10 = 770).
-    expect(deckCardWidth(800)).toBe(120);
+    // 776px usable: six columns fit (6*120 + 5*10 = 770), seven do not.
+    expect(deckCardWidth(800)).toBe(121);
   });
 
   it('never returns less than the grid floor, however narrow the panel', () => {
@@ -1152,7 +1158,12 @@ describe('deckCardWidth', () => {
 });
 ```
 
-Vérifier les deux attendus chiffrés à la main avant de coder : à 800px, utile = 776, `cols = floor(786 / 130) = 6`, largeur = `floor((776 - 50) / 6) = 121`. Corriger l'attendu à `121` si le calcul le donne — l'assertion doit décrire le calcul, pas l'inverse.
+**Poser les deux attendus chiffrés en faisant l'arithmétique à la main, avant d'écrire la moindre ligne d'implémentation** — jamais en exécutant le code pour voir ce qu'il sort, ce qui ne prouverait rien.
+
+- 360px → utile `360 − 24 = 336` ; colonnes `floor((336 + 10) / 130) = 2` ; largeur `floor((336 − 10) / 2) = 163`.
+- 800px → utile `800 − 24 = 776` ; colonnes `floor((776 + 10) / 130) = 6` ; largeur `floor((776 − 50) / 6) = 121`.
+
+L'attendu du second test est donc **121**, pas 120 : corriger le bloc de test ci-dessus avant de le lancer.
 
 - [ ] **Step 2: Run test to verify it fails**
 
