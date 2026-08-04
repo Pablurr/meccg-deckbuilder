@@ -792,6 +792,17 @@ annulée. **L'invariant est maintenant épinglé par un test :**
 trouver laid, qui prouve la parité. Ce n'est pas partagé dans un helper commun : la parité
 tient par ce test, pas par la structure (§14).
 
+**Le deck ouvert s'exporte depuis l'écran, pas depuis le disque** (trouvé à la revue finale de
+branche). La boucle lit chaque deck par `api.getDeck`, sauf la ligne dont l'`id` est celui du
+deck ouvert : celle-là est construite depuis les `quantities`/`zones` vivants de `App`. Sans
+cette exception, un deck aux modifications non enregistrées partait dans l'archive dans son
+état **d'avant les modifications**, en silence. Deux raisons, et la seconde est la vraie :
+c'est le deck qu'on coche le plus distraitement, et surtout **l'export d'un seul deck en texte
+lit déjà l'état vivant** (`ExportDialog`) — un lot qui lirait le disque mettrait deux listes
+différentes sous un même nom de deck selon le bouton employé, ce que la réutilisation de
+`buildDeckListText` existe précisément pour empêcher. La comparaison est sûre parce qu'un deck
+jamais enregistré a `id === null` et qu'un `id` en stockage est toujours une chaîne `d_…`.
+
 **Un deck disparu en cours de lot est sauté, pas fatal.** `api.getDeck` **lève** au lieu de
 rendre `undefined`, donc une lecture non gardée dans la boucle jetait **tous les decks déjà
 rassemblés** à cause d'un seul deck supprimé entre le clic et son tour. Le `try`/`catch` autour
