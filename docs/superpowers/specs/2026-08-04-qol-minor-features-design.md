@@ -52,18 +52,29 @@ et les huit clés `docs.glossaryTitle`, `docs.glossaryIntro`, `docs.glossary.pla
 `docs.glossary.sideboard`, `docs.glossary.pool`, `docs.glossary.hazard`,
 `docs.glossary.minion`, `docs.glossary.stage`, dans les trois langues.
 
-**Conséquence à assumer, pas à contourner.** `test/i18n.test.js:175` définit `GLOSSARY_KEYS`
-comme la *seule* exemption au garde-fou de vocabulaire français : ces six clés sont les
-seules autorisées à citer un terme anglais retiré (« sideboard », « play deck », « pool »),
-et c'est ce qui donnait au joueur la correspondance avec ses cartes imprimées en anglais.
-En les supprimant, cette correspondance quitte l'application.
+**Trois choses portent le nom de « vocabulaire » dans ce dépôt et une seule est retirée.**
 
-Le traitement retenu : `GLOSSARY_KEYS` devient un `Set` **vide**, avec un commentaire
-expliquant que l'exemption existe toujours mais ne couvre plus aucune clé. Le test
-« a glossary entry uses a retired term only inside its « … » citation » est **conservé**
-(il itère sur un ensemble vide et passe) : c'est le point d'ancrage si un glossaire
-revient. Le test « no FR string outside the glossary uses a retired term » devient
-strictement plus strict, ce qui est correct.
+| | quoi | sort |
+|---|---|---|
+| `web/src/lib/import/vocabulary.js` | la table qui reconnaît « Pioche » / « Playdeck » / « Mazo de juego » comme une même section quand on colle une liste | **intacte** — elle est construite depuis `i18n.js` et n'a rien à voir avec la page d'aide |
+| `RETIRED_FR` dans `test/i18n.test.js` | les *règles* de vocabulaire FR : « sideboard », « danger », « magicien »… interdits dans toute chaîne française | **conservées**, et rendues inconditionnelles |
+| `docs.glossary.*` + le `<dl>` de `RulesDoc.jsx` | la *section texte* de la page « ? » | **supprimée** |
+
+Les règles de vocabulaire ne doivent plus pointer vers la section texte. `test/i18n.test.js:175`
+définit aujourd'hui `GLOSSARY_KEYS` comme la seule exemption au garde-fou : ces six clés
+étaient les seules autorisées à citer un terme anglais retiré. La section partant, l'exemption
+part avec elle :
+
+- `GLOSSARY_KEYS` est **supprimé** — pas vidé « au cas où », car un ensemble vide est une
+  référence morte vers une section qui n'existe plus ;
+- le test « a glossary entry uses a retired term only inside its « … » citation » est
+  **supprimé** : il n'itère plus sur rien ;
+- le test « no FR string outside the glossary uses a retired term » perd son `continue`
+  d'exemption, devient inconditionnel, et est renommé « no FR string uses a retired term ».
+  Le garde-fou en sort strictement plus strict.
+
+Effet secondaire assumé : la correspondance FR↔EN (« talon » = *sideboard* sur les cartes
+imprimées en anglais) quitte l'application. C'est le prix de la demande, pas un oubli.
 
 **Contrainte directe sur la prose de la partie 1 :** aucune des huit nouvelles rubriques ne
 peut employer, en français, `deck de jeu`, `magicien`, `sbire`, `mise en scène`, `danger(s)`,
@@ -278,7 +289,7 @@ responsabilité s'y ajoutait un jour, la liste de decks mériterait son propre c
 | `test/deckSignature.test.js` (nouveau) | même état → même empreinte quel que soit l'ordre d'insertion des clés ; chaque champ persisté change l'empreinte ; `id`/`order` ne la changent pas |
 | `test/deck.test.js` | `deckPayload` porte tous les champs que `DeckManager.save()` portait |
 | `test/deckListZip.test.js` (nouveau) | un fichier par entrée ; collisions de noms suffixées `-2`, `-3` ; zip lisible par JSZip |
-| `test/i18n.test.js` | `GLOSSARY_KEYS` vidé ; parité fr/en/es des nouvelles clés ; aucune nouvelle chaîne FR n'emploie un terme retiré |
+| `test/i18n.test.js` | `GLOSSARY_KEYS` et son test supprimés, garde-fou rendu inconditionnel ; parité fr/en/es des nouvelles clés ; aucune nouvelle chaîne FR n'emploie un terme retiré |
 | `test/docText.test.js` | inchangé — la partie 2 de la page ne bouge pas |
 | couverture `ZoneTabs` | un onglet `sideboard` vide et *optional* rend `+ Talon` sans compteur |
 
@@ -287,8 +298,8 @@ JSX fait échouer un fichier à la compilation, pas à l'assertion).
 
 ## Documentation
 
-`docs/ARCHITECTURE.md` : §9 (vocabulaire FR, ajout de « Antres » ; disparition du
-glossaire et vidage de l'exemption), §10 (bouton Enregistrer dans le header, pilule talon
+`docs/ARCHITECTURE.md` : §9 (vocabulaire FR, ajout de « Antres » ; disparition de la section
+glossaire et de l'exemption du garde-fou, qui devient inconditionnel), §10 (bouton Enregistrer dans le header, pilule talon
 optionnelle, lien de suggestion), §4 et §5 (`deckSignature`, `deckPayload`, `savedSignature`),
 §7 (`deckListZip`), §13 (inventaire), §15 (journal daté) et la date en tête du fichier.
 
