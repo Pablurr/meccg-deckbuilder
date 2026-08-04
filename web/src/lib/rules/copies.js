@@ -9,9 +9,14 @@
 // a copy cap. So scope 'total' is the default: a unique card in the sideboard
 // cannot also be in the play deck.
 //
-// A { zone } scope is an ADDITIONAL restriction layered on top of a total cap,
+// A { zones } scope is an ADDITIONAL restriction layered on top of a total cap,
 // never a replacement for it. Only 1.6.2 needs one: one copy of each avatar in
 // the sideboard, out of the three that avatar may have in the whole deck.
+//
+// It names a LIST of zones, not one, because 1.6.1's Fallen-wizard sideboard
+// is sideboard too: "one copy of each avatar in the sideboard" reads as one
+// copy across both, and a per-zone cap would quietly permit two. Owner's
+// decision, 2026-08-03.
 import { SIDES, GENERAL } from './sides.js';
 import { isRuleEnabled } from './catalog.js';
 import { roleFor } from './roles.js';
@@ -50,7 +55,7 @@ export function copyCaps(card, { side, ruleOverrides = {} } = {}) {
       caps.push({ limit: GENERAL.avatarMaxCopies, scope: 'total', ruleId: 'AVATAR-COPIES' });
     }
     if (on('AVATAR-SIDEBOARD')) {
-      caps.push({ limit: GENERAL.avatarMaxInSideboard, scope: { zone: 'sideboard' }, ruleId: 'AVATAR-SIDEBOARD' });
+      caps.push({ limit: GENERAL.avatarMaxInSideboard, scope: { zones: ['sideboard', 'sideboardFw'] }, ruleId: 'AVATAR-SIDEBOARD' });
     }
     return caps;
   }
@@ -92,14 +97,17 @@ export function remainingCopies(card, zone, { quantities = {}, zones = {} } = {}
   const caps = copyCaps(card, ctx);
   if (caps.length === 0) return { remaining: Infinity, ruleId: null };
   const countIn = (z) => ((z === 'deck' ? quantities : (zones[z] || {}))[card.id] || 0);
-  const total = countIn('deck') + countIn('sideboard') + countIn('pool');
+  const total = countIn('deck') + countIn('sideboard') + countIn('pool') + countIn('sideboardFw');
   let remaining = Infinity;
   let ruleId = null;
   for (const cap of caps) {
     let used;
     if (cap.scope === 'total') used = total;
-    else if (cap.scope.zone === zone) used = countIn(zone);
-    else continue; // a zone cap on another zone does not constrain this one
+    // A zoned cap constrains only the zones it names, and counts all of them:
+    // the copy this zone may still take is what the FAMILY has left, not what
+    // this one zone happens to hold.
+    else if (cap.scope.zones.includes(zone)) used = cap.scope.zones.reduce((n, z) => n + countIn(z), 0);
+    else continue; // a zone cap on other zones does not constrain this one
     const left = cap.limit - used;
     if (left < remaining) { remaining = left; ruleId = cap.ruleId; }
   }

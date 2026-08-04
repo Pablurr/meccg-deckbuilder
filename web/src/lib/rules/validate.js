@@ -94,6 +94,8 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
   const caps = LENGTHS[length] || LENGTHS.standard;
   const sb = zones.sideboard || {};
   const pool = zones.pool || {};
+  const sbFw = zones.sideboardFw || {};
+  const zoneMaps = { sideboard: sb, pool, sideboardFw: sbFw };
   const out = [];
   // code defaults to ruleId; POOL-ITEMS and POOL-ELIGIBLE use a dotted code
   // for their message shape (POOL-ELIGIBLE currently fires only for the
@@ -108,7 +110,7 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
 
   // Total copies per card across every zone; missing cards are skipped.
   const totals = new Map();
-  for (const zoneMap of [quantities, sb, pool]) {
+  for (const zoneMap of [quantities, sb, pool, sbFw]) {
     for (const [id, n] of Object.entries(zoneMap)) {
       if (!cardsById.get(id)) continue;
       totals.set(id, (totals.get(id) || 0) + n);
@@ -215,9 +217,11 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
 
     // Copy caps all come from copies.js -- the same function the + buttons
     // consult -- so a card the counter refuses is exactly a card this reports.
-    // `e.count` is already the deck + sideboard + pool total.
+    // `e.count` is already the deck + both sideboards + pool total.
     for (const cap of copyCaps(c, { side, ruleOverrides })) {
-      const used = cap.scope === 'total' ? e.count : ((cap.scope.zone === 'sideboard' ? sb : pool)[e.id] || 0);
+      const used = cap.scope === 'total'
+        ? e.count
+        : cap.scope.zones.reduce((n, z) => n + ((zoneMaps[z] || {})[e.id] || 0), 0);
       if (used <= cap.limit) continue;
       emit(cap.ruleId, {
         id: e.id, name: name(c), count: used,

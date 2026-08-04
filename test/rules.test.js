@@ -1400,7 +1400,7 @@ describe('copyCaps / remainingCopies', () => {
     const caps = copyCaps(g, ctx('wizard'));
     expect(caps).toEqual([
       { limit: 3, scope: 'total', ruleId: 'AVATAR-COPIES' },
-      { limit: 1, scope: { zone: 'sideboard' }, ruleId: 'AVATAR-SIDEBOARD' },
+      { limit: 1, scope: { zones: ['sideboard', 'sideboardFw'] }, ruleId: 'AVATAR-SIDEBOARD' },
     ]);
     // 3 in the play deck spends the whole allowance.
     const full = state({ 'TW-156': 3 });
@@ -1519,6 +1519,43 @@ describe('cap/warning agreement', () => {
         expect(capWarns(over).length).toBeGreaterThan(0);
       }
     }
+  });
+});
+
+describe('copy caps across the two sideboards', () => {
+  const avatar = cards.find((c) => c.attributes.avatar && c.alignment === 'Hero');
+  const unique = cards.find((c) => c.attributes.unique === true && !c.attributes.avatar && c.type !== 'Site');
+  const ctx = { side: 'wizard', ruleOverrides: {} };
+
+  it('counts the Fallen-wizard sideboard in the whole-deck total', () => {
+    // 1.3.1 -- a unique card held in one zone leaves no room in any other.
+    const held = { quantities: {}, zones: { sideboard: {}, pool: {}, sideboardFw: { [unique.id]: 1 } } };
+    expect(remainingCopies(unique, 'deck', held, ctx).remaining).toBe(0);
+    expect(remainingCopies(unique, 'deck', held, ctx).ruleId).toBe('UNIQUE-LIMIT');
+  });
+
+  it('reads the 1.6.2 avatar sub-cap as combined over both sideboards', () => {
+    // Owner's decision, 2026-08-03: the Fallen-wizard sideboard IS sideboard,
+    // so one copy of an avatar there consumes the single copy 1.6.2 allows.
+    const held = { quantities: {}, zones: { sideboard: { [avatar.id]: 1 }, pool: {}, sideboardFw: {} } };
+    expect(remainingCopies(avatar, 'sideboardFw', held, ctx).remaining).toBe(0);
+    expect(remainingCopies(avatar, 'sideboardFw', held, ctx).ruleId).toBe('AVATAR-SIDEBOARD');
+  });
+
+  it('emits AVATAR-SIDEBOARD when the two sideboards hold one avatar copy each', () => {
+    const out = validateDeck({
+      side: 'wizard', length: 'standard', tournament: true, cardsById,
+      quantities: {},
+      zones: { sideboard: { [avatar.id]: 1 }, pool: {}, sideboardFw: { [avatar.id]: 1 } },
+    });
+    expect(byId(out, 'AVATAR-SIDEBOARD')).toHaveLength(1);
+    expect(byId(out, 'AVATAR-SIDEBOARD')[0].params.count).toBe(2);
+  });
+
+  it('still allows the copies the whole-deck cap leaves', () => {
+    const held = { quantities: { [avatar.id]: 1 }, zones: { sideboard: {}, pool: {}, sideboardFw: {} } };
+    // AVATAR-COPIES caps the avatar at 3 across the deck; one is placed.
+    expect(remainingCopies(avatar, 'sideboardFw', held, ctx).remaining).toBe(1);
   });
 });
 
