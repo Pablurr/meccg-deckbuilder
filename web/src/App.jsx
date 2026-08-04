@@ -8,7 +8,6 @@ import { validateDeck } from './lib/rules/validate.js';
 import { remainingCopies } from './lib/rules/copies.js';
 import { zoneTargets } from './lib/rules/zones.js';
 import { bumpCount, applyDelta, applyToggle, applySelectAll } from './lib/deckMutations.js';
-import { parseStoredZoom, defaultZoom, ZOOM_STORAGE_KEY } from './lib/zoom.js';
 import FilterBar from './components/FilterBar.jsx';
 import CardBrowser from './components/CardBrowser.jsx';
 import DeckDrawer from './components/DeckDrawer.jsx';
@@ -38,16 +37,7 @@ export default function App() {
   const [showDocs, setShowDocs] = useState(false);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [panelWidth, setPanelWidth] = useState(360); // right deck panel width in px
-  // Declared before cardZoom on purpose: the zoom default differs per surface,
-  // so the lazy initializer below needs isMobile to already be resolved.
   const isMobile = useIsMobile();
-  // Deck-panel card size, as a % of the width available to the deck list (not
-  // of the source image — see lib/zoom.js). Persisted like proxyMode so the
-  // choice sticks; validated on read because localStorage is user-writable,
-  // and zoom was never persisted before, so there is no legacy value to migrate.
-  const [cardZoom, setCardZoom] = useState(() => {
-    try { return parseStoredZoom(localStorage.getItem(ZOOM_STORAGE_KEY), isMobile); } catch { return defaultZoom(isMobile); }
-  });
   const [error, setError] = useState(null);
   const [deckSheetOpen, setDeckSheetOpen] = useState(false);
   const [previewCard, setPreviewCard] = useState(null);
@@ -59,9 +49,6 @@ export default function App() {
   useEffect(() => {
     try { localStorage.setItem('meccg.proxyMode', proxyMode ? '1' : '0'); } catch { /* storage unavailable */ }
   }, [proxyMode]);
-  useEffect(() => {
-    try { localStorage.setItem(ZOOM_STORAGE_KEY, String(cardZoom)); } catch { /* storage unavailable */ }
-  }, [cardZoom]);
 
   // When the deck empties the mobile sheet unmounts; reset its flag so re-adding
   // a card doesn't pop the sheet back open unprompted.
@@ -271,8 +258,6 @@ export default function App() {
             onToggleCollapsed={() => setPanelCollapsed((v) => !v)}
             width={panelWidth}
             onResize={setPanelWidth}
-            zoom={cardZoom}
-            onZoom={setCardZoom}
             onChangeQty={changeQty}
             onToggle={toggleCard}
             onChangeNote={changeNote}
@@ -297,8 +282,6 @@ export default function App() {
           ruleWarnings={ruleWarnings}
           onToggleRule={onToggleRule}
           collapsed={false}
-          zoom={cardZoom}
-          onZoom={setCardZoom}
           onChangeQty={changeQty}
           onToggle={toggleCard}
           onChangeNote={changeNote}

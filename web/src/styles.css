@@ -656,16 +656,6 @@ body {
   border-bottom: 1px solid var(--line);
 }
 .deckpanel-counts { display: flex; gap: 8px; flex-wrap: wrap; width: 100%; }
-.deckpanel-zoom {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  color: var(--muted);
-  font-size: 12px;
-}
-.deckpanel-zoom input[type="range"] { flex: 1; accent-color: var(--accent); cursor: pointer; }
-.deckpanel-zoom-val { min-width: 36px; text-align: right; color: var(--text); font-variant-numeric: tabular-nums; }
 .deckpanel-toggle {
   background: var(--panel-2);
   border: 1px solid var(--line);
@@ -691,28 +681,13 @@ body {
 /* Zone tabs: the tab bar IS the drop target (zones live in separate tabs, so
    source and destination are never both visible — this also works when the
    destination zone is empty). */
-/* The tab strip and, on the sheet, the zoom disclosure trigger pinned after
-   it. The border sits on the row so the trigger shares it with the tabs. */
+/* Wraps the tab strip; the border lives here rather than on .ztabs itself. */
 .ztabs-row {
   display: flex;
   align-items: stretch;
   border-bottom: 1px solid var(--line);
 }
 .ztabs-row > .ztabs { flex: 1; min-width: 0; border-bottom: none; }
-.ztabs-zoom {
-  flex: none;
-  background: none;
-  border: none;
-  border-left: 1px solid var(--line);
-  color: var(--muted);
-  cursor: pointer;
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  padding: 0 10px;
-}
-.ztabs-zoom:hover, .ztabs-zoom.on { color: var(--accent); }
-.sheet-zoom { padding: 8px 12px; border-bottom: 1px solid var(--line); }
-.sheet-zoom .deckpanel-zoom { width: 100%; }
 .ztabs {
   display: flex;
   flex-wrap: wrap;
@@ -769,15 +744,9 @@ body {
   padding-bottom: 4px;
   margin-bottom: 8px;
 }
-/* Cards render at ~50% of the source image (570×796 → ~285px wide), so they
-   are noticeably larger than the browser grid cells. min(285px, 100%) keeps a
-   card from overflowing when the panel is dragged narrow. */
-.deck-mini-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(285px, 100%), 285px));
-  gap: 10px;
-}
-/* Otherwise identical to a browser grid cell (same image + −/count/+ control). */
+/* The deck grid IS the card selector's .grid — same rule, same card size, one
+   place to change either. A mini card is otherwise identical to a browser
+   grid cell (same image + −/count/+ control). */
 /* Confirmation overlay shown when a selected mini card is clicked. */
 .deck-mini-confirm {
   position: absolute;
@@ -1146,7 +1115,6 @@ code {
      a second row at 44px each would cost more height than it saves. */
   .ztabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .ztab { min-height: 44px; white-space: nowrap; }
-  .ztabs-zoom { min-height: 44px; }
 
   /* Folded, that one line is the whole control surface for a warning, so both
      its buttons take the full target -- the ignore shortcut most of all, since

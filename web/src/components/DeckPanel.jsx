@@ -15,7 +15,7 @@ import { REPORT_ISSUES_URL } from '../lib/constants.js';
 import { COE, RULE_BY_ID } from '../lib/rules/catalog.js';
 import { refText } from '../lib/rules/docText.js';
 import { remainingCopies } from '../lib/rules/copies.js';
-import { cardWidthFor, deckZoneWidth, MIN_ZOOM, MAX_ZOOM, DEFAULT_ZOOM_DESKTOP } from '../lib/zoom.js';
+import { deckCardWidth } from '../lib/cardGrid.js';
 import { placePopover } from '../lib/popover.js';
 
 const SEV_ICON = { error: '⛔', warning: '⚠', info: 'ℹ' };
@@ -135,8 +135,6 @@ export default function DeckPanel({
   onToggleCollapsed,
   width = DEFAULT_WIDTH,
   onResize,
-  zoom = DEFAULT_ZOOM_DESKTOP,
-  onZoom,
   onChangeQty,
   onToggle,
   onChangeNote,
@@ -165,11 +163,6 @@ export default function DeckPanel({
     : ['cards', ...(hasPool ? ['pool'] : []), ...(hasSideboard ? ['sideboard'] : []),
        ...(hasSideboardFw ? ['sideboardFw'] : []), 'notes'];
   const [tab, setTab] = useState(deckbuilding ? 'play' : 'cards');
-  // Sheet only: the zoom slider is a secondary control, so it hides behind a
-  // toggle in the tab strip instead of taking a third row in the head. The
-  // trigger lives in that strip rather than next to the title because the
-  // strip is already 44px tall on touch, so it costs no extra height there.
-  const [showZoom, setShowZoom] = useState(false);
   // Which rule warnings are unfolded, by warningKey. Folded is the default:
   // five warnings on a 14-card deck already filled 574px before the 35vh cap,
   // and the block grows with the deck, so the full text of every one of them
@@ -244,45 +237,18 @@ export default function DeckPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deckbuilding, hasPool, hasSideboard, hasSideboardFw]);
 
-  // Card width driven by the zoom slider, which is now a percentage of the
-  // width available to the deck list rather than of the 570px source image:
-  // one setting therefore means one visual density whether the panel is at its
-  // 280px minimum or maximised, instead of the old absolute width that gave a
-  // single card per row in a narrow panel and six in a wide one.
+  // The card grid uses the card selector's rule verbatim (see lib/cardGrid.js),
+  // so a card is the same size on both surfaces and the panel's width is what
+  // changes the density -- the same lever the selector has always had.
   //
   // The zone's outer width comes from data we already hold — the `width` prop
   // on desktop, the viewport on the full-screen sheet — rather than from a
-  // measured DOM node, which keeps cardWidthFor a pure function and mirrors
-  // how `maxW` below already reads window.innerWidth. A viewport change the
-  // component doesn't re-render for only makes the grid slightly less dense
-  // than intended; min(…,100%) still stops a card overflowing its column.
+  // measured DOM node, which keeps deckCardWidth a pure function. It feeds the
+  // THUMBNAIL choice only; the layout itself is the .grid rule in styles.css.
   const outerWidth = asSheet
     ? (typeof window !== 'undefined' ? window.innerWidth : DEFAULT_WIDTH)
     : width;
-  const cardW = cardWidthFor(deckZoneWidth(outerWidth), zoom);
-  const thumbW = deckThumbWidth(cardW);
-  const gridStyle = { gridTemplateColumns: `repeat(auto-fill, minmax(min(${cardW}px, 100%), ${cardW}px))` };
-
-  // One definition, two placements: inline in the head on desktop, in a
-  // disclosure row under the tabs on the sheet. Duplicating the markup would
-  // let the two drift apart (min/max/step are the slider's contract).
-  // min/max come from zoom.js because they are also the range parseStoredZoom
-  // accepts: a bound that lived only here could drift out of sync and make the
-  // slider emit values its own reader would reject as corrupt.
-  const zoomControl = (
-    <label className="deckpanel-zoom">
-      {t('panel.zoom')}
-      <input
-        type="range"
-        min={MIN_ZOOM}
-        max={MAX_ZOOM}
-        step="5"
-        value={zoom}
-        onChange={(e) => onZoom(Number(e.target.value))}
-      />
-      <span className="deckpanel-zoom-val">{zoom}%</span>
-    </label>
-  );
+  const thumbW = deckThumbWidth(deckCardWidth(outerWidth));
 
   // Drag the left edge to resize; released listeners live only for the drag.
   function startResize(e) {
@@ -413,7 +379,6 @@ export default function DeckPanel({
           <span className="count-pill">{t('drawer.playdeck')} <b>{counts.byGroup.playdeck}</b></span>
           <span className="count-pill">{t('drawer.location')} <b>{counts.byGroup.locationdeck}</b></span>
         </div>
-        {!asSheet && zoomControl}
       </div>
 
       <div className="ztabs-row">
@@ -428,17 +393,7 @@ export default function DeckPanel({
           optional={optionalTabs}
           titles={tabTitles}
         />
-        {asSheet && (
-          <button
-            type="button"
-            className={`ztabs-zoom ${showZoom ? 'on' : ''}`}
-            onClick={() => setShowZoom((v) => !v)}
-            aria-expanded={showZoom}
-            aria-label={t('panel.zoom')}
-          >{zoom}%</button>
-        )}
       </div>
-      {asSheet && showZoom && <div className="sheet-zoom">{zoomControl}</div>}
 
       {/* A region, not role="status". As a status the whole block was a live
           region, so every deck edit re-announced all five warnings in full --
@@ -544,7 +499,7 @@ export default function DeckPanel({
                 <div className="deck-group-head">
                   {t(`panel.group.${g.type}`)} <span className="muted">({n})</span>
                 </div>
-                <div className="deck-mini-grid" style={gridStyle}>
+                <div className="grid">
                   {g.items.map(({ card, qty }) => (
                     <MiniCard
                       key={card.id}
