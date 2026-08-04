@@ -7,12 +7,13 @@
 > Public : LLM. Style : dense, factuel, pas de prose d'introduction.
 > Doc utilisateur : [`README.md`](../README.md). Ce fichier-ci décrit le *comment* et le *pourquoi*.
 
-**Dernière mise à jour : 2026-08-03** — import de liste reconstruit en pipeline de six
-modules (sections en tout ordre, désambiguïsation à quatre rangs, **zone de destination
-arbitrée par les règles**), un dépôt refusé par l'onglet qui n'afficherait pas la carte,
-cartes spécifiques à un camp exclues du navigateur d'un camp qui ne peut pas les jouer,
-bloc `## Metadata` à l'export texte, ordre de jeu fixé dans le filtre Type
-(état : branche `deck-import-zones`).
+**Dernière mise à jour : 2026-08-04** — talon contre Sorcier déchu (règle 1.6.1) : quatrième
+zone `sideboardFw`, dix cartes préselectionnées en plus du talon ordinaire, offerte partout
+où le talon l'est déjà et jamais aux sites ; plafond de copies d'avatar au talon lu **combiné**
+sur les deux talons (interprétation propriétaire) ; panneau de deck refondu — en-tête devenu
+nom du deck + pastille de camp + total réel, curseur de zoom retiré au profit de la règle CSS
+`.grid` déjà utilisée par le sélecteur de cartes
+(état : branche `deck-panel-fw-sideboard`, dix commits `103737f..bc07b80`).
 
 ---
 
@@ -216,7 +217,7 @@ lecture. Toute évolution du schéma **doit** passer par cette fonction.
     ruleOverrides: { [ruleId]: boolean },
   },
   quantities: { [cardId]: number },    // le deck principal (play deck + locations)
-  zones: { sideboard: {…}, pool: {…} },
+  zones: { sideboard: {…}, pool: {…}, sideboardFw: {…} },
   backAssignments: { playdeck?: dataURL, locationdeck?: dataURL },
   notes: { starting, resourceStrategy, hazardStrategy, other },
   savedRuleOverrides: { [ruleId]: boolean },
@@ -236,6 +237,13 @@ lecture. Toute évolution du schéma **doit** passer par cette fonction.
   quand celui-ci existe, et le laisse passer intact sinon.
 - **Un deck `deckbuilding` dont `side` ou `length` est inconnu retombe en `freeform`**
   plutôt que de lever une exception.
+- **`zones.sideboardFw` (règle 1.6.1, 2026-08-03) — la quatrième zone.** Les dix cartes
+  préselectionnées pour un adversaire Sorcier déchu, *en plus* du talon ordinaire
+  (`SIDEBOARD_FW_MAX`, §6). Toujours pas de numéro de version de schéma (voir ci-dessus) :
+  `normalizeDeck` la défaute comme `sideboard`/`pool`, donc tout deck enregistré avant que
+  cette zone existe se relit comme la possédant, vide. `totalCopies` somme désormais **quatre**
+  zones (`quantities` + `sideboard` + `pool` + `sideboardFw`) — c'est ce total, pas une liste de
+  zones tenue à la main, qui répond à « ce deck contient-il des cartes ? » (§5).
 
 ### Pipeline d'import (`web/src/lib/import/`, 2026-08-03)
 
@@ -271,6 +279,14 @@ lib/importDeck.js = façade, API publique inchangée (263 → 139 lignes)
   section précédente et **tous les sites atterrissaient dans le talon**. C'est sans risque
   parce que leur type ne peut vivre que dans une seule zone : c'est précisément pourquoi
   Characters / Resources / Hazards, eux, restent de simples groupes.
+- **En-têtes reconnus pour `sideboardFw` (2026-08-03).** `Sideboard vs FW`, `Sideboard vs.
+  FW`, `Sideboard vs Fallen-wizard`, `FW sideboard`, `Fallen-wizard opponent sideboard`,
+  `Anti-FW sideboard`, `SB vs FW`, `Talon vs SD`, `Talon contre Sorcier déchu`, `SB vs MC`,
+  et le titre canonique de l'export (`Sideboard vs FW`, §7) pointent tous vers la même entrée
+  de la `TABLE` de `vocabulary.js`. Chacun **contient** le mot « Sideboard », ce qui ne
+  collisionne jamais avec le talon ordinaire parce que le repérage matche un **en-tête
+  normalisé entier**, jamais un préfixe — un `## Sideboard` nu reste le talon ordinaire. Un
+  test épingle les deux sens.
 - **`document.js`** — `parseDocument(text)` tient deux garanties : le **mode notes est
   absolu** (aucune ligne n'y est jamais lue comme une carte, même « 3x Gandalf »), et **un
   titre inconnu part en notes et laisse la zone intacte** — l'ancienne implémentation
@@ -403,16 +419,16 @@ dense du projet ; `test/rules.test.js` fait 91 Ko à lui seul.
 - **`status`** — `'verified'`. `defaultEnabled` en découle.
 - **`source`** — `COE` = `https://www.councilofelrond.org/rules/#Section1`.
 
-**État au 2026-08-02 : les 30 règles sont `status: 'verified'`.** L'avertissement du README
+**État au 2026-08-03 : les 31 règles sont `status: 'verified'`.** L'avertissement du README
 sur des « valeurs stubs désactivées par défaut » décrit un état antérieur (voir §14).
 
-**Les 30 règles :** `AVATAR-PRESENT`, `AVATAR-COPIES`, `AVATAR-SIDEBOARD`, `AVATAR-COUNT`,
+**Les 31 règles :** `AVATAR-PRESENT`, `AVATAR-COPIES`, `AVATAR-SIDEBOARD`, `AVATAR-COUNT`,
 `AVATAR-MULTIPLES`, `AVATAR-SIDE`, `ALIGN-LEGAL`, `BANNED`, `SPECIFIC-AVATAR`,
 `SPECIFIC-SIDE`, `AGENT-MIND`, `COPIES-LIMIT`, `UNIQUE-LIMIT`, `SITE-COPIES`,
 `REGION-EXCLUDED`, `SITE-SIDE`, `SITE-BALROG-VERSION`, `BALROG-RACE`, `BALROG-MIND`,
 `FACTION-RACE`, `DECKSIZE-RESOURCES`, `DECKSIZE-HAZARDS`, `DECKSIZE-CHARS`, `CREATURE-MIN`,
-`DECKSIZE-LOCATION`, `SIDEBOARD-MAX`, `POOL-CHARS`, `POOL-ITEMS`, `POOL-ELIGIBLE`,
-`POOL-STAGE`.
+`DECKSIZE-LOCATION`, `SIDEBOARD-MAX`, `SIDEBOARD-FW-MAX`, `POOL-CHARS`, `POOL-ITEMS`,
+`POOL-ELIGIBLE`, `POOL-STAGE`.
 
 ### Contrat de `validateDeck`
 
@@ -430,14 +446,28 @@ validateDeck({ side, length, tournament, ruleOverrides, quantities, zones, cards
 
 ### Modèle de zones
 
-Trois zones logiques : **`deck`**, **`pool`**, **`sideboard`**. `zonesFor(card)` renvoie
-`{ primary, extra[] }` — la forme dont parle le texte des règles. `zoneTargets(card)`
-aplatit en une liste ordonnée avec `'deck'` toujours ajouté en queue (toute carte peut
-rejoindre le play deck), dédoublonnée. **`isDropAllowed` est construit sur `zoneTargets`,
-pas sur une dérivation parallèle** : l'UI tactile et le drag-and-drop ne doivent pas
-pouvoir diverger sur la destination autorisée. **L'import aussi passe par `zoneTargets`**
-(`import/target.js`, §4) : trois chemins, une seule table de vérité sur « où une carte a le
-droit d'aller ».
+Quatre zones logiques : **`deck`**, **`pool`**, **`sideboard`**, **`sideboardFw`** (règle
+1.6.1, 2026-08-03 — les dix cartes préselectionnées contre un adversaire Sorcier déchu, en
+plus du talon ordinaire ; §4). `zonesFor(card)` renvoie `{ primary, extra[] }` — la forme
+dont parle le texte des règles, et `sideboardFw` y arrive **toujours en dernier** dans
+`extra` : cet ordre pilote celui des compteurs de zone affichés sur une tuile du navigateur,
+et la zone la plus rare va après les zones courantes. **Site et Region gardent un `extra`
+vide** : c'est ce qui rend `sideboardFw`, comme les deux autres zones `extra`, inatteignable
+pour eux sur les **trois** surfaces à la fois — glisser-déposer, menu « déplacer vers » et
+import — puisque toutes trois interrogent `zoneTargets()` plutôt que de décider chacune de
+son côté. `zoneTargets(card)` aplatit en une liste ordonnée avec `'deck'` toujours ajouté en
+queue (toute carte peut rejoindre le play deck), dédoublonnée. **`isDropAllowed` est
+construit sur `zoneTargets`, pas sur une dérivation parallèle** : l'UI tactile et le
+drag-and-drop ne doivent pas pouvoir diverger sur la destination autorisée. **L'import aussi
+passe par `zoneTargets`** (`import/target.js`, §4) : trois chemins, une seule table de vérité
+sur « où une carte a le droit d'aller ».
+
+**`dropTargets.js` n'a pas été touché par l'ajout de `sideboardFw`.** Il consomme
+`zoneTargets()` sans jamais énumérer de noms de zone lui-même, donc la nouvelle zone lui
+arrive par construction. Ce n'est pas une supposition : c'est la preuve que la garantie que
+son propre commentaire d'en-tête revendique — un dépôt et un « déplacer vers » ne peuvent
+jamais se contredire — tient réellement, puisqu'un ajout de zone n'a rien exigé de ce
+fichier.
 
 Rappel : `deck` couvre à la fois le play deck et le location deck ; les onglets UI `'play'`,
 `'location'` et `'cards'` se résolvent tous vers la zone logique `'deck'`.
@@ -470,6 +500,14 @@ unlimitedFwSites, requireBalrogVersion}`, `factionRaces`.
 `LENGTHS` (`formats.js`) ne porte plus qu'un seuil : `sideboardMax` (starter 30, standard
 30, long 35, campaign 40). **La longueur de partie n'affecte donc que la taille de la
 réserve, jamais la légalité d'une carte.**
+
+`SIDEBOARD_FW_MAX = 10` (`formats.js`, 1.6.1, 2026-08-03) plafonne `sideboardFw` séparément
+de `sideboardMax` — cette allocation est **additionnelle**, jamais soustraite du talon
+ordinaire. C'est une **constante à plat**, pas une cinquième colonne de `LENGTHS` : 1.6.1
+accorde les dix cartes telles quelles, sans jamais varier avec la longueur de partie, à la
+différence de `sideboardMax`. `SIDEBOARD-FW-MAX` (le validateur) et `AVATAR-SIDEBOARD` (le
+plafond de copies, ci-dessous) sont deux règles distinctes sur les mêmes zones : la première
+compte des cartes, la seconde des exemplaires d'un même avatar.
 
 **`isLegalForSide` — la passe `specific` (2026-08-03).** Une carte dont `attributes.specific`
 nomme un avatar est illégale pour tout camp qui ne peut pas déclarer cet avatar
@@ -512,6 +550,13 @@ l'exemption de race/mind du pool — sans rapport avec cette passe du navigateur
   (clé : `cardsById`) mémoïsent pour ne pas recalculer à chaque frappe. Si tu recrées ces
   objets à chaque rendu, tu détruis silencieusement le cache.
 - **Normalisation avant toute comparaison de nom ou de race** (§3).
+- **La forme du `scope` d'un plafond de copies zoné a changé (2026-08-03) :**
+  `{ zone: 'sideboard' }` → `{ zones: ['sideboard', 'sideboardFw'] }`, pour que
+  `AVATAR-SIDEBOARD` compte les deux talons ensemble (§12, ruling 1.6.2). **`copies.js` et
+  `validate.js` lisent tous les deux cette forme** — `remainingCopies` (le bouton `+`) et
+  `validateDeck` (les avertissements) recalculent chacun leur propre total sur `cap.scope.zones`
+  plutôt que de partager un total. Ne mettre à jour que l'un des deux produirait un plafond
+  silencieusement ignoré par l'autre : rien ne les recouple automatiquement.
 
 ---
 
@@ -534,11 +579,18 @@ Modules purs, sans React. `api.js` est le seul orchestrateur.
 
 ### Ordre d'export — invariant
 
-`deckSections()` produit **Pool → Play deck → Locations → Sideboard**, et à l'intérieur de
-chaque section un ordre de groupes fixe (play : avatars → characters → resources → hazards).
-Les trois formats le consomment, donc ils **ne peuvent pas** diverger. Cet ordre s'applique
-**aussi en mode freeform** (décision propriétaire du 2026-07-26), pour qu'il n'y ait qu'un
-seul ordre d'export à expliquer.
+`deckSections()` produit **Pool → Play deck → Locations → Sideboard → Sideboard vs FW**
+(1.6.1, 2026-08-03), et à l'intérieur de chaque section un ordre de groupes fixe (play :
+avatars → characters → resources → hazards). `sideboardFw` groupe **exactement comme**
+`sideboard` — même liste `SIDEBOARD_GROUPS`, partagée plutôt que recopiée pour ne pas tenir
+deux définitions du même regroupement synchronisées pour une seule règle — mais reste une
+**section à part** : c'est une allocation de dix cartes distincte de `sideboardMax`, que le
+joueur doit pouvoir compter séparément. `SECTION_TITLES.sideboardFw = 'Sideboard vs FW'` en
+est le titre anglais canonique, celui que le vocabulaire de l'import reprend tel quel (§4)
+pour que l'écriture et la lecture ne puissent pas diverger. Les trois formats consomment
+`deckSections()`, donc ils **ne peuvent pas** diverger. Cet ordre s'applique **aussi en mode
+freeform** (décision propriétaire du 2026-07-26), pour qu'il n'y ait qu'un seul ordre
+d'export à expliquer.
 
 Le tri à l'intérieur d'un groupe utilise `localeCompare(…, 'en')` : le **collationnement**
 est épinglé sur `'en'` (les *noms* restent rendus dans `lang`) afin que Node et le
@@ -595,7 +647,7 @@ includeBacks, format })`.
 ## Notes            (seulement si au moins une note est non vide)
 ### <titre de note>
 <contenu>
-## Pool | Play deck | Locations | Sideboard
+## Pool | Play deck | Locations | Sideboard | Sideboard vs FW
 ### <Groupe> (<total>)
 <N>x <nom de carte dans `lang`>
 ```
@@ -799,6 +851,24 @@ collé qui écrit « Réserve » en pensant au sideboard sera lu comme visant le
 avertissement : c'est une décision (aucune liste écrite à la main n'utilise plus l'ancien
 sens), pas un oubli à corriger en ajoutant l'ancienne entrée.
 
+### Zone `sideboardFw` et en-tête du panneau (2026-08-03)
+
+`zones.sideboardFw` porte le libellé court de l'onglet (`Talon vs SD` en FR, `SB vs FW` en
+EN, `SB vs MC` en ES) ; `zones.sideboardFwFull` porte le nom long, celui que lit un lecteur
+d'écran (`Talon contre un adversaire Sorcier déchu` en FR — voir §10, l'`aria-label`
+composé). `zoneShort.sideboardFw` porte l'abréviation à trois-quatre lettres du menu
+« déplacer vers » (`T.SD` / `SBFW` / `SBMC`). **`SD` = Sorcier déchu** — l'abréviation FR
+retenue pour tenir le libellé court dans la largeur d'une pastille de zone. `panel.titleNamed`
+(`Deck « {name} »`) habille l'en-tête refondu du panneau (§10).
+
+L'ES a d'abord porté `Reserva` pour `zones.sideboardFwFull` — collision avec `zones.pool`
+dans le même dictionnaire, le libellé se lisait comme visant la réserve plutôt que le talon.
+Corrigé (`6052c63`) en laissant `Sideboard` non traduit, comme le fait déjà `zones.sideboard`.
+
+**Clé retirée : `panel.zoom`.** Le curseur de zoom du panneau a disparu (§10) ; la clé
+n'habille plus aucun bouton et a été retirée des trois dictionnaires ensemble — un retrait
+symétrique, donc la parité de clés `fr`/`en`/`es` qu'`i18n.test.js` vérifie tient toujours.
+
 ---
 
 ## §10 — Couche UI, responsive, accessibilité
@@ -919,12 +989,55 @@ parmi les candidats. Les marques de légalité réutilisent `isLegalForSide` ave
 `openBalrog`/`bannedIds` que `CardBrowser`, sous la même garde `isRuleEnabled('BANNED', …)`,
 pour que les deux écrans ne puissent jamais se contredire sur ce qui est légal.
 
-### Zoom du panneau ([`zoom.js`](../web/src/lib/zoom.js))
+### En-tête et grille du panneau (`DeckPanel.jsx`, 2026-08-03/04)
 
-Le zoom est un **pourcentage de la largeur disponible** (`deckZoneWidth(outerWidth)`), plus
-un pourcentage de la largeur source de 570 px — ainsi la densité visuelle reste constante
-quelle que soit la largeur du panneau. `parseStoredZoom` valide la valeur stockée et
-**retombe sur le défaut** en cas d'absurdité (§4).
+**En-tête.** Nom du deck (`panel.titleNamed`), pastille de camp (`.side-badge` — même
+dérivation et même classe CSS que `DeckManager`, réutilisée plutôt que réinventée, pour
+qu'un deck ne porte jamais deux styles de pastille selon l'écran qui l'affiche) et total réel
+(`totalCopies`, §5). Les trois pastilles `Total / Pioche / Sites` qui occupaient l'en-tête
+sont retirées : elles répétaient un total **partiel** (`counts.total` = pioche seule) sous le
+mot « Total », juste à côté d'onglets de zone qui, eux, rapportent chacun leur propre compte
+— deux nombres différents affichés sous un même mot est ce qui les a fait retirer. Le badge
+de la barre repliée (`.deckpanel-badge`) affiche désormais ce même `totalCopies` : un deck ne
+montre jamais deux nombres différents selon qu'il est ouvert ou replié.
+
+**Grille (`lib/cardGrid.js`, remplace `lib/zoom.js`).** Le curseur de zoom a disparu ; la
+grille du panneau porte la classe `.grid` littérale, la même règle CSS que le navigateur de
+cartes (`repeat(auto-fill, minmax(120px, 1fr))`, §3) — une seule règle à tenir plutôt que deux
+gardées numériquement synchronisées (décision propriétaire, §12). **Le CSS possède la mise en
+page ; rien en JS ne fixe plus de largeur de colonne.** `deckCardWidth()` survit uniquement
+pour **prédire** la largeur que le navigateur va calculer, parce que `deckThumbWidth()` doit
+encore choisir une vignette proxy et qu'une colonne `1fr` n'a pas de largeur côté JavaScript
+avant le rendu.
+
+**Vérifié en direct :** `deckCardWidth(360)` prédit 163 px quand la colonne réelle mesure
+155 px — environ 6 px de bordure/scrollbar que la prédiction ne modélise pas. Les deux
+quantifient sur la même vignette 200 px (`deckThumbWidth`), donc sans conséquence visible :
+c'est le compromis assumé « la prédiction peut dériver, la mise en page jamais », pas un bug.
+
+### Onglets de zone : pastilles élargies, survol de dépôt, zone optionnelle (`ZoneTabs.jsx`, 2026-08-03)
+
+Pastilles élargies (`4px 10px` → `8px 14px`, hauteur mini `34px`) : ce sont des cibles de
+dépôt avant d'être des étiquettes, et 24 px de haut est difficile à viser avec une carte en
+train d'être glissée. `.ztab.drop-over` donne à la bande le premier retour visuel de survol
+de dépôt qu'elle ait jamais eu — état interne à `ZoneTabs` (pas remonté au panneau : rien
+d'autre n'a besoin de le savoir), effacé par tout dépôt ou tout `dragleave`, donc jamais
+bloqué allumé.
+
+**Onglet optionnel — `sideboardFw`, seule zone concernée pour l'instant.** Tant qu'elle est
+vide, la zone se propose en **invitation** : bordure en tirets, texte atténué, préfixée
+`+`, sans compteur (`0 / 10` réclamerait un budget que le joueur n'a jamais choisi). Elle
+redevient un onglet ordinaire, compteur compris, dès qu'elle contient une carte — piloté par
+le prop `optional` (le `Set` que `DeckPanel` lui passe), pas codé en dur dans `ZoneTabs`. En
+freeform, la zone n'apparaît d'ailleurs pas du tout tant qu'elle est vide, comme `pool` et
+`sideboard` déjà.
+
+**Nom accessible composé (`2942873`).** `aria-label` colle le libellé court au nom long
+(`` `${labels[id]} — ${titles[id]}` ``) plutôt que de le remplacer : le nom accessible doit
+**contenir** le libellé visible ou la commande vocale cesse de reconnaître ce que
+l'utilisateur lit sur la pastille — c'est WCAG 2.5.3 (Label in Name). `title` seul
+(l'infobulle) n'atteint ni le tactile ni les lecteurs d'écran, d'où la duplication
+délibérée dans `aria-label` plutôt qu'un simple renvoi vers `title`.
 
 ### Conventions de style
 
@@ -1036,6 +1149,31 @@ l'app ne modélise pas (il n'y a pas de second joueur dans le périmètre). Reti
 recâblé. Si un adversaire est un jour modélisé, il faudra le sourcer et le câbler
 proprement, pas restaurer un champ que personne ne consommait.
 
+### 2026-08-03 — La grille du panneau de deck adopte celle du sélecteur
+
+Le panneau de deck calculait la largeur de ses cartes depuis un pourcentage de zoom persisté,
+avec un curseur dans l'en-tête (`lib/zoom.js`, retiré). Il porte désormais la classe `.grid`
+du sélecteur de cartes **verbatim** — une seule règle CSS pour les deux surfaces au lieu de
+deux valeurs à garder synchronisées numériquement, et la densité visuelle se règle en
+élargissant ou en rétrécissant le panneau, exactement le levier qu'a toujours eu le
+sélecteur. **Le CSS possède la mise en page maintenant ; rien en JS ne fixe plus de largeur
+de colonne.** `deckCardWidth()` (`lib/cardGrid.js`) survit seulement pour *prédire* la
+largeur que le navigateur calculera, parce que `deckThumbWidth()` doit encore choisir une
+vignette proxy avant que le DOM existe. Voir §10.
+
+### 2026-08-03 — 1.6.2 : la sous-limite d'avatar au talon se lit combinée sur les deux talons
+
+Le catalogue plafonne à un exemplaire d'un avatar donné « au talon » (`AVATAR-SIDEBOARD`,
+1.6.2). Avec deux talons désormais — l'ordinaire et celui de 1.6.1 contre un Sorcier déchu —
+la lettre du texte ne tranche pas si le plafond porte sur chaque talon séparément ou sur les
+deux réunis. **Lecture retenue, propriétaire, 2026-08-03 : un exemplaire au total entre les
+deux talons**, pas un par talon — une carte unique qu'une règle d'unicité interdit en double
+ne devrait pas redevenir doublable simplement parce qu'elle se répartit sur deux zones. C'est
+une **interprétation**, pas la lettre de la source. `copies.js` le documente comme tel dans
+son en-tête, et le passage de `scope: { zone: 'sideboard' }` à
+`scope: { zones: ['sideboard', 'sideboardFw'] }` (dans `copyCaps`/`remainingCopies` **et**
+`validate.js`, §6) est ce qui porte cette lecture dans le code.
+
 ---
 
 ## §13 — État des fonctionnalités
@@ -1046,7 +1184,8 @@ proprement, pas restaurer un champ que personne ne consommait.
 | Quantités (`−`/`+`, clic image = bascule), « Tout sélectionner (N) » | **Livré** |
 | Modes de deck (freeform / deckbuilding) + migration transparente | **Livré** |
 | Zones : play deck, location deck, réserve, pool de départ | **Livré** |
-| Moteur de règles — 30 règles, toutes `verified` | **Livré** |
+| Talon contre Sorcier déchu (règle 1.6.1) : quatrième zone, dix cartes préselectionnées en plus du talon ordinaire | **Livré** — 2026-08-03 |
+| Moteur de règles — 31 règles, toutes `verified` | **Livré** |
 | Ignorer une règle par deck / signaler une règle (ticket GitHub pré-rempli) | **Livré** |
 | Filtre de légalité dans le navigateur de cartes | **Livré** |
 | Page « Règles et modes » générée depuis les mêmes données que le validateur | **Livré** |
@@ -1061,6 +1200,8 @@ proprement, pas restaurer un champ que personne ne consommait.
 | i18n complète FR / EN / ES (chrome, noms, images) | **Livré** |
 | UI mobile (feuille de deck, modale de carte, barre d'icônes) | **Livré** |
 | Passe accessibilité / polish | **Livré** — branche `polish-ui-a11y` fusionnée en `84304fe` |
+| Curseur de zoom du panneau de deck | **Retiré** — 2026-08-03, remplacé par la largeur du panneau elle-même, alignée sur la grille du sélecteur (§10, §12) |
+| Pastilles `Total / Pioche / Sites` en en-tête du panneau | **Retiré** — 2026-08-03, remplacées par le nom du deck, sa pastille de camp et le total réel (§10) |
 
 ---
 
@@ -1092,6 +1233,25 @@ proprement, pas restaurer un champ que personne ne consommait.
 6. **La grille n'est pas virtualisée** (`CAP = 600` dans `CardBrowser.jsx`). Au-delà, les
    cartes sont simplement tronquées avec un message invitant à affiner les filtres.
 
+7. **`meccg.cardZoom` reste orpheline dans `localStorage`.** Le curseur de zoom du panneau a
+   disparu (§10, §12) mais la clé n'a jamais été purgée : elle survit chez les joueurs qui
+   l'avaient déjà écrite, sans plus rien qui la lise. Inoffensive — vérifiée toujours présente
+   dans le navigateur après le changement — mais sans migration, comme les autres clés de ce
+   tableau (§4).
+
+8. **Le compteur de la liste des decks ne compte pas comme l'en-tête du panneau ouvert.**
+   `deckStore.list()` (consommé par `DeckManager`) ne totalise que la pioche ; l'en-tête du
+   panneau affiche `totalCopies()`, les quatre zones réunies (§5, §10). **Vérifié en direct :**
+   un même deck affichait « 2 cartes » dans la liste et « (9) » une fois ouvert. Hors périmètre
+   de ce lot ; consigné pour ne pas être redécouvert de zéro à la prochaine session.
+
+9. **Le point de rupture `@container (min-width: 80px)` sur `.deck-mini-move-btn` est peut-être
+   devenu du code mort.** Il bascule le bouton « déplacer » vers sa taille tactile de 44 px une
+   fois la tuile assez large — mais le plancher de la grille (`GRID_MIN_WIDTH = 120`,
+   `lib/cardGrid.js`) dépasse maintenant ce seuil en permanence, donc la branche compacte du
+   bouton pourrait ne plus jamais s'exécuter. Non vérifié, non retiré : modifier une règle de
+   cible tactile à l'aveugle est plus risqué que de la garder.
+
 *Réglé le 2026-08-02 :* le `README.md` décrivait les règles comme des « stubs » non
 vérifiés démarrant désactivés — périmé depuis que les 30 règles portent
 `status: 'verified'`. Les trois passages concernés (limites de copies, avertissements de
@@ -1117,3 +1277,4 @@ transformation*, donc lis le compte de **fichiers**, pas seulement celui des tes
 | 2026-08-02 | §3 : `parseCards` rend `setNames` (les noms de sets sont dans les données, en fr/en/es). §9 : nouveau tableau des deux sources de libellés de facettes ; le filtre Set affiche « Contre l'Ombre (AS) », les filtres continuent de stocker les codes. §11 : contrat « chaque set a un nom dans les trois langues ». 504 tests. |
 | 2026-08-03 | Trois fonctionnalités, onze commits (`523beb7..40e1c84`). §9 : filtre Type trié sur l'ordre de jeu (`TYPE_ORDER`/`sortFacetOptions`), plutôt que sur le libellé — exception à la règle générale du paragraphe Sets, corrigée en conséquence ; nouvelles clés `import.*` ; piège « réserve » pour le vocabulaire du parseur. §6 : `isLegalForSide` gagne la passe `specific` au niveau camp (46 cartes BA `specific: "Balrog"` quittent un navigateur Spectre de l'Anneau) et absorbe l'ancien cas spécial balrog-only. §7 : bloc `## Metadata` toujours émis à l'export texte, `tournament` volontairement absent. §4 : nouvelle sous-section décrivant le pipeline d'import en cinq modules (`normalize → line → vocabulary → document → resolve`, façade `importDeck.js` réduite à 137 lignes) et ses deux invariants. §10 : fenêtre d'import en deux temps (analyser avant de régler), pourquoi ça élimine tout conflit affiché. §13 : ligne import réécrite, passe accessibilité `polish-ui-a11y` marquée Livrée (déjà fusionnée en `84304fe`, la ligne était restée « En cours »). §2/§11 : compte de tests à jour (32 fichiers, 584 tests) et nouveaux fichiers de test du pipeline d'import listés — stale depuis le 2026-08-02, corrigé en marge de cette tâche. |
 | 2026-08-03 | Deux bugs signalés par le propriétaire, corrigés. §6 : `isDropAllowed` pose désormais **deux** questions au lieu d'une — la zone (`zoneTargets`) *et* l'onglet qui affichera la carte (`backGroupForType`) ; `play` et `location` étant deux vues d'une seule zone, un personnage glissé de la réserve vers l'onglet **Sites** comptait comme un dépôt légal et atterrissait dans la **pioche**. §4/§9 : « Sites » et « Regions » deviennent des titres de **zone** portant leur indice de type, au lieu de simples indices de groupe qui ne fermaient pas la section précédente — c'est ce qui envoyait dans le talon tous les sites d'une liste écrite à la main. §4 : nouveau module `import/target.js` (`targetForCard`/`bucketFor`), sixième étage du pipeline, qui fait arbitrer la zone de destination par `zoneTargets` pour les **deux** appelants (`importDeckList` et la prévisualisation d'`ImportDialog`) : un import ne peut plus construire un deck que l'interface refuserait de construire à la main. §11 : `test/importTarget.test.js`, 33 fichiers / 594 tests. |
+| 2026-08-04 | Deux lots indépendants, dix commits (`103737f..bc07b80`). **Talon contre Sorcier déchu (règle 1.6.1) :** quatrième zone `sideboardFw` garantie par `normalizeDeck`, comptée par `totalCopies` (§4) ; offerte partout où le talon ordinaire l'est, toujours en dernier dans `extra`, jamais aux sites — `dropTargets.js` non touché, ce qui prouve que sa garantie tient par construction (§6) ; plafond `SIDEBOARD_FW_MAX = 10` en constante à plat, hors de `LENGTHS`, plus la règle `SIDEBOARD-FW-MAX` (31 règles au total) ; la sous-limite d'avatar 1.6.2 relue **combinée** sur les deux talons, une interprétation datée (§12), qui a fait passer le `scope` d'un plafond de `{ zone }` à `{ zones }` dans `copies.js` **et** `validate.js` (§6) ; export en cinq sections (`Sideboard vs FW` en queue, §7) et alias d'import associés (§4) ; onglet dédié, invitation en tirets tant qu'il est vide, `aria-label` composé pour WCAG 2.5.3 (§9, §10). **Panneau de deck refondu :** en-tête devenu nom + pastille de camp + total réel au lieu de trois pastilles répétant un total partiel ; curseur de zoom retiré, la grille du panneau reprenant la règle `.grid` du sélecteur de cartes — le CSS possède désormais la mise en page, `deckCardWidth()` ne fait plus que la prédire pour choisir une vignette (§10, §12). §14 : trois dettes consignées (`meccg.cardZoom` orpheline, `deckStore.list()` vs en-tête du panneau — deux nombres vérifiés pour un même deck —, point de rupture CSS peut-être mort). Quatre commentaires de `styles.css`/`MiniCard.jsx` décrivant encore le curseur de zoom disparu, réécrits. |

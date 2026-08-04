@@ -772,8 +772,9 @@ body {
    exceeds the 60px minimum card width, so the mobile block also lifts the
    stack to the top edge and the two clear each other vertically instead. */
 /* The tile is a query container so its controls can size against the CARD
-   rather than the viewport -- the zoom slider scales these tiles freely, so
-   viewport-based sizing says nothing about the room actually available. */
+   rather than the viewport -- the panel's own width drives these tiles' size
+   via the shared .grid rule, so viewport-based sizing says nothing about the
+   room actually available. */
 .deck-mini { container-type: inline-size; }
 .deck-mini-move-btn {
   position: absolute;
@@ -1138,9 +1139,10 @@ code {
   /* The only touch route to moving a copy between zones -- the card is not
      draggable on mobile -- so it gets a full 44px target even though it costs
      a visible corner of the thumbnail. */
-  /* Sized against the CARD, not the viewport: the zoom slider scales these
-     tiles independently of screen width, so a flat 44px here collided with
-     the qty stack at low zoom -- measured at the 60px floor, the button
+  /* Sized against the CARD, not the viewport: the panel's own width drives
+     these tiles' size via the shared .grid rule, independently of screen
+     width, so a flat 44px here collided with the qty stack at the card's
+     smallest size -- measured at the 60px floor, the button
      spanned x 18-62 across a stack at x 44-66, making a tap there ambiguous.
      Stacking them vertically does not rescue it either: the stack is 54px
      tall and the card only 84px at that size.

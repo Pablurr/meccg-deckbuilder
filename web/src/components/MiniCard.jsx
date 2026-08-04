@@ -8,7 +8,7 @@ import { ZONE_LABEL_KEY } from '../lib/rules/zones.js';
 // One selected card, shown as a compact version of a browser grid cell: same
 // thumbnail + same −/count/+ control. Clicking the image asks for confirmation
 // before removing the card, so a stray click can't silently empty the deck.
-// Hover shows the shared full-size preview so the card stays readable at any zoom.
+// Hover shows the shared full-size preview so the card stays readable at any panel width.
 //
 // `moveTargets` is the zones this copy may move to, already excluding the one
 // it sits in. Dragging the card onto a zone tab stays the desktop route, but
@@ -107,7 +107,7 @@ export default function MiniCard({ card, qty, lang, thumbW, onChangeQty, onToggl
             // Deliberately a sibling of .qty-ctrl rather than a fourth button
             // inside it: as its own control it can be grown to a 44px touch
             // target on mobile without stretching the +/count/− stack, whose
-            // compact size the deck grid depends on at every zoom level.
+            // compact size the deck grid depends on at every panel width.
             <button
               className="deck-mini-move-btn"
               onClick={() => setMoving(true)}

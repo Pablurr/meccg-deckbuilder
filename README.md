@@ -60,9 +60,10 @@ npx wrangler pages deploy web/dist
    limite** pour les **havres** ni pour les sites de sorcier déchu de ce même camp. Ces
    plafonds se comptent sur **l'ensemble des zones** réunies, pas zone par zone.
 3. **Importer une liste** : bouton « Importer » → colle une liste, puis « Analyser ». Les
-   sections (pioche, talon, réserve, lieux, sites, régions, notes) sont reconnues **dans
-   n'importe quel ordre**, en markdown ou en texte brut, et en **français, anglais ou
-   espagnol** ; une carte finit toujours dans une zone où elle a le droit d'être, même si
+   sections (pioche, talon, talon contre Sorcier déchu, réserve, lieux, sites, régions, notes)
+   sont reconnues **dans n'importe quel ordre**, en markdown ou en texte brut, et en
+   **français, anglais ou espagnol** ; une carte finit toujours dans une zone où elle a le
+   droit d'être, même si
    la liste collée la range ailleurs (un site listé sous « Talon » rejoint les sites). La
    quantité peut se lire **devant ou derrière** le nom (`3x Bûrat`, `Bûrat - 3`, `Bûrat
    (3)`) ; une parenthèse après le nom sert aussi à désambiguïser (`Angmarim (Hero)`,
@@ -95,15 +96,25 @@ Chaque deck a un **mode**, choisi à sa création et modifiable ensuite via « R
 
 ### Zones
 
-Un deck a jusqu'à quatre zones : la **pioche** (Personnage/Ressource/Péril), le **deck de
-sites** (Site/Région), un **talon** (sideboard) optionnel et, pour les camps qui en utilisent
+Un deck a jusqu'à cinq zones : la **pioche** (Personnage/Ressource/Péril), le **deck de
+sites** (Site/Région), un **talon** (sideboard) optionnel, pour les camps qui en utilisent
 un, une **réserve** de personnages et d'objets mineurs mis de côté avant la partie (le pool de
-départ). Le tiroir du bas affiche des onglets par zone avec compteurs et plafonds (ex.
-`Réserve 3 / 10`), et déposer une carte sur un onglet l'y déplace. Dans le navigateur de
-cartes, chaque carte affiche un compteur par zone ; en mode Construction de deck, un filtre de
-**légalité** (activé par défaut) masque les cartes non éligibles au camp choisi (la longueur
-de partie n'affecte que la limite de talon, pas la légalité d'une carte) — bascule « Afficher
-les cartes illégales » pour tout voir quand même.
+départ), et un **talon contre Sorcier déchu** optionnel — jusqu'à 10 cartes supplémentaires,
+en plus du talon normal, préselectionnées pour un adversaire jouant Sorcier déchu (règle
+1.6.1). Cette dernière n'apparaît dans le panneau de deck que comme un onglet d'invitation
+(`+ Talon vs SD`) tant qu'elle est vide, et devient un onglet normal avec compteur dès qu'une
+carte y est ajoutée ; en construction de deck, son plafond de 10 s'applique quelle que soit la
+longueur de partie choisie. Le panneau affiche des onglets par zone avec compteurs et
+plafonds (ex. `Réserve 3 / 10`), et déposer une carte sur un onglet l'y déplace. Dans le
+navigateur de cartes, chaque carte affiche un compteur par zone ; en mode Construction de
+deck, un filtre de **légalité** (activé par défaut) masque les cartes non éligibles au camp
+choisi (la longueur de partie n'affecte que la limite de talon, pas la légalité d'une carte)
+— bascule « Afficher les cartes illégales » pour tout voir quand même.
+
+Le panneau de deck (volet à droite sur ordinateur, feuille plein écran sur mobile) affiche les
+cartes sélectionnées dans une grille dont la largeur du panneau détermine la densité : plus il
+est large — fais glisser son bord, ou agrandis-le en plein panneau —, plus il montre de
+cartes par rangée, exactement comme la grille du navigateur de cartes au-dessus.
 
 ### Avertissements de règles
 
@@ -207,8 +218,9 @@ Télécharge un fichier `.txt` listant les cartes **triées par type** (Characte
 Hazards, Sites, Regions) avec les quantités, au format `Nx nom` — directement ré-importable
 via le bouton « Importer ». La **langue** de la liste est réglable (English, Français, Español,
 Deutsch, Nederlands — les langues complètes du JSON). Quel que soit le mode du deck, dès qu'une
-zone (pool, réserve) contient des cartes, elle apparaît en section (`## Pool`, `## Play deck`,
-`## Locations`, `## Sideboard`, dans cet ordre — le même ordre que le ZIP et le PDF) et les notes
+zone (pool, réserve, talon contre Sorcier déchu) contient des cartes, elle apparaît en section
+(`## Pool`, `## Play deck`, `## Locations`, `## Sideboard`, `## Sideboard vs FW`, dans cet
+ordre — le même ordre que le ZIP et le PDF) et les notes
 sont reprises en tête du fichier sous `## Notes` ; ré-importer ce fichier restaure les cartes
 **dans leurs zones d'origine** ainsi que les notes.
 
