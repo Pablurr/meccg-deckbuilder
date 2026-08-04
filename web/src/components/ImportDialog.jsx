@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { parseDocument, buildNameIndex, resolveLines } from '../lib/importDeck.js';
+import { parseDocument, buildNameIndex, resolveLines, bucketFor } from '../lib/importDeck.js';
 import { isLegalForSide } from '../lib/rules/sides.js';
 import { siteIndex } from '../lib/rules/sites.js';
 import { resolveBanned } from '../lib/rules/banned.js';
@@ -129,7 +129,10 @@ export default function ImportDialog({ cards, lang = 'fr', deck, setNames = NO_S
       const id = choice[i] || (line.matches[0] && line.matches[0].id);
       if (!id) return;
       const count = Math.max(1, line.qty);
-      const bucket = line.target === 'pool' ? zones.pool : line.target === 'sideboard' ? zones.sideboard : quantities;
+      // The card, not just its id: the zone a line may land in depends on the
+      // card's type, and the player's manual pick can change that card.
+      const card = line.matches.find((c) => c.id === id) || line.matches[0];
+      const bucket = bucketFor(card, line.target, { quantities, zones });
       bucket[id] = (bucket[id] || 0) + count;
     });
     return { quantities, zones };

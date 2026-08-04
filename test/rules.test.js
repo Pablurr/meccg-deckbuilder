@@ -138,11 +138,19 @@ describe('zoneTargets / moveTargets', () => {
   it('agrees with isDropAllowed for every card and every tab', () => {
     // This is the test that stops the drag path and the touch path drifting
     // into two subtly different answers about where a card may go.
+    //
+    // The agreement is per ZONE, which is the granularity the touch menu
+    // works in. The play and location tabs are two VIEWS on the same 'deck'
+    // zone, so zoneTargets cannot decide between them: which of the two a
+    // card may be dropped on is the extra question isDropAllowed answers on
+    // its own, and it is checked separately below.
     for (const c of cards) {
       const targets = zoneTargets(c);
-      for (const tab of ['play', 'location', 'cards', 'pool', 'sideboard']) {
+      for (const tab of ['cards', 'pool', 'sideboard']) {
         expect(isDropAllowed(c, tab)).toBe(targets.includes(resolveDropTarget(tab)));
       }
+      const onDeckTab = isDropAllowed(c, 'play') || isDropAllowed(c, 'location');
+      expect(onDeckTab).toBe(targets.includes('deck'));
     }
   });
   it('every zone a card may occupy has a label key, so no row renders untranslated', () => {
@@ -159,13 +167,12 @@ describe('zoneTargets / moveTargets', () => {
 });
 
 describe('dropTargets', () => {
-  it('a Character may be dropped on Pool, Sideboard and the deck tabs', () => {
+  it('a Character may be dropped on Pool, Sideboard and the play tab', () => {
     const chr = cards.find((c) => c.type === 'Character');
     expect(chr).toBeTruthy();
     expect(isDropAllowed(chr, 'pool')).toBe(true);
     expect(isDropAllowed(chr, 'sideboard')).toBe(true);
     expect(isDropAllowed(chr, 'play')).toBe(true);
-    expect(isDropAllowed(chr, 'location')).toBe(true);
     expect(isDropAllowed(chr, 'cards')).toBe(true);
   });
   it('a Site may not be dropped on Pool or Sideboard', () => {
@@ -173,7 +180,23 @@ describe('dropTargets', () => {
     expect(site).toBeTruthy();
     expect(isDropAllowed(site, 'pool')).toBe(false);
     expect(isDropAllowed(site, 'sideboard')).toBe(false);
-    expect(isDropAllowed(site, 'play')).toBe(true);
+    expect(isDropAllowed(site, 'location')).toBe(true);
+  });
+  // The bug this pins: play/location/cards are three views on one zone, so a
+  // drop on ANY of them used to be a drop on 'deck'. Dragging a character out
+  // of the pool onto the Sites tab therefore "worked" -- and the card landed
+  // in the play deck, a tab away from where the player aimed. A drop the
+  // destination tab will not display is a mistake, and a mistake is refused.
+  it('a drop is refused by the deck tab that would not show the card', () => {
+    const chr = cards.find((c) => c.type === 'Character');
+    const site = cards.find((c) => c.type === 'Site');
+    const region = cards.find((c) => c.type === 'Region');
+    expect(isDropAllowed(chr, 'location')).toBe(false);
+    expect(isDropAllowed(site, 'play')).toBe(false);
+    expect(isDropAllowed(region, 'play')).toBe(false);
+    // The freeform tab shows every card, so it refuses nothing.
+    expect(isDropAllowed(site, 'cards')).toBe(true);
+    expect(isDropAllowed(chr, 'cards')).toBe(true);
   });
   it('a Resource flagged playableAsStartingMinorItem may be dropped on Pool; an ordinary Resource may not', () => {
     const minorItem = cards.find((c) => c.type === 'Resource' && c.attributes.playableAsStartingMinorItem === true);

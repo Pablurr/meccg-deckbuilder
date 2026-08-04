@@ -19,7 +19,9 @@
 import { normalizeName } from './normalize.js';
 import { SECTION_TITLES, GROUP_TITLES, NOTE_TITLES, METADATA_TITLE, META_KEYS } from '../deckList.js';
 
-const zone = (z) => ({ family: 'zone', zone: z });
+// A zone heading may carry a type hint too, for the sections whose own name
+// already names one type -- see the Sites/Regions rows below.
+const zone = (z, type = null) => ({ family: 'zone', zone: z, type });
 const group = (type) => ({ family: 'group', type });
 const notes = (field) => ({ family: 'notes', field });
 const meta = () => ({ family: 'meta' });
@@ -41,6 +43,18 @@ export const TABLE = [
   // point here.
   [['Playdeck', 'Play deck', 'Deck', 'Main deck', 'Maindeck', 'Pioche', 'Mazo', 'Mazo de juego', 'Baraja', SECTION_TITLES.play], zone('quantities')],
   [['Locations', 'Location deck', 'Location', 'Site deck', 'Lieux', 'Localizaciones', SECTION_TITLES.locations], zone('quantities')],
+  // -- zone AND group: "Sites" and "Regions" name a section in half the lists
+  // in the wild ("## Sideboard ... ## Sites ...") and a sub-group of the
+  // Locations section in our own exports ("## Locations / ### Sites (12)").
+  // Reading them as a group only -- which is what they were -- meant the
+  // first shape left every site in whatever section came before it, usually
+  // the sideboard. Reading them as a zone costs nothing in the second shape:
+  // the zone they select is the one the enclosing Locations heading already
+  // selected, and the type hint they carry is the one they always carried.
+  // Their type can live in exactly one zone, which is what makes this safe
+  // and is why Characters/Resources/Hazards stay plain groups.
+  [['Sites', 'Sitios', GROUP_TITLES.sites], zone('quantities', 'Site')],
+  [['Regions', 'Régions', 'Regiones', GROUP_TITLES.regions], zone('quantities', 'Region')],
   // -- zone: sideboard. Spanish keeps the English word (i18n zones.sideboard).
   [['Sideboard', 'Side', 'SB', 'Talon', SECTION_TITLES.sideboard], zone('sideboard')],
   // -- zone: pool
@@ -50,8 +64,6 @@ export const TABLE = [
   [['Characters', 'Personnages', 'Personajes', GROUP_TITLES.characters], group('Character')],
   [['Resources', 'Ressources', 'Recursos', GROUP_TITLES.resources], group('Resource')],
   [['Hazards', 'Périls', 'Peligros', GROUP_TITLES.hazards], group('Hazard')],
-  [['Sites', 'Sitios', GROUP_TITLES.sites], group('Site')],
-  [['Regions', 'Régions', 'Regiones', GROUP_TITLES.regions], group('Region')],
   [['Minor objects', 'Minor items', 'Objets mineurs', 'Objetos menores'], group('Resource')],
   [['Stage events', 'Permanent events', 'Progressions', 'Eventos de etapa'], group('Resource')],
   // No type hint: these do not reduce to one type, and no hint beats a wrong one.

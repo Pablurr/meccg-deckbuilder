@@ -32,6 +32,19 @@ describe('lookupHeading — a heading is its content, not its markdown level', (
     expect(lookupHeading('Lieux')).toMatchObject({ zone: 'quantities' });
   });
 
+  it('"Sites" and "Regions" name a zone, not just a group', () => {
+    // A site can only ever live in the location deck, so a list that opens a
+    // "Sites" section after its sideboard means the location deck -- reading
+    // the word as a group hint alone left every site under it in the
+    // sideboard, which is where hand-written and LLM-written lists put them.
+    for (const s of ['Sites', 'Sitios', '### Sites (12)']) {
+      expect(lookupHeading(s)).toMatchObject({ family: 'zone', zone: 'quantities', type: 'Site' });
+    }
+    for (const s of ['Regions', 'Régions', 'Regiones']) {
+      expect(lookupHeading(s)).toMatchObject({ family: 'zone', zone: 'quantities', type: 'Region' });
+    }
+  });
+
   it('"Deck" alone is the play deck, which is why the metadata block is not called that', () => {
     expect(lookupHeading('Deck')).toMatchObject({ family: 'zone', zone: 'quantities' });
     expect(lookupHeading('Metadata')).toMatchObject({ family: 'meta' });

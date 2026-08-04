@@ -7,10 +7,12 @@
 > Public : LLM. Style : dense, factuel, pas de prose d'introduction.
 > Doc utilisateur : [`README.md`](../README.md). Ce fichier-ci décrit le *comment* et le *pourquoi*.
 
-**Dernière mise à jour : 2026-08-03** — import de liste reconstruit en pipeline de cinq
-modules (sections en tout ordre, désambiguïsation à quatre rangs), cartes spécifiques à un
-camp exclues du navigateur d'un camp qui ne peut pas les jouer, bloc `## Metadata` à
-l'export texte, ordre de jeu fixé dans le filtre Type (état : branche `deck-import-zones`).
+**Dernière mise à jour : 2026-08-03** — import de liste reconstruit en pipeline de six
+modules (sections en tout ordre, désambiguïsation à quatre rangs, **zone de destination
+arbitrée par les règles**), un dépôt refusé par l'onglet qui n'afficherait pas la carte,
+cartes spécifiques à un camp exclues du navigateur d'un camp qui ne peut pas les jouer,
+bloc `## Metadata` à l'export texte, ordre de jeu fixé dans le filtre Type
+(état : branche `deck-import-zones`).
 
 ---
 
@@ -107,7 +109,7 @@ web/src/            toute l'application
     export/         pipeline d'export pur (10 modules, aucun import React)
     *.js            deck, deckStore, filter, importDeck, lang, proxy, tags, zoom…
 web/public/         servi tel quel : cards.json, card-backs/, proxy-patches/, _redirects
-test/               32 fichiers Vitest, 584 tests
+test/               33 fichiers Vitest, 594 tests
 docs/superpowers/   specs et plans d'implémentation, datés (historique des intentions)
 scripts/            make_proxy_patches.py (génération des patchs proxy, hors build)
 ```
@@ -238,8 +240,8 @@ lecture. Toute évolution du schéma **doit** passer par cette fonction.
 ### Pipeline d'import (`web/src/lib/import/`, 2026-08-03)
 
 ```
-lib/import/normalize.js → line.js → vocabulary.js → document.js → resolve.js
-lib/importDeck.js = façade, API publique inchangée (263 → 137 lignes)
+lib/import/normalize.js → line.js → vocabulary.js → document.js → resolve.js → target.js
+lib/importDeck.js = façade, API publique inchangée (263 → 139 lignes)
 ```
 
 - **`normalize.js`** — `normalizeName()` seule, sans aucun import. Elle vit dans une feuille
@@ -261,6 +263,14 @@ lib/importDeck.js = façade, API publique inchangée (263 → 137 lignes)
   vocabulaire du parseur et celui de l'interface ne puissent pas diverger. Les alias
   communautaires (Description, Strategy, Overview…) n'ont pas d'équivalent UI et sont ajoutés
   à la main, délibérément, pour comprendre un post de forum ou une liste générée par un LLM.
+  **Un titre de zone peut porter en plus un indice de type** : « Sites » et « Regions » sont
+  des titres de *zone* (`quantities`) qui posent aussi leur type, parce que ces deux mots
+  ouvrent une section dans la moitié des listes écrites à la main (`## Talon … ## Sites …`)
+  et ne sont un sous-groupe que dans nos propres exports (`## Locations / ### Sites (12)`).
+  Lus comme de simples groupes — leur état d'avant le 2026-08-03 — ils ne fermaient pas la
+  section précédente et **tous les sites atterrissaient dans le talon**. C'est sans risque
+  parce que leur type ne peut vivre que dans une seule zone : c'est précisément pourquoi
+  Characters / Resources / Hazards, eux, restent de simples groupes.
 - **`document.js`** — `parseDocument(text)` tient deux garanties : le **mode notes est
   absolu** (aucune ligne n'y est jamais lue comme une carte, même « 3x Gandalf »), et **un
   titre inconnu part en notes et laisse la zone intacte** — l'ancienne implémentation
@@ -276,7 +286,18 @@ lib/importDeck.js = façade, API publique inchangée (263 → 137 lignes)
   camp — la carte est importée et marquée, jamais silencieusement substituée. Une ligne sans
   quantité explicite qui ne matche rien est de la prose, pas un miss ; une ligne marquée
   (quantité, ou parenthèse `id`/`set`/`alignment`) reste un miss signalé même sans match.
-- **`importDeck.js`** (137 lignes, contre 263 avant) devient une **façade** : ré-exporte les
+- **`target.js`** — `targetForCard(card, target)` / `bucketFor(card, target, ctx)` ont **le
+  dernier mot sur la zone** : `parseDocument` lit la *section écrite*, ce module décide de la
+  *zone permise*. **La légalité n'est pas re-dérivée ici** — elle est demandée à
+  `zoneTargets()` (§6), qui la possède déjà pour le glisser-déposer du panneau et son menu
+  « déplacer vers ». Un import ne peut donc pas construire un deck que l'interface refuserait
+  de construire à la main : **le talon ne contient jamais de site**, la réserve non plus, et
+  ainsi de suite pour toute règle que `zoneTargets` connaît. Une zone refusée retombe sur le
+  deck principal plutôt que de perdre la carte : le joueur a bien écrit la carte, seule la
+  section était fausse. **Les deux appelants passent par là** (`importDeckList` et la
+  prévisualisation d'`ImportDialog`), sinon le deck compté dans la fenêtre ne serait pas le
+  deck reçu par l'application.
+- **`importDeck.js`** (139 lignes, contre 263 avant) devient une **façade** : ré-exporte les
   fonctions ci-dessus et garde `parseDeckList`, `parseDeckListDocument`, `resolveDeckList`,
   `importDeckList` sous leur forme d'origine, pour que les appelants existants et
   `test/importDeck.test.js` n'aient rien à changer.
@@ -354,7 +375,7 @@ dense du projet ; `test/rules.test.js` fait 91 Ko à lui seul.
 | `sides.js` | Profil de chaque camp + limites transversales | `SIDES`, `GENERAL`, `SPECIFIC_TO_SIDES`, `isLegalForSide`, `raceAllowed` |
 | `formats.js` | Seuils par longueur de partie | `LENGTHS` |
 | `zones.js` | Quelles zones une carte peut occuper | `zonesFor`, `zoneTargets`, `moveTargets`, `ZONE_LABEL_KEY` |
-| `dropTargets.js` | Légalité d'un drop sur un onglet | `isDropAllowed` |
+| `dropTargets.js` | Légalité d'un drop sur un onglet (zone **et** onglet qui l'affiche) | `isDropAllowed`, `resolveDropTarget` |
 | `copies.js` | Plafonds de copies (source unique UI + validateur) | `copyCaps`, `remainingCopies` |
 | `roles.js` | Rôle effectif d'une carte selon le camp | `roleFor` |
 | `races.js` | Normalisation/comparaison des races | `singularize`, `matchesRace` |
@@ -414,10 +435,24 @@ Trois zones logiques : **`deck`**, **`pool`**, **`sideboard`**. `zonesFor(card)`
 aplatit en une liste ordonnée avec `'deck'` toujours ajouté en queue (toute carte peut
 rejoindre le play deck), dédoublonnée. **`isDropAllowed` est construit sur `zoneTargets`,
 pas sur une dérivation parallèle** : l'UI tactile et le drag-and-drop ne doivent pas
-pouvoir diverger sur la destination autorisée.
+pouvoir diverger sur la destination autorisée. **L'import aussi passe par `zoneTargets`**
+(`import/target.js`, §4) : trois chemins, une seule table de vérité sur « où une carte a le
+droit d'aller ».
 
-Rappel : `deck` couvre à la fois le play deck et le location deck ; l'onglet UI `'play'`
-est résolu vers la zone logique `'deck'`.
+Rappel : `deck` couvre à la fois le play deck et le location deck ; les onglets UI `'play'`,
+`'location'` et `'cards'` se résolvent tous vers la zone logique `'deck'`.
+
+**Un dépôt légal par la zone peut rester illégal par l'onglet.** `isDropAllowed` pose donc
+*deux* questions, et il faut deux oui : (1) la carte peut-elle occuper la zone visée
+(`zoneTargets`) ; (2) l'onglet visé **affichera-t-il** la carte (`backGroupForType`, le même
+filtre que `DeckPanel` applique à ses entrées). La seconde n'est pas une règle du jeu mais
+une règle d'interface, et l'avoir omise était un vrai bug : `play` et `location` étant deux
+vues d'une seule zone, glisser un personnage de la réserve vers l'onglet **Sites** comptait
+comme un dépôt légal sur `deck` — et le personnage atterrissait dans la **pioche**, un
+onglet plus loin que là où le joueur avait lâché, sans rien pour expliquer le saut. Un dépôt
+que la destination ne sait pas montrer est une erreur de visée, et une erreur de visée
+laisse la carte où elle était. L'onglet `cards` du mode impression libre montre tout le
+deck : il ne refuse rien.
 
 ### Camps (`sides.js`)
 
@@ -904,7 +939,7 @@ quelle que soit la largeur du panneau. `parseStoredZoom` valide la valeur stock�
 
 ## §11 — Tests
 
-`npm test` → Vitest, **32 fichiers, 584 tests**. Node pur, pas de DOM : les composants ne
+`npm test` → Vitest, **33 fichiers, 594 tests**. Node pur, pas de DOM : les composants ne
 sont pas montés, ce sont les **modules purs** qui sont testés.
 
 C'est ce qui dicte la façon d'aborder un travail d'interface ici : **on extrait la décision
@@ -927,9 +962,12 @@ Fichiers notables :
   ajouté sans nom s'afficherait en code nu, dans toutes les langues, sans rien casser.
 - `importDeck.test.js`, `deckList.test.js`, `deckSections.test.js` — le cycle
   export texte → import. `importLine.test.js`, `importVocabulary.test.js`,
-  `importDocument.test.js`, `importResolve.test.js`, `importDeckSetCode.test.js` (2026-08-03)
+  `importDocument.test.js`, `importResolve.test.js`, `importDeckSetCode.test.js`,
+  `importTarget.test.js` (2026-08-03)
   testent chaque module du pipeline d'import (§4) séparément ; `importDeck.test.js` reste le
-  test de la façade et pins la forme pré-refactor.
+  test de la façade et pins la forme pré-refactor. `importTarget.test.js` épingle
+  l'invariant « le talon ne contient jamais de site », et `importDeck.test.js` le vérifie
+  une seconde fois de bout en bout — l'invariant vaut la double garde.
 - `pngDpi.test.js`, `bleedOps.test.js`, `sheetLayout.test.js`, `pdf.test.js`, `zip.test.js`
   — la géométrie et les octets d'export.
 - `proxy.test.js`, `proxyPatches.test.js` — classification et présence des 32 patchs.
@@ -1014,7 +1052,7 @@ proprement, pas restaurer un champ que personne ne consommait.
 | Page « Règles et modes » générée depuis les mêmes données que le validateur | **Livré** |
 | Notes de deck (4 champs) + reprises dans l'export texte | **Livré** |
 | Sauvegarde `localStorage`, duplication, réordonnancement par glisser-déposer | **Livré** |
-| Import de liste : sections en tout ordre (markdown ou texte brut, FR/EN/ES), quantité aux quatre positions, désambiguïsation et restauration des zones | **Livré** |
+| Import de liste : sections en tout ordre (markdown ou texte brut, FR/EN/ES), quantité aux quatre positions, désambiguïsation, restauration des zones, zone de destination arbitrée par les règles | **Livré** |
 | Export ZIP MPC (822×1122 @300 DPI, bleed, manifeste) | **Livré** |
 | Export planches PDF (letter / a4 / a3 paysage, dos en miroir) | **Livré** |
 | Export deck list texte, ré-importable, 5 langues | **Livré** |
@@ -1078,3 +1116,4 @@ transformation*, donc lis le compte de **fichiers**, pas seulement celui des tes
 | 2026-08-02 | §9 : `Nazgûl` ≠ `Ringwraith` (deux races, pas deux orthographes) et pourquoi `RACE_ALIASES` ne doit pas les fusionner ; `race.Ringwraith` FR passe à « Spectre », ES à « Espectro del Anillo », ajout de `race.Nazgûl`. `import.alignPref.*` traduit (FR et ES l'affichaient en anglais, « Minion » compris) et `Fallen Wizard` → `Fallen-wizard` en EN. Garde étendu : les six termes anglais du glossaire, tokens `{placeholder}` exclus de l'inspection. §14 : deux dettes réglées, liste renumérotée. 496 tests. |
 | 2026-08-02 | §3 : `parseCards` rend `setNames` (les noms de sets sont dans les données, en fr/en/es). §9 : nouveau tableau des deux sources de libellés de facettes ; le filtre Set affiche « Contre l'Ombre (AS) », les filtres continuent de stocker les codes. §11 : contrat « chaque set a un nom dans les trois langues ». 504 tests. |
 | 2026-08-03 | Trois fonctionnalités, onze commits (`523beb7..40e1c84`). §9 : filtre Type trié sur l'ordre de jeu (`TYPE_ORDER`/`sortFacetOptions`), plutôt que sur le libellé — exception à la règle générale du paragraphe Sets, corrigée en conséquence ; nouvelles clés `import.*` ; piège « réserve » pour le vocabulaire du parseur. §6 : `isLegalForSide` gagne la passe `specific` au niveau camp (46 cartes BA `specific: "Balrog"` quittent un navigateur Spectre de l'Anneau) et absorbe l'ancien cas spécial balrog-only. §7 : bloc `## Metadata` toujours émis à l'export texte, `tournament` volontairement absent. §4 : nouvelle sous-section décrivant le pipeline d'import en cinq modules (`normalize → line → vocabulary → document → resolve`, façade `importDeck.js` réduite à 137 lignes) et ses deux invariants. §10 : fenêtre d'import en deux temps (analyser avant de régler), pourquoi ça élimine tout conflit affiché. §13 : ligne import réécrite, passe accessibilité `polish-ui-a11y` marquée Livrée (déjà fusionnée en `84304fe`, la ligne était restée « En cours »). §2/§11 : compte de tests à jour (32 fichiers, 584 tests) et nouveaux fichiers de test du pipeline d'import listés — stale depuis le 2026-08-02, corrigé en marge de cette tâche. |
+| 2026-08-03 | Deux bugs signalés par le propriétaire, corrigés. §6 : `isDropAllowed` pose désormais **deux** questions au lieu d'une — la zone (`zoneTargets`) *et* l'onglet qui affichera la carte (`backGroupForType`) ; `play` et `location` étant deux vues d'une seule zone, un personnage glissé de la réserve vers l'onglet **Sites** comptait comme un dépôt légal et atterrissait dans la **pioche**. §4/§9 : « Sites » et « Regions » deviennent des titres de **zone** portant leur indice de type, au lieu de simples indices de groupe qui ne fermaient pas la section précédente — c'est ce qui envoyait dans le talon tous les sites d'une liste écrite à la main. §4 : nouveau module `import/target.js` (`targetForCard`/`bucketFor`), sixième étage du pipeline, qui fait arbitrer la zone de destination par `zoneTargets` pour les **deux** appelants (`importDeckList` et la prévisualisation d'`ImportDialog`) : un import ne peut plus construire un deck que l'interface refuserait de construire à la main. §11 : `test/importTarget.test.js`, 33 fichiers / 594 tests. |

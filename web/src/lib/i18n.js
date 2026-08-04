@@ -141,7 +141,7 @@ export const translations = {
 
     // Import dialog
     'import.title': 'Importer une liste',
-    'import.help': 'Colle une liste, dans n’importe quel ordre : les titres de section (pioche, talon, réserve, lieux, notes) sont reconnus en français, anglais et espagnol, en markdown ou en texte brut. La quantité peut être devant ou derrière ({fmt}), et vaut 1 par défaut. Le nom doit être complet, mais la casse, les accents, les tirets et la ponctuation sont ignorés ({ex}). Tout ce qui n’est ni un titre ni une carte est conservé en notes.',
+    'import.help': 'Colle une liste, dans n’importe quel ordre : les titres de section (pioche, talon, réserve, lieux, sites, notes) sont reconnus en français, anglais et espagnol, en markdown ou en texte brut. La quantité peut être devant ou derrière ({fmt}), et vaut 1 par défaut. Le nom doit être complet, mais la casse, les accents, les tirets et la ponctuation sont ignorés ({ex}). Tout ce qui n’est ni un titre ni une carte est conservé en notes.',
     'import.analyze': 'Analyser',
     'import.alignPref': 'Préférence d’alignement (doublons) :',
     'import.alignPref.none': 'Aucune préférence',
@@ -508,7 +508,7 @@ export const translations = {
     'decks.moveDown': 'Move down',
 
     'import.title': 'Import a list',
-    'import.help': 'Paste a list, in any order: section headings (play deck, sideboard, pool, locations, notes) are recognized in French, English and Spanish, as markdown or as plain text. The quantity may lead or trail ({fmt}), and defaults to 1. The name must be complete, but case, accents, hyphens and punctuation are ignored ({ex}). Anything that is neither a heading nor a card is kept as notes.',
+    'import.help': 'Paste a list, in any order: section headings (play deck, sideboard, pool, locations, sites, notes) are recognized in French, English and Spanish, as markdown or as plain text. The quantity may lead or trail ({fmt}), and defaults to 1. The name must be complete, but case, accents, hyphens and punctuation are ignored ({ex}). Anything that is neither a heading nor a card is kept as notes.',
     'import.analyze': 'Analyze',
     'import.alignPref': 'Alignment preference (duplicates):',
     'import.alignPref.none': 'No preference',
@@ -842,7 +842,7 @@ export const translations = {
 
     // Import dialog
     'import.title': 'Importar una lista',
-    'import.help': 'Pega una lista, en cualquier orden: los encabezados de sección (mazo de juego, sideboard, reserva, localizaciones, notas) se reconocen en francés, inglés y español, en markdown o en texto plano. La cantidad puede ir delante o detrás ({fmt}), y por defecto es 1. El nombre debe estar completo, pero se ignoran mayúsculas, acentos, guiones y puntuación ({ex}). Todo lo que no sea un encabezado ni una carta se conserva como notas.',
+    'import.help': 'Pega una lista, en cualquier orden: los encabezados de sección (mazo de juego, sideboard, reserva, localizaciones, sitios, notas) se reconocen en francés, inglés y español, en markdown o en texto plano. La cantidad puede ir delante o detrás ({fmt}), y por defecto es 1. El nombre debe estar completo, pero se ignoran mayúsculas, acentos, guiones y puntuación ({ex}). Todo lo que no sea un encabezado ni una carta se conserva como notas.',
     'import.analyze': 'Analizar',
     'import.alignPref': 'Preferencia de alineación (duplicados):',
     'import.alignPref.none': 'Sin preferencia',

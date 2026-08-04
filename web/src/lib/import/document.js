@@ -61,7 +61,10 @@ export function parseDocument(text) {
     if (heading) {
       sawHeading = true;
       if (heading.family === 'zone') {
-        mode = 'cards'; target = heading.zone; typeHint = null; noteField = null;
+        // A zone heading clears the type hint -- unless it brings one of its
+        // own ("## Sites" is both), in which case dropping it would throw
+        // away a disambiguator the player did write down.
+        mode = 'cards'; target = heading.zone; typeHint = heading.type || null; noteField = null;
       } else if (heading.family === 'group') {
         // Does NOT change the zone. Only the hint.
         mode = 'cards'; typeHint = heading.type || null; noteField = null;

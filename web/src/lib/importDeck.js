@@ -11,11 +11,13 @@ export {
   buildNameIndex, resolveLines, classifyHint,
   ALIGNMENT_PREFERENCES, preferredMatchId, PREF_BY_SIDE,
 } from './import/resolve.js';
+export { targetForCard, bucketFor } from './import/target.js';
 
 import { parseLineCandidates } from './import/line.js';
 import { parseDocument } from './import/document.js';
 import { buildNameIndex, resolveLines } from './import/resolve.js';
 import { normalizeName } from './import/normalize.js';
+import { bucketFor } from './import/target.js';
 
 // Flat, sectionless paste. Each entry carries the pre-refactor reading
 // (leading quantity only) so the shape callers destructure is unchanged.
@@ -128,9 +130,9 @@ export function importDeckList(text, cards, lang = 'en') {
     const { candidates, typeHint, ...clean } = line;
     if (clean.status === 'notfound') { unmatched.push(clean); continue; }
     if (clean.status === 'ambiguous') ambiguous.push(clean);
-    const id = clean.matches[0].id;
-    const bucket = clean.target === 'pool' ? zones.pool : clean.target === 'sideboard' ? zones.sideboard : quantities;
-    bucket[id] = (bucket[id] || 0) + clean.qty;
+    const card = clean.matches[0];
+    const bucket = bucketFor(card, clean.target, { quantities, zones });
+    bucket[card.id] = (bucket[card.id] || 0) + clean.qty;
   }
 
   return { quantities, zones, notes: doc.notes, unmatched, ambiguous, meta: doc.meta, name: doc.name };

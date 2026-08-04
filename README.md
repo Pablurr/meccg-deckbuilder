@@ -60,8 +60,10 @@ npx wrangler pages deploy web/dist
    limite** pour les **havres** ni pour les sites de sorcier déchu de ce même camp. Ces
    plafonds se comptent sur **l'ensemble des zones** réunies, pas zone par zone.
 3. **Importer une liste** : bouton « Importer » → colle une liste, puis « Analyser ». Les
-   sections (pioche, talon, réserve, lieux, notes) sont reconnues **dans n'importe quel
-   ordre**, en markdown ou en texte brut, et en **français, anglais ou espagnol**. La
+   sections (pioche, talon, réserve, lieux, sites, régions, notes) sont reconnues **dans
+   n'importe quel ordre**, en markdown ou en texte brut, et en **français, anglais ou
+   espagnol** ; une carte finit toujours dans une zone où elle a le droit d'être, même si
+   la liste collée la range ailleurs (un site listé sous « Talon » rejoint les sites). La
    quantité peut se lire **devant ou derrière** le nom (`3x Bûrat`, `Bûrat - 3`, `Bûrat
    (3)`) ; une parenthèse après le nom sert aussi à désambiguïser (`Angmarim (Hero)`,
    `Bûrat (AS)`) quand plusieurs cartes portent le même nom (accents ignorés, nom complet

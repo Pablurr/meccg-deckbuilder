@@ -46,6 +46,15 @@ describe('parseDocument — zones', () => {
     const doc = parseDocument(['### Hazards', '## Pool', '1x Bûrat'].join('\n'));
     expect(at(doc, 'Bûrat')).toMatchObject({ target: 'pool', typeHint: null });
   });
+
+  it('a "Sites" heading leaves the sideboard behind, hint and all', () => {
+    // The shape every hand-written list has, and the bug it used to cause:
+    // "Sites" was only a group hint, so it did not close the sideboard
+    // section above it and every site landed in the sideboard.
+    const doc = parseDocument(['## Sideboard', '1x Bûrat', '## Sites', '1x Bag End'].join('\n'));
+    expect(at(doc, 'Bûrat').target).toBe('sideboard');
+    expect(at(doc, 'Bag End')).toMatchObject({ target: 'quantities', typeHint: 'Site' });
+  });
 });
 
 describe('parseDocument — nothing is lost', () => {
