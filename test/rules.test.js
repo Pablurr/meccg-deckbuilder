@@ -38,22 +38,22 @@ describe('zonesFor', () => {
   it('characters default to pool; resources/hazards default to deck', () => {
     const chr = cards.find((c) => c.type === 'Character');
     expect(chr).toBeTruthy();
-    expect(zonesFor(chr)).toEqual({ primary: 'pool', extra: ['deck', 'sideboard'] });
+    expect(zonesFor(chr)).toEqual({ primary: 'pool', extra: ['deck', 'sideboard', 'sideboardFw'] });
     const hz = cards.find((c) => c.type === 'Hazard');
     expect(hz).toBeTruthy();
-    expect(zonesFor(hz)).toEqual({ primary: 'deck', extra: ['sideboard'] });
+    expect(zonesFor(hz)).toEqual({ primary: 'deck', extra: ['sideboard', 'sideboardFw'] });
   });
   it('starting minor items also offer the pool', () => {
     const item = cards.find((c) => c.type === 'Resource' && c.attributes.playableAsStartingMinorItem === true);
     expect(item).toBeTruthy();
-    expect(zonesFor(item)).toEqual({ primary: 'deck', extra: ['sideboard', 'pool'] });
+    expect(zonesFor(item)).toEqual({ primary: 'deck', extra: ['sideboard', 'pool', 'sideboardFw'] });
   });
   it('avatars belong to the play deck and sideboard, never the pool (1.7)', () => {
     // 1.7: "a pool is a set of up to 10 NON-avatar characters".
     for (const c of cards.filter((x) => (x.attributes || {}).avatar === true)) {
       const z = zonesFor(c);
       expect(z.primary).toBe('deck');
-      expect(z.extra).toEqual(['sideboard']);
+      expect(z.extra).toEqual(['sideboard', 'sideboardFw']);
       expect(isDropAllowed(c, 'pool')).toBe(false);
     }
   });
@@ -97,29 +97,29 @@ describe('zoneTargets / moveTargets', () => {
     const avatar = index.get('TW-156'); // Gandalf
     expect(avatar).toBeTruthy();
     expect(avatar.attributes.avatar).toBe(true);
-    expect(zoneTargets(avatar)).toEqual(['deck', 'sideboard']);
+    expect(zoneTargets(avatar)).toEqual(['deck', 'sideboard', 'sideboardFw']);
     expect(zoneTargets(avatar)).not.toContain('pool');
-    expect(moveTargets(avatar, 'deck')).toEqual(['sideboard']);
+    expect(moveTargets(avatar, 'deck')).toEqual(['sideboard', 'sideboardFw']);
   });
   it('a non-avatar Character leads with the pool, then the deck and sideboard', () => {
     const chr = cards.find((c) => c.type === 'Character' && !(c.attributes || {}).avatar);
     expect(chr).toBeTruthy();
     // Primary first: the pool is where a starting character normally goes, so
     // it must be the zone the UI lists at the top.
-    expect(zoneTargets(chr)).toEqual(['pool', 'deck', 'sideboard']);
-    expect(moveTargets(chr, 'pool')).toEqual(['deck', 'sideboard']);
+    expect(zoneTargets(chr)).toEqual(['pool', 'deck', 'sideboard', 'sideboardFw']);
+    expect(moveTargets(chr, 'pool')).toEqual(['deck', 'sideboard', 'sideboardFw']);
   });
   it('a Minor Item Resource reaches all three zones (1.7)', () => {
     const item = cards.find((c) => c.type === 'Resource' && (c.attributes || {}).subtype === 'Minor Item');
     expect(item).toBeTruthy();
-    expect(zoneTargets(item)).toEqual(['deck', 'sideboard', 'pool']);
-    expect(moveTargets(item, 'sideboard')).toEqual(['deck', 'pool']);
+    expect(zoneTargets(item)).toEqual(['deck', 'sideboard', 'pool', 'sideboardFw']);
+    expect(moveTargets(item, 'sideboard')).toEqual(['deck', 'pool', 'sideboardFw']);
   });
   it('an ordinary Hazard offers the deck and the sideboard', () => {
     const hz = cards.find((c) => c.type === 'Hazard');
     expect(hz).toBeTruthy();
-    expect(zoneTargets(hz)).toEqual(['deck', 'sideboard']);
-    expect(moveTargets(hz, 'sideboard')).toEqual(['deck']);
+    expect(zoneTargets(hz)).toEqual(['deck', 'sideboard', 'sideboardFw']);
+    expect(moveTargets(hz, 'sideboard')).toEqual(['deck', 'sideboardFw']);
   });
   it('lists each zone once, so a card can never show two counters for one zone', () => {
     for (const c of cards) {
@@ -163,6 +163,47 @@ describe('zoneTargets / moveTargets', () => {
   it('returns an empty list for a missing card rather than throwing', () => {
     expect(zoneTargets(null)).toEqual([]);
     expect(moveTargets(null, 'deck')).toEqual([]);
+  });
+});
+
+describe('sideboardFw as a zone (1.6.1)', () => {
+  const avatar = cards.find((c) => c.attributes.avatar && c.alignment === 'Hero');
+  const character = cards.find((c) => c.type === 'Character' && !c.attributes.avatar && c.alignment === 'Hero');
+  const hazard = cards.find((c) => c.type === 'Hazard');
+  const site = cards.find((c) => c.type === 'Site');
+  const region = cards.find((c) => c.type === 'Region');
+  const minorItem = cards.find((c) => c.type === 'Resource' && c.attributes.subtype === 'Minor Item');
+
+  it('is offered to every card family the ordinary sideboard is offered to', () => {
+    for (const c of [avatar, character, hazard, minorItem]) {
+      expect(zoneTargets(c)).toContain('sideboardFw');
+    }
+  });
+
+  it('is never offered to a Site or a Region', () => {
+    // Not an oversight: this is what keeps the zone unreachable in ALL THREE
+    // surfaces at once -- drag-and-drop, the "move to" menu and import --
+    // because the three ask zoneTargets rather than each deciding for itself.
+    expect(zoneTargets(site)).not.toContain('sideboardFw');
+    expect(zoneTargets(region)).not.toContain('sideboardFw');
+  });
+
+  it('comes last, after the zones that already existed', () => {
+    const t = zoneTargets(character);
+    expect(t.indexOf('sideboardFw')).toBe(t.length - 1);
+  });
+
+  it('is a legal drop target for a hazard and refused for a site', () => {
+    expect(isDropAllowed(hazard, 'sideboardFw')).toBe(true);
+    expect(isDropAllowed(site, 'sideboardFw')).toBe(false);
+  });
+
+  it('resolveDropTarget maps the tab onto itself', () => {
+    expect(resolveDropTarget('sideboardFw')).toBe('sideboardFw');
+  });
+
+  it('has a full-name label key', () => {
+    expect(ZONE_LABEL_KEY.sideboardFw).toBe('zones.sideboardFw');
   });
 });
 

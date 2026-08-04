@@ -75,6 +75,7 @@ export const translations = {
     'zoneShort.deck': 'Pioche',
     'zoneShort.sideboard': 'Talon',
     'zoneShort.pool': 'Rés',
+    'zoneShort.sideboardFw': 'T.SD',
 
     // Deck drawer
     'drawer.total': 'Total',
@@ -111,6 +112,8 @@ export const translations = {
     'zones.play': 'Pioche',
     'zones.pool': 'Réserve',
     'zones.sideboard': 'Talon',
+    'zones.sideboardFw': 'Talon vs SD',
+    'zones.sideboardFwFull': 'Talon contre un adversaire Sorcier déchu',
     'zones.location': 'Sites',
     'zones.notes': 'Notes',
     'zones.cards': 'Cartes',
@@ -446,6 +449,7 @@ export const translations = {
     'zoneShort.deck': 'Deck',
     'zoneShort.sideboard': 'SB',
     'zoneShort.pool': 'Pool',
+    'zoneShort.sideboardFw': 'SBFW',
 
     'drawer.total': 'Total',
     'drawer.playdeck': 'Play deck',
@@ -480,6 +484,8 @@ export const translations = {
     'zones.play': 'Play deck',
     'zones.pool': 'Pool',
     'zones.sideboard': 'Sideboard',
+    'zones.sideboardFw': 'SB vs FW',
+    'zones.sideboardFwFull': 'Sideboard vs a Fallen-wizard opponent',
     'zones.location': 'Location',
     'zones.notes': 'Notes',
     'zones.cards': 'Cards',
@@ -808,6 +814,7 @@ export const translations = {
     'zoneShort.deck': 'Mazo',
     'zoneShort.sideboard': 'SB',
     'zoneShort.pool': 'Res',
+    'zoneShort.sideboardFw': 'SBMC',
 
     // Deck drawer
     'drawer.total': 'Total',
@@ -896,6 +903,8 @@ export const translations = {
     'zones.play': 'Mazo de juego',
     'zones.pool': 'Reserva',
     'zones.sideboard': 'Sideboard',
+    'zones.sideboardFw': 'SB vs MC',
+    'zones.sideboardFwFull': 'Reserva contra un Mago caído',
     'zones.location': 'Localizaciones',
     'zones.notes': 'Notas',
     'zones.cards': 'Cartas',
