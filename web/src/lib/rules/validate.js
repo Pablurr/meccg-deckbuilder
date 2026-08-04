@@ -5,7 +5,7 @@
 // remainingCopies is consulted directly by the + button, which refuses a
 // copy past the limit, independently of this file.
 import { SIDES, GENERAL, SPECIFIC_TO_SIDES, raceAllowed } from './sides.js';
-import { LENGTHS } from './formats.js';
+import { LENGTHS, SIDEBOARD_FW_MAX } from './formats.js';
 import { resolveBanned } from './banned.js';
 import { backGroupForType } from '../deck.js';
 import { zonesFor } from './zones.js';
@@ -293,6 +293,12 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
   // --- sideboard ---
   const sbCount = Object.entries(sb).reduce((s, [id, n]) => s + (cardsById.get(id) ? n : 0), 0);
   if (sbCount > caps.sideboardMax) emit('SIDEBOARD-MAX', { count: sbCount, max: caps.sideboardMax, length });
+
+  // --- Fallen-wizard sideboard (1.6.1) ---
+  // Counted and capped on its own: these ten cards are "additional", so they
+  // never enter sbCount and SIDEBOARD-MAX never sees them.
+  const sbFwCount = Object.entries(sbFw).reduce((s, [id, n]) => s + (cardsById.get(id) ? n : 0), 0);
+  if (sbFwCount > SIDEBOARD_FW_MAX) emit('SIDEBOARD-FW-MAX', { count: sbFwCount, max: SIDEBOARD_FW_MAX });
 
   // --- pool ---
   let poolChars = 0, poolItems = 0;

@@ -192,6 +192,10 @@ function buildFixture(code) {
       const hz = firstWhere((c) => c.type === 'Hazard' && !c.attributes.unique);
       return { ...base, side: 'wizard', length: 'long', quantities: { [wizardAvatar.id]: 1 }, zones: { sideboard: { [hz.id]: 36 }, pool: {} } };
     }
+    case 'SIDEBOARD-FW-MAX': {
+      const hz = firstWhere((c) => c.type === 'Hazard' && !c.attributes.unique);
+      return { ...base, side: 'wizard', quantities: { [wizardAvatar.id]: 1 }, zones: { sideboard: {}, pool: {}, sideboardFw: { [hz.id]: 11 } } };
+    }
     case 'POOL-CHARS': {
       const poolChar = firstWhere((c) => c.type === 'Character' && ['Hero', 'Neutral'].includes(c.alignment) && !c.attributes.avatar);
       return { ...base, side: 'wizard', quantities: { [wizardAvatar.id]: 1 }, zones: { sideboard: {}, pool: { [poolChar.id]: 11 } } };

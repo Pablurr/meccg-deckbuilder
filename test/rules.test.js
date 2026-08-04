@@ -1838,6 +1838,42 @@ describe('POOL-STAGE (1.7.F1)', () => {
   });
 });
 
+describe('SIDEBOARD-FW-MAX (1.6.1)', () => {
+  const avatar = cards.find((c) => c.attributes.avatar && c.alignment === 'Hero');
+  const hz = cards.find((c) => c.type === 'Hazard' && !c.attributes.unique);
+  const run = (sideboardFw, length = 'standard') => validateDeck({
+    side: 'wizard', length, tournament: true, cardsById,
+    quantities: { [avatar.id]: 1 }, zones: { sideboard: {}, pool: {}, sideboardFw },
+  });
+
+  it('stays silent at exactly ten cards', () => {
+    expect(byId(run({ [hz.id]: 10 }), 'SIDEBOARD-FW-MAX')).toHaveLength(0);
+  });
+
+  it('fires at eleven, reporting the count and the cap', () => {
+    const w = byId(run({ [hz.id]: 11 }), 'SIDEBOARD-FW-MAX');
+    expect(w).toHaveLength(1);
+    expect(w[0].params).toMatchObject({ count: 11, max: 10 });
+    expect(w[0].severity).toBe('error');
+  });
+
+  it('does not vary with the game length: 1.6.1 grants ten on top of any sideboard', () => {
+    expect(byId(run({ [hz.id]: 11 }, 'campaign'), 'SIDEBOARD-FW-MAX')).toHaveLength(1);
+  });
+
+  it('does not consume the ordinary sideboard allowance', () => {
+    // 30 in the sideboard is exactly the `standard` cap; ten more in the
+    // Fallen-wizard sideboard must not push SIDEBOARD-MAX over.
+    const out = validateDeck({
+      side: 'wizard', length: 'standard', tournament: true, cardsById,
+      quantities: { [avatar.id]: 1 },
+      zones: { sideboard: { [hz.id]: 30 }, pool: {}, sideboardFw: { [hz.id]: 10 } },
+    });
+    expect(byId(out, 'SIDEBOARD-MAX')).toHaveLength(0);
+    expect(byId(out, 'SIDEBOARD-FW-MAX')).toHaveLength(0);
+  });
+});
+
 describe('sites.js siteIndex cache shares one derivation across callers', () => {
   it('two calls with the same reference return the identical cached object', () => {
     const a = siteIndex(cards);

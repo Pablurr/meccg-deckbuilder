@@ -12,3 +12,10 @@ export const LENGTHS = {
   long:     { id: 'long',     sideboardMax: 35 },
   campaign: { id: 'campaign', sideboardMax: 40 },
 };
+
+// 1.6.1 -- "up to 10 additional cards ... preselected for Fallen-wizard
+// opponents". ADDITIONAL: this allowance sits on top of sideboardMax rather
+// than inside it, and unlike sideboardMax it does not vary with the game
+// length -- which is exactly why it is a constant here and not a fifth column
+// in LENGTHS.
+export const SIDEBOARD_FW_MAX = 10;
