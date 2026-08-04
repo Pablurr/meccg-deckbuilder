@@ -38,22 +38,22 @@ describe('zonesFor', () => {
   it('characters default to pool; resources/hazards default to deck', () => {
     const chr = cards.find((c) => c.type === 'Character');
     expect(chr).toBeTruthy();
-    expect(zonesFor(chr)).toEqual({ primary: 'pool', extra: ['deck', 'sideboard'] });
+    expect(zonesFor(chr)).toEqual({ primary: 'pool', extra: ['deck', 'sideboard', 'sideboardFw'] });
     const hz = cards.find((c) => c.type === 'Hazard');
     expect(hz).toBeTruthy();
-    expect(zonesFor(hz)).toEqual({ primary: 'deck', extra: ['sideboard'] });
+    expect(zonesFor(hz)).toEqual({ primary: 'deck', extra: ['sideboard', 'sideboardFw'] });
   });
   it('starting minor items also offer the pool', () => {
     const item = cards.find((c) => c.type === 'Resource' && c.attributes.playableAsStartingMinorItem === true);
     expect(item).toBeTruthy();
-    expect(zonesFor(item)).toEqual({ primary: 'deck', extra: ['sideboard', 'pool'] });
+    expect(zonesFor(item)).toEqual({ primary: 'deck', extra: ['sideboard', 'pool', 'sideboardFw'] });
   });
   it('avatars belong to the play deck and sideboard, never the pool (1.7)', () => {
     // 1.7: "a pool is a set of up to 10 NON-avatar characters".
     for (const c of cards.filter((x) => (x.attributes || {}).avatar === true)) {
       const z = zonesFor(c);
       expect(z.primary).toBe('deck');
-      expect(z.extra).toEqual(['sideboard']);
+      expect(z.extra).toEqual(['sideboard', 'sideboardFw']);
       expect(isDropAllowed(c, 'pool')).toBe(false);
     }
   });
@@ -93,33 +93,33 @@ describe('zoneTargets / moveTargets', () => {
     // An empty list is what tells MiniCard to render no move action at all.
     expect(moveTargets(site, 'deck')).toEqual([]);
   });
-  it('an avatar Character offers the deck and the sideboard, never the pool (1.7)', () => {
+  it('an avatar Character offers the deck and both sideboards, never the pool (1.7)', () => {
     const avatar = index.get('TW-156'); // Gandalf
     expect(avatar).toBeTruthy();
     expect(avatar.attributes.avatar).toBe(true);
-    expect(zoneTargets(avatar)).toEqual(['deck', 'sideboard']);
+    expect(zoneTargets(avatar)).toEqual(['deck', 'sideboard', 'sideboardFw']);
     expect(zoneTargets(avatar)).not.toContain('pool');
-    expect(moveTargets(avatar, 'deck')).toEqual(['sideboard']);
+    expect(moveTargets(avatar, 'deck')).toEqual(['sideboard', 'sideboardFw']);
   });
   it('a non-avatar Character leads with the pool, then the deck and sideboard', () => {
     const chr = cards.find((c) => c.type === 'Character' && !(c.attributes || {}).avatar);
     expect(chr).toBeTruthy();
     // Primary first: the pool is where a starting character normally goes, so
     // it must be the zone the UI lists at the top.
-    expect(zoneTargets(chr)).toEqual(['pool', 'deck', 'sideboard']);
-    expect(moveTargets(chr, 'pool')).toEqual(['deck', 'sideboard']);
+    expect(zoneTargets(chr)).toEqual(['pool', 'deck', 'sideboard', 'sideboardFw']);
+    expect(moveTargets(chr, 'pool')).toEqual(['deck', 'sideboard', 'sideboardFw']);
   });
-  it('a Minor Item Resource reaches all three zones (1.7)', () => {
+  it('a Minor Item Resource reaches all four zones (1.7)', () => {
     const item = cards.find((c) => c.type === 'Resource' && (c.attributes || {}).subtype === 'Minor Item');
     expect(item).toBeTruthy();
-    expect(zoneTargets(item)).toEqual(['deck', 'sideboard', 'pool']);
-    expect(moveTargets(item, 'sideboard')).toEqual(['deck', 'pool']);
+    expect(zoneTargets(item)).toEqual(['deck', 'sideboard', 'pool', 'sideboardFw']);
+    expect(moveTargets(item, 'sideboard')).toEqual(['deck', 'pool', 'sideboardFw']);
   });
-  it('an ordinary Hazard offers the deck and the sideboard', () => {
+  it('an ordinary Hazard offers the deck and both sideboards', () => {
     const hz = cards.find((c) => c.type === 'Hazard');
     expect(hz).toBeTruthy();
-    expect(zoneTargets(hz)).toEqual(['deck', 'sideboard']);
-    expect(moveTargets(hz, 'sideboard')).toEqual(['deck']);
+    expect(zoneTargets(hz)).toEqual(['deck', 'sideboard', 'sideboardFw']);
+    expect(moveTargets(hz, 'sideboard')).toEqual(['deck', 'sideboardFw']);
   });
   it('lists each zone once, so a card can never show two counters for one zone', () => {
     for (const c of cards) {
@@ -163,6 +163,47 @@ describe('zoneTargets / moveTargets', () => {
   it('returns an empty list for a missing card rather than throwing', () => {
     expect(zoneTargets(null)).toEqual([]);
     expect(moveTargets(null, 'deck')).toEqual([]);
+  });
+});
+
+describe('sideboardFw as a zone (1.6.1)', () => {
+  const avatar = cards.find((c) => c.attributes.avatar && c.alignment === 'Hero');
+  const character = cards.find((c) => c.type === 'Character' && !c.attributes.avatar && c.alignment === 'Hero');
+  const hazard = cards.find((c) => c.type === 'Hazard');
+  const site = cards.find((c) => c.type === 'Site');
+  const region = cards.find((c) => c.type === 'Region');
+  const minorItem = cards.find((c) => c.type === 'Resource' && c.attributes.subtype === 'Minor Item');
+
+  it('is offered to every card family the ordinary sideboard is offered to', () => {
+    for (const c of [avatar, character, hazard, minorItem]) {
+      expect(zoneTargets(c)).toContain('sideboardFw');
+    }
+  });
+
+  it('is never offered to a Site or a Region', () => {
+    // Not an oversight: this is what keeps the zone unreachable in ALL THREE
+    // surfaces at once -- drag-and-drop, the "move to" menu and import --
+    // because the three ask zoneTargets rather than each deciding for itself.
+    expect(zoneTargets(site)).not.toContain('sideboardFw');
+    expect(zoneTargets(region)).not.toContain('sideboardFw');
+  });
+
+  it('comes last, after the zones that already existed', () => {
+    const t = zoneTargets(character);
+    expect(t.indexOf('sideboardFw')).toBe(t.length - 1);
+  });
+
+  it('is a legal drop target for a hazard and refused for a site', () => {
+    expect(isDropAllowed(hazard, 'sideboardFw')).toBe(true);
+    expect(isDropAllowed(site, 'sideboardFw')).toBe(false);
+  });
+
+  it('resolveDropTarget maps the tab onto itself', () => {
+    expect(resolveDropTarget('sideboardFw')).toBe('sideboardFw');
+  });
+
+  it('has a full-name label key', () => {
+    expect(ZONE_LABEL_KEY.sideboardFw).toBe('zones.sideboardFw');
   });
 });
 
@@ -1359,7 +1400,7 @@ describe('copyCaps / remainingCopies', () => {
     const caps = copyCaps(g, ctx('wizard'));
     expect(caps).toEqual([
       { limit: 3, scope: 'total', ruleId: 'AVATAR-COPIES' },
-      { limit: 1, scope: { zone: 'sideboard' }, ruleId: 'AVATAR-SIDEBOARD' },
+      { limit: 1, scope: { zones: ['sideboard', 'sideboardFw'] }, ruleId: 'AVATAR-SIDEBOARD' },
     ]);
     // 3 in the play deck spends the whole allowance.
     const full = state({ 'TW-156': 3 });
@@ -1478,6 +1519,43 @@ describe('cap/warning agreement', () => {
         expect(capWarns(over).length).toBeGreaterThan(0);
       }
     }
+  });
+});
+
+describe('copy caps across the two sideboards', () => {
+  const avatar = cards.find((c) => c.attributes.avatar && c.alignment === 'Hero');
+  const unique = cards.find((c) => c.attributes.unique === true && !c.attributes.avatar && c.type !== 'Site');
+  const ctx = { side: 'wizard', ruleOverrides: {} };
+
+  it('counts the Fallen-wizard sideboard in the whole-deck total', () => {
+    // 1.3.1 -- a unique card held in one zone leaves no room in any other.
+    const held = { quantities: {}, zones: { sideboard: {}, pool: {}, sideboardFw: { [unique.id]: 1 } } };
+    expect(remainingCopies(unique, 'deck', held, ctx).remaining).toBe(0);
+    expect(remainingCopies(unique, 'deck', held, ctx).ruleId).toBe('UNIQUE-LIMIT');
+  });
+
+  it('reads the 1.6.2 avatar sub-cap as combined over both sideboards', () => {
+    // Owner's decision, 2026-08-03: the Fallen-wizard sideboard IS sideboard,
+    // so one copy of an avatar there consumes the single copy 1.6.2 allows.
+    const held = { quantities: {}, zones: { sideboard: { [avatar.id]: 1 }, pool: {}, sideboardFw: {} } };
+    expect(remainingCopies(avatar, 'sideboardFw', held, ctx).remaining).toBe(0);
+    expect(remainingCopies(avatar, 'sideboardFw', held, ctx).ruleId).toBe('AVATAR-SIDEBOARD');
+  });
+
+  it('emits AVATAR-SIDEBOARD when the two sideboards hold one avatar copy each', () => {
+    const out = validateDeck({
+      side: 'wizard', length: 'standard', tournament: true, cardsById,
+      quantities: {},
+      zones: { sideboard: { [avatar.id]: 1 }, pool: {}, sideboardFw: { [avatar.id]: 1 } },
+    });
+    expect(byId(out, 'AVATAR-SIDEBOARD')).toHaveLength(1);
+    expect(byId(out, 'AVATAR-SIDEBOARD')[0].params.count).toBe(2);
+  });
+
+  it('still allows the copies the whole-deck cap leaves', () => {
+    const held = { quantities: { [avatar.id]: 1 }, zones: { sideboard: {}, pool: {}, sideboardFw: {} } };
+    // AVATAR-COPIES caps the avatar at 3 across the deck; one is placed.
+    expect(remainingCopies(avatar, 'sideboardFw', held, ctx).remaining).toBe(1);
   });
 });
 
@@ -1757,6 +1835,42 @@ describe('POOL-STAGE (1.7.F1)', () => {
     // maxMinorItems -- that cap belongs to a different card family (1.7).
     const out = V({ 'WH-66': 1, 'WH-71': 1, 'WH-73': 1 });
     expect(out.filter((w) => w.ruleId === 'POOL-ITEMS')).toEqual([]);
+  });
+});
+
+describe('SIDEBOARD-FW-MAX (1.6.1)', () => {
+  const avatar = cards.find((c) => c.attributes.avatar && c.alignment === 'Hero');
+  const hz = cards.find((c) => c.type === 'Hazard' && !c.attributes.unique);
+  const run = (sideboardFw, length = 'standard') => validateDeck({
+    side: 'wizard', length, tournament: true, cardsById,
+    quantities: { [avatar.id]: 1 }, zones: { sideboard: {}, pool: {}, sideboardFw },
+  });
+
+  it('stays silent at exactly ten cards', () => {
+    expect(byId(run({ [hz.id]: 10 }), 'SIDEBOARD-FW-MAX')).toHaveLength(0);
+  });
+
+  it('fires at eleven, reporting the count and the cap', () => {
+    const w = byId(run({ [hz.id]: 11 }), 'SIDEBOARD-FW-MAX');
+    expect(w).toHaveLength(1);
+    expect(w[0].params).toMatchObject({ count: 11, max: 10 });
+    expect(w[0].severity).toBe('error');
+  });
+
+  it('does not vary with the game length: 1.6.1 grants ten on top of any sideboard', () => {
+    expect(byId(run({ [hz.id]: 11 }, 'campaign'), 'SIDEBOARD-FW-MAX')).toHaveLength(1);
+  });
+
+  it('does not consume the ordinary sideboard allowance', () => {
+    // 30 in the sideboard is exactly the `standard` cap; ten more in the
+    // Fallen-wizard sideboard must not push SIDEBOARD-MAX over.
+    const out = validateDeck({
+      side: 'wizard', length: 'standard', tournament: true, cardsById,
+      quantities: { [avatar.id]: 1 },
+      zones: { sideboard: { [hz.id]: 30 }, pool: {}, sideboardFw: { [hz.id]: 10 } },
+    });
+    expect(byId(out, 'SIDEBOARD-MAX')).toHaveLength(0);
+    expect(byId(out, 'SIDEBOARD-FW-MAX')).toHaveLength(0);
   });
 });
 

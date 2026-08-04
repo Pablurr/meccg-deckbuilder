@@ -5,7 +5,7 @@
 // remainingCopies is consulted directly by the + button, which refuses a
 // copy past the limit, independently of this file.
 import { SIDES, GENERAL, SPECIFIC_TO_SIDES, raceAllowed } from './sides.js';
-import { LENGTHS } from './formats.js';
+import { LENGTHS, SIDEBOARD_FW_MAX } from './formats.js';
 import { resolveBanned } from './banned.js';
 import { backGroupForType } from '../deck.js';
 import { zonesFor } from './zones.js';
@@ -94,6 +94,8 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
   const caps = LENGTHS[length] || LENGTHS.standard;
   const sb = zones.sideboard || {};
   const pool = zones.pool || {};
+  const sbFw = zones.sideboardFw || {};
+  const zoneMaps = { sideboard: sb, pool, sideboardFw: sbFw };
   const out = [];
   // code defaults to ruleId; POOL-ITEMS and POOL-ELIGIBLE use a dotted code
   // for their message shape (POOL-ELIGIBLE currently fires only for the
@@ -108,7 +110,7 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
 
   // Total copies per card across every zone; missing cards are skipped.
   const totals = new Map();
-  for (const zoneMap of [quantities, sb, pool]) {
+  for (const zoneMap of [quantities, sb, pool, sbFw]) {
     for (const [id, n] of Object.entries(zoneMap)) {
       if (!cardsById.get(id)) continue;
       totals.set(id, (totals.get(id) || 0) + n);
@@ -215,9 +217,11 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
 
     // Copy caps all come from copies.js -- the same function the + buttons
     // consult -- so a card the counter refuses is exactly a card this reports.
-    // `e.count` is already the deck + sideboard + pool total.
+    // `e.count` is already the deck + both sideboards + pool total.
     for (const cap of copyCaps(c, { side, ruleOverrides })) {
-      const used = cap.scope === 'total' ? e.count : ((cap.scope.zone === 'sideboard' ? sb : pool)[e.id] || 0);
+      const used = cap.scope === 'total'
+        ? e.count
+        : cap.scope.zones.reduce((n, z) => n + ((zoneMaps[z] || {})[e.id] || 0), 0);
       if (used <= cap.limit) continue;
       emit(cap.ruleId, {
         id: e.id, name: name(c), count: used,
@@ -289,6 +293,12 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
   // --- sideboard ---
   const sbCount = Object.entries(sb).reduce((s, [id, n]) => s + (cardsById.get(id) ? n : 0), 0);
   if (sbCount > caps.sideboardMax) emit('SIDEBOARD-MAX', { count: sbCount, max: caps.sideboardMax, length });
+
+  // --- Fallen-wizard sideboard (1.6.1) ---
+  // Counted and capped on its own: these ten cards are "additional", so they
+  // never enter sbCount and SIDEBOARD-MAX never sees them.
+  const sbFwCount = Object.entries(sbFw).reduce((s, [id, n]) => s + (cardsById.get(id) ? n : 0), 0);
+  if (sbFwCount > SIDEBOARD_FW_MAX) emit('SIDEBOARD-FW-MAX', { count: sbFwCount, max: SIDEBOARD_FW_MAX });
 
   // --- pool ---
   let poolChars = 0, poolItems = 0;

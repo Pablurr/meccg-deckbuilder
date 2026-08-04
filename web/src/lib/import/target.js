@@ -22,7 +22,7 @@ import { zoneTargets } from '../rules/zones.js';
 // parseDocument's target names vs rules/zones.js's zone names. 'quantities' is
 // the play AND location deck (ARCHITECTURE.md §4), which rules/zones.js calls
 // 'deck'.
-const ZONE_BY_TARGET = { quantities: 'deck', pool: 'pool', sideboard: 'sideboard' };
+const ZONE_BY_TARGET = { quantities: 'deck', pool: 'pool', sideboard: 'sideboard', sideboardFw: 'sideboardFw' };
 
 export function targetForCard(card, target) {
   const wanted = ZONE_BY_TARGET[target] ? target : 'quantities';
@@ -40,5 +40,6 @@ export function bucketFor(card, target, { quantities, zones }) {
   const t = targetForCard(card, target);
   if (t === 'pool') return zones.pool;
   if (t === 'sideboard') return zones.sideboard;
+  if (t === 'sideboardFw') return zones.sideboardFw;
   return quantities;
 }

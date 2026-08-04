@@ -8,6 +8,7 @@ import {
   normalizeName,
   preferredMatchId,
 } from '../web/src/lib/importDeck.js';
+import { buildDeckListText } from '../web/src/lib/deckList.js';
 
 const cards = [
   { id: 'AS-1', name: { en: 'Bûrat', fr: 'Bûrat' } },
@@ -159,7 +160,8 @@ describe('parseDeckListDocument / importDeckList (reachable path — legacy comp
     const { quantities, zones, unmatched } = importDeckList('1x burat\n2 x angmarim\n  \n3x All the Bells Ringing\nglamour', cards);
     // "glamour" alone has no matching card in this fixture set — notfound, not imported.
     expect(quantities).toEqual({ 'AS-1': 1, 'AS-58': 2, 'AS-44': 3 });
-    expect(zones).toEqual({ pool: {}, sideboard: {} });
+    // zones now always carries sideboardFw too (emptyZones(), final review C1-C4).
+    expect(zones).toEqual({ pool: {}, sideboard: {}, sideboardFw: {} });
     expect(unmatched.map((l) => l.name)).toEqual(['glamour']);
   });
 
@@ -228,5 +230,39 @@ describe('parseDeckListDocument / importDeckList (reachable path — legacy comp
     // syntax) must survive once we're inside a real section.
     const { notes } = parseDeckListDocument('# Deck Title\n\n## Notes\n\n### Other notes\n\n# 1 goal: ramp\nthen attack');
     expect(notes.other).toBe('# 1 goal: ramp\nthen attack');
+  });
+});
+
+// Final review, C1-C4: the export half of the Fallen-wizard sideboard worked
+// (## Sideboard vs FW was written correctly), but the import half crashed --
+// bucketFor(card, 'sideboardFw', { quantities, zones }) returned
+// zones.sideboardFw === undefined whenever the caller's `zones` literal named
+// only `sideboard`/`pool` (importDeck.js's own `importDeckList`, and
+// ImportDialog.jsx's live preview), and the following `bucket[id] = …` threw.
+// These two tests cover the crash directly and the full round trip: export a
+// deck with cards in sideboardFw, re-import the text, and get the same cards
+// back in the same zone. Before the fix (emptyZones() used everywhere a
+// `zones` object is built), both failed -- see the report for the captured
+// failing run.
+describe('round trip through the Fallen-wizard sideboard (C1-C4 reproduction)', () => {
+  const cardsById = new Map(cards.map((c) => [c.id, c]));
+
+  it('does not throw importing a list with a "## Sideboard vs FW" section (the C1/C2 crash)', () => {
+    const text = ['## Sideboard vs FW', '1x burat'].join('\n');
+    expect(() => importDeckList(text, cards)).not.toThrow();
+    expect(importDeckList(text, cards).zones.sideboardFw).toEqual({ 'AS-1': 1 });
+  });
+
+  it('exports cards routed to sideboardFw and re-imports them into the same zone with the same counts', () => {
+    const zones = { sideboard: {}, pool: {}, sideboardFw: { 'AS-1': 2, 'TW-1': 1 } };
+    const text = buildDeckListText(cardsById, {}, 'RT Deck', 'en', { zones, notes: {}, mode: 'freeform', ruleset: null });
+    expect(text).toContain('## Sideboard vs FW');
+
+    const result = importDeckList(text, cards, 'en');
+    expect(result.zones.sideboardFw).toEqual({ 'AS-1': 2, 'TW-1': 1 });
+    // And nothing spilled into the ordinary sideboard/pool/main deck.
+    expect(result.zones.sideboard).toEqual({});
+    expect(result.zones.pool).toEqual({});
+    expect(result.quantities).toEqual({});
   });
 });

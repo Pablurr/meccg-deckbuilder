@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { parseDocument, buildNameIndex, resolveLines, bucketFor } from '../lib/importDeck.js';
+import { emptyZones, totalCopies } from '../lib/deck.js';
 import { isLegalForSide } from '../lib/rules/sides.js';
 import { siteIndex } from '../lib/rules/sites.js';
 import { resolveBanned } from '../lib/rules/banned.js';
@@ -122,7 +123,7 @@ export default function ImportDialog({ cards, lang = 'fr', deck, setNames = NO_S
 
   const importable = useMemo(() => {
     const quantities = {};
-    const zones = { pool: {}, sideboard: {} };
+    const zones = emptyZones();
     if (!resolved) return { quantities, zones };
     resolved.forEach((line, i) => {
       if (line.status === 'notfound') return;
@@ -138,8 +139,12 @@ export default function ImportDialog({ cards, lang = 'fr', deck, setNames = NO_S
     return { quantities, zones };
   }, [resolved, choice]);
 
-  const importCount = [importable.quantities, importable.zones.pool, importable.zones.sideboard]
-    .reduce((sum, m) => sum + Object.values(m).reduce((a, b) => a + b, 0), 0);
+  // totalCopies, not a hand-listed map trio: the previous list named
+  // quantities/pool/sideboard only, so a paste that resolved entirely into
+  // the Fallen-wizard sideboard counted as zero importable cards and the
+  // submit button (below) stayed disabled forever (I1, final review). Same
+  // function App.jsx already uses for "does this deck have cards" (§4/§5).
+  const importCount = totalCopies(importable.quantities, importable.zones);
 
   const okCount = resolved ? resolved.filter((l) => l.status !== 'notfound').length : 0;
   const notFoundCount = resolved ? resolved.filter((l) => l.status === 'notfound').length : 0;

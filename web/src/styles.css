@@ -377,8 +377,6 @@ body {
   flex-wrap: wrap;
 }
 .counts { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
-.count-pill { background: var(--panel-2); border: 1px solid var(--line); border-radius: 20px; padding: 4px 12px; }
-.count-pill b { color: var(--accent); }
 .warns { color: var(--warn); font-size: 12px; }
 
 /* Live rule warnings (deckbuilding mode): rendered above the tab content so
@@ -655,17 +653,9 @@ body {
   padding: 10px 12px;
   border-bottom: 1px solid var(--line);
 }
-.deckpanel-counts { display: flex; gap: 8px; flex-wrap: wrap; width: 100%; }
-.deckpanel-zoom {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  color: var(--muted);
-  font-size: 12px;
-}
-.deckpanel-zoom input[type="range"] { flex: 1; accent-color: var(--accent); cursor: pointer; }
-.deckpanel-zoom-val { min-width: 36px; text-align: right; color: var(--text); font-variant-numeric: tabular-nums; }
+/* Pushes the count to the far end of the head, so the deck's name and its
+   side badge stay together as one label. */
+.deckpanel-total { margin-left: auto; font-variant-numeric: tabular-nums; }
 .deckpanel-toggle {
   background: var(--panel-2);
   border: 1px solid var(--line);
@@ -691,28 +681,13 @@ body {
 /* Zone tabs: the tab bar IS the drop target (zones live in separate tabs, so
    source and destination are never both visible — this also works when the
    destination zone is empty). */
-/* The tab strip and, on the sheet, the zoom disclosure trigger pinned after
-   it. The border sits on the row so the trigger shares it with the tabs. */
+/* Wraps the tab strip; the border lives here rather than on .ztabs itself. */
 .ztabs-row {
   display: flex;
   align-items: stretch;
   border-bottom: 1px solid var(--line);
 }
 .ztabs-row > .ztabs { flex: 1; min-width: 0; border-bottom: none; }
-.ztabs-zoom {
-  flex: none;
-  background: none;
-  border: none;
-  border-left: 1px solid var(--line);
-  color: var(--muted);
-  cursor: pointer;
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  padding: 0 10px;
-}
-.ztabs-zoom:hover, .ztabs-zoom.on { color: var(--accent); }
-.sheet-zoom { padding: 8px 12px; border-bottom: 1px solid var(--line); }
-.sheet-zoom .deckpanel-zoom { width: 100%; }
 .ztabs {
   display: flex;
   flex-wrap: wrap;
@@ -720,22 +695,30 @@ body {
   padding: 8px 12px;
   border-bottom: 1px solid var(--line);
 }
+/* Wider than they were (4px 10px): these are drop targets first and labels
+   second, and a 24px-tall pill is a hard thing to aim a dragged card at. */
 .ztab {
   background: var(--panel-2);
   border: 1px solid var(--line);
   color: var(--text);
   border-radius: var(--radius);
   cursor: pointer;
-  padding: 4px 10px;
+  padding: 8px 14px;
+  min-height: 34px;
   font-size: 13px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 .ztab:hover { border-color: var(--accent); }
 .ztab.on { font-weight: 700; border-color: currentColor; }
 .ztab .cnt { opacity: .65; font-variant-numeric: tabular-nums; }
 .ztab.over .cnt { color: var(--danger); font-weight: 700; opacity: 1; }
+/* An optional zone nobody has put a card in yet: an invitation, not a budget. */
+.ztab.optional { border-style: dashed; color: var(--muted); }
+/* A card is being held over this tab. Without it a tab gives no sign it will
+   accept the drop, which is most of why the pills read as labels. */
+.ztab.drop-over { border-color: var(--accent); border-style: solid; color: var(--text); }
 
 /* Notes tab: four free-text fields (starting/resource/hazard/other). */
 .deck-notes { display: flex; flex-direction: column; gap: 12px; }
@@ -761,15 +744,9 @@ body {
   padding-bottom: 4px;
   margin-bottom: 8px;
 }
-/* Cards render at ~50% of the source image (570×796 → ~285px wide), so they
-   are noticeably larger than the browser grid cells. min(285px, 100%) keeps a
-   card from overflowing when the panel is dragged narrow. */
-.deck-mini-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(285px, 100%), 285px));
-  gap: 10px;
-}
-/* Otherwise identical to a browser grid cell (same image + −/count/+ control). */
+/* The deck grid IS the card selector's .grid — same rule, same card size, one
+   place to change either. A mini card is otherwise identical to a browser
+   grid cell (same image + −/count/+ control). */
 /* Confirmation overlay shown when a selected mini card is clicked. */
 .deck-mini-confirm {
   position: absolute;
@@ -795,8 +772,9 @@ body {
    exceeds the 60px minimum card width, so the mobile block also lifts the
    stack to the top edge and the two clear each other vertically instead. */
 /* The tile is a query container so its controls can size against the CARD
-   rather than the viewport -- the zoom slider scales these tiles freely, so
-   viewport-based sizing says nothing about the room actually available. */
+   rather than the viewport -- the panel's own width drives these tiles' size
+   via the shared .grid rule, so viewport-based sizing says nothing about the
+   room actually available. */
 .deck-mini { container-type: inline-size; }
 .deck-mini-move-btn {
   position: absolute;
@@ -1138,7 +1116,6 @@ code {
      a second row at 44px each would cost more height than it saves. */
   .ztabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .ztab { min-height: 44px; white-space: nowrap; }
-  .ztabs-zoom { min-height: 44px; }
 
   /* Folded, that one line is the whole control surface for a warning, so both
      its buttons take the full target -- the ignore shortcut most of all, since
@@ -1162,9 +1139,10 @@ code {
   /* The only touch route to moving a copy between zones -- the card is not
      draggable on mobile -- so it gets a full 44px target even though it costs
      a visible corner of the thumbnail. */
-  /* Sized against the CARD, not the viewport: the zoom slider scales these
-     tiles independently of screen width, so a flat 44px here collided with
-     the qty stack at low zoom -- measured at the 60px floor, the button
+  /* Sized against the CARD, not the viewport: the panel's own width drives
+     these tiles' size via the shared .grid rule, independently of screen
+     width, so a flat 44px here collided with the qty stack at the card's
+     smallest size -- measured at the 60px floor, the button
      spanned x 18-62 across a stack at x 44-66, making a tap there ambiguous.
      Stacking them vertically does not rescue it either: the stack is 54px
      tall and the card only 84px at that size.

@@ -75,6 +75,28 @@ describe('lookupHeading — a heading is its content, not its markdown level', (
   });
 });
 
+describe('the Fallen-wizard sideboard heading (1.6.1)', () => {
+  const aliases = [
+    'Sideboard vs FW', 'Sideboard vs. fw', '## SIDEBOARD VS FALLEN-WIZARD',
+    'FW sideboard', 'Fallen-wizard opponent sideboard', 'Anti-FW sideboard',
+    'SB vs FW', 'Talon vs SD', 'Talon contre Sorcier déchu', 'SB vs MC',
+    '### Sideboard vs FW (10)', '**Sideboard vs FW**', 'Sideboard vs FW:',
+  ];
+
+  it.each(aliases)('%s resolves to the sideboardFw zone', (raw) => {
+    expect(lookupHeading(raw)).toMatchObject({ family: 'zone', zone: 'sideboardFw' });
+  });
+
+  it('leaves a bare Sideboard heading on the ordinary sideboard', () => {
+    // The trap this pins: 'Sideboard vs FW' CONTAINS 'Sideboard'. If the
+    // lookup ever became a prefix or substring match instead of an exact
+    // normalized-word match, one of these two would silently swallow the other.
+    for (const raw of ['Sideboard', 'SB', 'Side', 'Talon', '## Sideboard (30)']) {
+      expect(lookupHeading(raw)).toMatchObject({ family: 'zone', zone: 'sideboard' });
+    }
+  });
+});
+
 describe('TABLE — one reading per word', () => {
   // vocabulary.js builds HEADINGS from TABLE with first-writer-wins, which
   // silently drops the loser of a real collision -- so checking HEADINGS

@@ -69,6 +69,9 @@ export const RULES = [
   { id: 'CREATURE-MIN', severity: 'error', status: 'verified', ref: '1.5.1', source: COE },
   { id: 'DECKSIZE-LOCATION', severity: 'warning', status: 'verified', house: true, source: COE },
   { id: 'SIDEBOARD-MAX', severity: 'error', status: 'verified', ref: '1.6.1', source: COE },
+  // 1.6.1 -- the ten extra cards preselected for a Fallen-wizard OPPONENT,
+  // on top of the length-dependent sideboard cap above.
+  { id: 'SIDEBOARD-FW-MAX', severity: 'error', status: 'verified', ref: '1.6.1', source: COE },
 
   // -- starting pool --
   { id: 'POOL-CHARS', severity: 'error', status: 'verified', ref: '1.7', source: COE },

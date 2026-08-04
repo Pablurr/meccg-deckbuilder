@@ -7,15 +7,15 @@ import ZoneTabs from './ZoneTabs.jsx';
 import DeckNotes from './DeckNotes.jsx';
 import { isDropAllowed, resolveDropTarget } from '../lib/rules/dropTargets.js';
 import { moveTargets } from '../lib/rules/zones.js';
-import { LENGTHS } from '../lib/rules/formats.js';
+import { LENGTHS, SIDEBOARD_FW_MAX } from '../lib/rules/formats.js';
 import { SIDES } from '../lib/rules/sides.js';
-import { backGroupForType } from '../lib/deck.js';
+import { backGroupForType, totalCopies, emptyZones } from '../lib/deck.js';
 import { buildGroups } from '../lib/deckList.js';
 import { REPORT_ISSUES_URL } from '../lib/constants.js';
 import { COE, RULE_BY_ID } from '../lib/rules/catalog.js';
 import { refText } from '../lib/rules/docText.js';
 import { remainingCopies } from '../lib/rules/copies.js';
-import { cardWidthFor, deckZoneWidth, MIN_ZOOM, MAX_ZOOM, DEFAULT_ZOOM_DESKTOP } from '../lib/zoom.js';
+import { deckCardWidth } from '../lib/cardGrid.js';
 import { placePopover } from '../lib/popover.js';
 
 const SEV_ICON = { error: '⛔', warning: '⚠', info: 'ℹ' };
@@ -66,7 +66,7 @@ export function localizeParams(w, { cardsById, lang, t }) {
   // one specific card, not a total), so p.over would be NaN for them. Guard
   // on both operands being present rather than on ruleId alone, so no
   // template ever gets handed a value the validator didn't actually supply.
-  if ((w.ruleId === 'SIDEBOARD-MAX' || w.ruleId === 'POOL-CHARS' || w.ruleId === 'POOL-ITEMS') && p.count != null && p.max != null) {
+  if ((w.ruleId === 'SIDEBOARD-MAX' || w.ruleId === 'SIDEBOARD-FW-MAX' || w.ruleId === 'POOL-CHARS' || w.ruleId === 'POOL-ITEMS') && p.count != null && p.max != null) {
     p.over = p.count - p.max;
   }
   return p;
@@ -122,7 +122,7 @@ function poolCharCount(pool, cardsById) {
 export default function DeckPanel({
   cardsById,
   quantities,
-  zones = { sideboard: {}, pool: {} },
+  zones = emptyZones(),
   deck,
   changeZoneQty,
   moveCopy,
@@ -135,8 +135,6 @@ export default function DeckPanel({
   onToggleCollapsed,
   width = DEFAULT_WIDTH,
   onResize,
-  zoom = DEFAULT_ZOOM_DESKTOP,
-  onZoom,
   onChangeQty,
   onToggle,
   onChangeNote,
@@ -159,15 +157,12 @@ export default function DeckPanel({
   // tab appears whenever its zone is non-empty, in either mode.
   const hasPool = Object.keys(zones.pool || {}).length > 0;
   const hasSideboard = Object.keys(zones.sideboard || {}).length > 0;
+  const hasSideboardFw = Object.keys(zones.sideboardFw || {}).length > 0;
   const tabs = deckbuilding
-    ? ['play', 'pool', 'sideboard', 'location', 'notes']
-    : ['cards', ...(hasPool ? ['pool'] : []), ...(hasSideboard ? ['sideboard'] : []), 'notes'];
+    ? ['play', 'pool', 'sideboard', 'sideboardFw', 'location', 'notes']
+    : ['cards', ...(hasPool ? ['pool'] : []), ...(hasSideboard ? ['sideboard'] : []),
+       ...(hasSideboardFw ? ['sideboardFw'] : []), 'notes'];
   const [tab, setTab] = useState(deckbuilding ? 'play' : 'cards');
-  // Sheet only: the zoom slider is a secondary control, so it hides behind a
-  // toggle in the tab strip instead of taking a third row in the head. The
-  // trigger lives in that strip rather than next to the title because the
-  // strip is already 44px tall on touch, so it costs no extra height there.
-  const [showZoom, setShowZoom] = useState(false);
   // Which rule warnings are unfolded, by warningKey. Folded is the default:
   // five warnings on a 14-card deck already filled 574px before the 35vh cap,
   // and the block grows with the deck, so the full text of every one of them
@@ -240,47 +235,20 @@ export default function DeckPanel({
   useEffect(() => {
     if (!tabs.includes(tab)) setTab(tabs[0]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deckbuilding, hasPool, hasSideboard]);
+  }, [deckbuilding, hasPool, hasSideboard, hasSideboardFw]);
 
-  // Card width driven by the zoom slider, which is now a percentage of the
-  // width available to the deck list rather than of the 570px source image:
-  // one setting therefore means one visual density whether the panel is at its
-  // 280px minimum or maximised, instead of the old absolute width that gave a
-  // single card per row in a narrow panel and six in a wide one.
+  // The card grid uses the card selector's rule verbatim (see lib/cardGrid.js),
+  // so a card is the same size on both surfaces and the panel's width is what
+  // changes the density -- the same lever the selector has always had.
   //
   // The zone's outer width comes from data we already hold — the `width` prop
   // on desktop, the viewport on the full-screen sheet — rather than from a
-  // measured DOM node, which keeps cardWidthFor a pure function and mirrors
-  // how `maxW` below already reads window.innerWidth. A viewport change the
-  // component doesn't re-render for only makes the grid slightly less dense
-  // than intended; min(…,100%) still stops a card overflowing its column.
+  // measured DOM node, which keeps deckCardWidth a pure function. It feeds the
+  // THUMBNAIL choice only; the layout itself is the .grid rule in styles.css.
   const outerWidth = asSheet
     ? (typeof window !== 'undefined' ? window.innerWidth : DEFAULT_WIDTH)
     : width;
-  const cardW = cardWidthFor(deckZoneWidth(outerWidth), zoom);
-  const thumbW = deckThumbWidth(cardW);
-  const gridStyle = { gridTemplateColumns: `repeat(auto-fill, minmax(min(${cardW}px, 100%), ${cardW}px))` };
-
-  // One definition, two placements: inline in the head on desktop, in a
-  // disclosure row under the tabs on the sheet. Duplicating the markup would
-  // let the two drift apart (min/max/step are the slider's contract).
-  // min/max come from zoom.js because they are also the range parseStoredZoom
-  // accepts: a bound that lived only here could drift out of sync and make the
-  // slider emit values its own reader would reject as corrupt.
-  const zoomControl = (
-    <label className="deckpanel-zoom">
-      {t('panel.zoom')}
-      <input
-        type="range"
-        min={MIN_ZOOM}
-        max={MAX_ZOOM}
-        step="5"
-        value={zoom}
-        onChange={(e) => onZoom(Number(e.target.value))}
-      />
-      <span className="deckpanel-zoom-val">{zoom}%</span>
-    </label>
-  );
+  const thumbW = deckThumbWidth(deckCardWidth(outerWidth));
 
   // Drag the left edge to resize; released listeners live only for the drag.
   function startResize(e) {
@@ -312,23 +280,39 @@ export default function DeckPanel({
   const sbMax = deck && deck.ruleset ? LENGTHS[deck.ruleset.length].sideboardMax : null;
   const poolMax = deck && deck.ruleset ? SIDES[deck.ruleset.side].pool.maxCharacters : null;
 
+  // The header's own count. totalCopies, not counts.total: counts.total is the
+  // PLAY DECK, which is what the three pills that used to sit here reported --
+  // and reporting a partial number under the word "Total", beside zone tabs
+  // that each report their own, is what made them worth removing.
+  const deckTotal = totalCopies(quantities, zones);
+  // Same derivation and same class as DeckManager's list rows, so the badge a
+  // deck wears in the list is the badge it wears open. Freeform has no side.
+  const sideKey = deckbuilding && deck.ruleset ? deck.ruleset.side : 'freeform';
+
   const tabCounts = {
     play: counts.byGroup.playdeck,
     location: counts.byGroup.locationdeck,
     pool: poolCharCount(zones.pool, cardsById),
     sideboard: sumQty(zones.sideboard),
+    sideboardFw: sumQty(zones.sideboardFw),
     cards: counts.total,
     notes: null, // the Notes tab carries no count
   };
-  const tabCaps = { play: null, location: null, pool: poolMax, sideboard: sbMax, cards: null, notes: null };
+  // 1.6.1's ten are granted flat, so unlike sideboardMax this cap does not
+  // depend on the ruleset -- it is the same number in freeform, where the tab
+  // only appears at all because the zone is non-empty.
+  const tabCaps = { play: null, location: null, pool: poolMax, sideboard: sbMax, sideboardFw: SIDEBOARD_FW_MAX, cards: null, notes: null };
   const tabLabels = {
     play: t('zones.play'),
     location: t('zones.location'),
     pool: t('zones.pool'),
     sideboard: t('zones.sideboard'),
+    sideboardFw: t('zones.sideboardFw'),
     cards: t('zones.cards'),
     notes: t('zones.notes'),
   };
+  const optionalTabs = new Set(['sideboardFw']);
+  const tabTitles = { sideboardFw: t('zones.sideboardFwFull') };
 
   // Entries + editing wired for whichever tab is active. play/location/cards
   // all edit `quantities` (zone 'deck'); pool/sideboard edit their zone map.
@@ -341,7 +325,7 @@ export default function DeckPanel({
     activeEntries = Object.entries(quantities)
       .map(([id, qty]) => ({ card: cardsById.get(id), qty }))
       .filter((it) => it.card && (wantGroup == null || backGroupForType(it.card.type) === wantGroup));
-  } else if (tab === 'pool' || tab === 'sideboard') {
+  } else if (tab === 'pool' || tab === 'sideboard' || tab === 'sideboardFw') {
     activeZone = tab;
     activeEntries = Object.entries(zones[tab] || {})
       .map(([id, qty]) => ({ card: cardsById.get(id), qty }))
@@ -372,7 +356,10 @@ export default function DeckPanel({
       <div className="deckpanel collapsed">
         <button className="deckpanel-toggle" onClick={onToggleCollapsed} aria-label={t('panel.expand')}>
           <span className="chevron">‹</span>
-          <span className="deckpanel-badge">{counts.total}</span>
+          {/* The same number the open header shows: two totals for one deck,
+              differing by whichever zones one of them forgot, is worse than
+              either. */}
+          <span className="deckpanel-badge">{deckTotal}</span>
         </button>
       </div>
     );
@@ -390,7 +377,9 @@ export default function DeckPanel({
             <span className="chevron">›</span>
           </button>
         )}
-        <b>{t('panel.title')}</b>
+        <b>{deck && deck.name ? t('panel.titleNamed', { name: deck.name }) : t('panel.title')}</b>
+        <span className={`side-badge ${sideKey}`}>{t(`side.${sideKey}`)}</span>
+        <span className="muted deckpanel-total">({deckTotal})</span>
         {!asSheet && (
           <button
             className="deckpanel-max"
@@ -399,12 +388,6 @@ export default function DeckPanel({
             title={isMaxed ? t('panel.restore') : t('panel.maximize')}
           >{isMaxed ? '⇥' : '⤢'}</button>
         )}
-        <div className="deckpanel-counts">
-          <span className="count-pill">{t('drawer.total')} <b>{counts.total}</b></span>
-          <span className="count-pill">{t('drawer.playdeck')} <b>{counts.byGroup.playdeck}</b></span>
-          <span className="count-pill">{t('drawer.location')} <b>{counts.byGroup.locationdeck}</b></span>
-        </div>
-        {!asSheet && zoomControl}
       </div>
 
       <div className="ztabs-row">
@@ -416,18 +399,10 @@ export default function DeckPanel({
           labels={tabLabels}
           counts={tabCounts}
           caps={tabCaps}
+          optional={optionalTabs}
+          titles={tabTitles}
         />
-        {asSheet && (
-          <button
-            type="button"
-            className={`ztabs-zoom ${showZoom ? 'on' : ''}`}
-            onClick={() => setShowZoom((v) => !v)}
-            aria-expanded={showZoom}
-            aria-label={t('panel.zoom')}
-          >{zoom}%</button>
-        )}
       </div>
-      {asSheet && showZoom && <div className="sheet-zoom">{zoomControl}</div>}
 
       {/* A region, not role="status". As a status the whole block was a live
           region, so every deck edit re-announced all five warnings in full --
@@ -533,7 +508,7 @@ export default function DeckPanel({
                 <div className="deck-group-head">
                   {t(`panel.group.${g.type}`)} <span className="muted">({n})</span>
                 </div>
-                <div className="deck-mini-grid" style={gridStyle}>
+                <div className="grid">
                   {g.items.map(({ card, qty }) => (
                     <MiniCard
                       key={card.id}

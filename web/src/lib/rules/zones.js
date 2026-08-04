@@ -1,15 +1,23 @@
 // Which zone counters a card exposes in deckbuilding mode.
 // 'deck' = the main deck; play vs location derives from the card type
 // (backGroupForType), so it is not a zone of its own here.
+// 1.6.1 -- 'sideboardFw' is the ten cards preselected for a Fallen-wizard
+// OPPONENT. It follows 'sideboard' everywhere and comes last in `extra`,
+// because `extra`'s order drives the order the browser tile lists its zone
+// counters in, and the rarest zone belongs after the common ones.
+//
+// Site and Region keep an empty `extra`, which is what makes the zone
+// unreachable for them in the three surfaces at once -- drag-and-drop, the
+// "move to" menu and import all ask zoneTargets instead of each deciding.
 export function zonesFor(card) {
   const type = card && card.type;
   const a = (card && card.attributes) || {};
   if (type === 'Site' || type === 'Region') return { primary: 'deck', extra: [] };
   if (type === 'Character') {
     // 1.7 -- the pool holds up to ten NON-avatar characters, so an avatar's
-    // zones are the play deck and the sideboard only.
-    if (a.avatar === true) return { primary: 'deck', extra: ['sideboard'] };
-    return { primary: 'pool', extra: ['deck', 'sideboard'] };
+    // zones are the play deck and the two sideboards only.
+    if (a.avatar === true) return { primary: 'deck', extra: ['sideboard', 'sideboardFw'] };
+    return { primary: 'pool', extra: ['deck', 'sideboard', 'sideboardFw'] };
   }
   // 1.7 -- the pool may also hold up to two minor items. Two families qualify:
   // actual Minor Item cards, and the six permanent-events whose own text says
@@ -19,9 +27,9 @@ export function zonesFor(card) {
   // permanent-events, up to three of them totalling exactly three stage points.
   if (type === 'Resource' && (a.subtype === 'Minor Item' || a.playableAsStartingMinorItem === true
     || (card.alignment === 'Stage' && a.subtype === 'Permanent-event'))) {
-    return { primary: 'deck', extra: ['sideboard', 'pool'] };
+    return { primary: 'deck', extra: ['sideboard', 'pool', 'sideboardFw'] };
   }
-  return { primary: 'deck', extra: ['sideboard'] };
+  return { primary: 'deck', extra: ['sideboard', 'sideboardFw'] };
 }
 
 // The zones a card may occupy, as one ordered list with the primary first --
@@ -57,4 +65,5 @@ export const ZONE_LABEL_KEY = {
   deck: 'zones.play',
   sideboard: 'zones.sideboard',
   pool: 'zones.pool',
+  sideboardFw: 'zones.sideboardFw',
 };

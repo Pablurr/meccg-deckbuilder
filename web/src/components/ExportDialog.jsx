@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import * as api from '../api.js';
 import { buildDeckListText } from '../lib/deckList.js';
 import { deckSections, flattenSections } from '../lib/export/deckSections.js';
+import { emptyZones } from '../lib/deck.js';
 import { LIST_LANGUAGES, IMAGE_LANGUAGES } from '../lib/lang.js';
 import { useT } from '../i18n.jsx';
 
@@ -24,7 +25,7 @@ function downloadText(text, filename) {
   URL.revokeObjectURL(url);
 }
 
-export default function ExportDialog({ deck, cardsById, quantities, zones = { sideboard: {}, pool: {} }, defaultBacks = {}, uiLang = 'fr', onClose, onBacksChange, proxyMode = false }) {
+export default function ExportDialog({ deck, cardsById, quantities, zones = emptyZones(), defaultBacks = {}, uiLang = 'fr', onClose, onBacksChange, proxyMode = false }) {
   const t = useT();
   const [backs, setBacks] = useState(deck.backAssignments || {});
   const [format, setFormat] = useState('mpc'); // 'mpc' | 'pdf' | 'list'

@@ -78,8 +78,8 @@ export function cardThumbSrc(card, lang = 'en', w = 260) {
 
 // Thumbnail width to request from the proxy for a deck-panel card displayed at
 // `cardW` px. Quantized to 100px steps (floor 200, cap 570 = source width) so
-// the zoom slider yields at most ~5 distinct, cache-friendly URLs while staying
-// >= the on-screen size (crisp at every zoom; pixel-perfect at 100%).
+// the handful of panel widths a player actually drags to yield a handful of
+// distinct, cache-friendly URLs while staying >= the on-screen size.
 export function deckThumbWidth(cardW) {
   return Math.min(570, Math.max(200, Math.ceil(cardW / 100) * 100));
 }

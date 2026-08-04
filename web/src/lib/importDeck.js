@@ -18,6 +18,7 @@ import { parseDocument } from './import/document.js';
 import { buildNameIndex, resolveLines } from './import/resolve.js';
 import { normalizeName } from './import/normalize.js';
 import { bucketFor } from './import/target.js';
+import { emptyZones } from './deck.js';
 
 // Flat, sectionless paste. Each entry carries the pre-refactor reading
 // (leading quantity only) so the shape callers destructure is unchanged.
@@ -116,7 +117,7 @@ export function importDeckList(text, cards, lang = 'en') {
     }));
 
   const quantities = {};
-  const zones = { pool: {}, sideboard: {} };
+  const zones = emptyZones();
   const unmatched = [];
   const ambiguous = [];
 

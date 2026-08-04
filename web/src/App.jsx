@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import * as api from './api.js';
-import { expandQuantities, countOccurrences, deckCounts, deckWarnings, normalizeDeck, totalCopies, EMPTY_NOTES } from './lib/deck.js';
+import { expandQuantities, countOccurrences, deckCounts, deckWarnings, normalizeDeck, totalCopies, emptyZones, EMPTY_NOTES } from './lib/deck.js';
 import { baseOptions } from './lib/tags.js';
 import { I18nProvider } from './i18n.jsx';
 import { makeT } from './lib/i18n.js';
@@ -8,7 +8,6 @@ import { validateDeck } from './lib/rules/validate.js';
 import { remainingCopies } from './lib/rules/copies.js';
 import { zoneTargets } from './lib/rules/zones.js';
 import { bumpCount, applyDelta, applyToggle, applySelectAll } from './lib/deckMutations.js';
-import { parseStoredZoom, defaultZoom, ZOOM_STORAGE_KEY } from './lib/zoom.js';
 import FilterBar from './components/FilterBar.jsx';
 import CardBrowser from './components/CardBrowser.jsx';
 import DeckDrawer from './components/DeckDrawer.jsx';
@@ -30,7 +29,7 @@ export default function App() {
   const [uiLang, setUiLang] = useState('fr'); // display language for card names
   const [quantities, setQuantities] = useState({}); // id -> copy count
   const [deck, setDeck] = useState(() => normalizeDeck({ id: null, name: 'Nouveau deck', backAssignments: {} }));
-  const [zones, setZones] = useState({ sideboard: {}, pool: {} }); // id -> copy count, per zone
+  const [zones, setZones] = useState(() => emptyZones()); // id -> copy count, per zone
   const [showManager, setShowManager] = useState(false);
   const [showSetup, setShowSetup] = useState(false);
   const [showExport, setShowExport] = useState(false);
@@ -38,16 +37,7 @@ export default function App() {
   const [showDocs, setShowDocs] = useState(false);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [panelWidth, setPanelWidth] = useState(360); // right deck panel width in px
-  // Declared before cardZoom on purpose: the zoom default differs per surface,
-  // so the lazy initializer below needs isMobile to already be resolved.
   const isMobile = useIsMobile();
-  // Deck-panel card size, as a % of the width available to the deck list (not
-  // of the source image — see lib/zoom.js). Persisted like proxyMode so the
-  // choice sticks; validated on read because localStorage is user-writable,
-  // and zoom was never persisted before, so there is no legacy value to migrate.
-  const [cardZoom, setCardZoom] = useState(() => {
-    try { return parseStoredZoom(localStorage.getItem(ZOOM_STORAGE_KEY), isMobile); } catch { return defaultZoom(isMobile); }
-  });
   const [error, setError] = useState(null);
   const [deckSheetOpen, setDeckSheetOpen] = useState(false);
   const [previewCard, setPreviewCard] = useState(null);
@@ -59,13 +49,14 @@ export default function App() {
   useEffect(() => {
     try { localStorage.setItem('meccg.proxyMode', proxyMode ? '1' : '0'); } catch { /* storage unavailable */ }
   }, [proxyMode]);
-  useEffect(() => {
-    try { localStorage.setItem(ZOOM_STORAGE_KEY, String(cardZoom)); } catch { /* storage unavailable */ }
-  }, [cardZoom]);
 
   // When the deck empties the mobile sheet unmounts; reset its flag so re-adding
   // a card doesn't pop the sheet back open unprompted.
-  const deckEmpty = Object.keys(quantities).length === 0 && Object.keys(zones.sideboard).length === 0 && Object.keys(zones.pool).length === 0;
+  //
+  // Asked of totalCopies rather than by listing the zones here: a zone added
+  // later and forgotten in this expression would make its cards unreachable on
+  // mobile, which is exactly the bug totalCopies' own comment records.
+  const deckEmpty = totalCopies(quantities, zones) === 0;
   useEffect(() => { if (deckEmpty) setDeckSheetOpen(false); }, [deckEmpty]);
 
   useEffect(() => {
@@ -114,8 +105,8 @@ export default function App() {
     setQuantities((prev) => applyDelta(prev, id, delta, enforce ? roomFor(id, 'deck', prev, zones) : Infinity));
   }
 
-  // zone is 'deck' | 'sideboard' | 'pool'; 'deck' routes to the existing
-  // quantities map rather than being a zone of its own.
+  // zone is 'deck' | 'sideboard' | 'pool' | 'sideboardFw'; 'deck' routes to the
+  // existing quantities map rather than being a zone of its own.
   function changeZoneQty(zone, id, delta, { enforce = true } = {}) {
     if (zone === 'deck') return changeQty(id, delta, { enforce });
     setZones((prev) => {
@@ -163,10 +154,13 @@ export default function App() {
       return out;
     };
     setQuantities(clamp(imported));
-    setZones({
-      sideboard: clamp(importedZones && importedZones.sideboard),
-      pool: clamp(importedZones && importedZones.pool),
-    });
+    // Derived from normalizeDeck's own zone set (via emptyZones), not a
+    // hand-listed sideboard/pool pair: the previous version silently dropped
+    // any zone it didn't name, which is exactly how the Fallen-wizard
+    // sideboard's imported cards used to vanish with no warning (C4, final
+    // review). A zone added later needs no edit here to survive an import.
+    const importedAll = normalizeDeck({ zones: importedZones }).zones;
+    setZones(Object.fromEntries(Object.entries(importedAll).map(([z, m]) => [z, clamp(m)])));
     setDeck((prev) => normalizeDeck({
       ...prev,
       // A new deck drops the previous id so saving creates a record instead of
@@ -192,7 +186,7 @@ export default function App() {
   function newDeck() {
     setDeck(normalizeDeck({ id: null, name: t('app.newDeck'), backAssignments: {} }));
     setQuantities({});
-    setZones({ sideboard: {}, pool: {} });
+    setZones(emptyZones());
     setShowManager(false);
     setShowSetup(true);
   }
@@ -242,7 +236,7 @@ export default function App() {
   const cardIds = expandQuantities(quantities);
   const counts = deckCounts(cardsById, cardIds);
   const warnings = deckWarnings(cardsById, cardIds, deck.backAssignments, defaultBacks);
-  const hasSelection = counts.total > 0 || Object.keys(zones.sideboard).length > 0 || Object.keys(zones.pool).length > 0;
+  const hasSelection = totalCopies(quantities, zones) > 0;
 
   return (
     <I18nProvider lang={textLang}>
@@ -267,8 +261,6 @@ export default function App() {
             onToggleCollapsed={() => setPanelCollapsed((v) => !v)}
             width={panelWidth}
             onResize={setPanelWidth}
-            zoom={cardZoom}
-            onZoom={setCardZoom}
             onChangeQty={changeQty}
             onToggle={toggleCard}
             onChangeNote={changeNote}
@@ -293,8 +285,6 @@ export default function App() {
           ruleWarnings={ruleWarnings}
           onToggleRule={onToggleRule}
           collapsed={false}
-          zoom={cardZoom}
-          onZoom={setCardZoom}
           onChangeQty={changeQty}
           onToggle={toggleCard}
           onChangeNote={changeNote}
