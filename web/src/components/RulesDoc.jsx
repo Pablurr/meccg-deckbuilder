@@ -7,6 +7,7 @@ import { BANNED } from '../lib/rules/banned.js';
 import { REPORT_ISSUES_URL, SIDE_IDS, LENGTH_IDS } from '../lib/constants.js';
 import { localize, copiesText, poolText, playDeckText, refText } from '../lib/rules/docText.js';
 import { COE } from '../lib/rules/catalog.js';
+import FeaturesDoc from './FeaturesDoc.jsx';
 
 function reportRuleUrl(ruleId) {
   const title = encodeURIComponent(`[rule] ${ruleId}`);
@@ -16,20 +17,6 @@ function reportRuleUrl(ruleId) {
 function StatusChip({ status, t }) {
   return <span className={`status-chip ${status}`}>{t(`status.${status}`)}</span>;
 }
-
-// Glossary of the terms the interface uses for things the rules name
-// differently in English. Each entry names the term by the SAME i18n key the
-// interface renders it from, never a copy of the word: the tab, the warning
-// and this table are then one string, so the glossary cannot document a word
-// the app has stopped using.
-const GLOSSARY = [
-  { termKey: 'zones.play', defKey: 'docs.glossary.play' },
-  { termKey: 'zones.sideboard', defKey: 'docs.glossary.sideboard' },
-  { termKey: 'zones.pool', defKey: 'docs.glossary.pool' },
-  { termKey: 'panel.group.Hazard', defKey: 'docs.glossary.hazard' },
-  { termKey: 'alignment.Minion', defKey: 'docs.glossary.minion' },
-  { termKey: 'alignment.Stage', defKey: 'docs.glossary.stage' },
-];
 
 // What the app does NOT check. Both are Section 1 clauses with no working
 // implementation: 1.3.1's last sentence has no grouping field in the card data
@@ -62,24 +49,13 @@ export default function RulesDoc({ deck, onToggleRule, onClose }) {
           <button className="btn secondary" onClick={onClose}>{t('common.close')}</button>
         </div>
 
+        <p className="doc-intro">{t('docs.intro')}</p>
+
+        <h2 className="doc-part">{t('docs.part.featuresTitle')}</h2>
+        <FeaturesDoc />
+
+        <h2 className="doc-part">{t('docs.part.rulesTitle')}</h2>
         <section className="doc-prose">
-          <p>{t('docs.intro')}</p>
-          <h3>{t('setup.mode.freeform')}</h3>
-          <p>{t('docs.freeform')}</p>
-          <h3>{t('setup.mode.deckbuilding')}</h3>
-          <p>{t('docs.deckbuilding')}</p>
-          <h3>{t('docs.zonesTitle')}</h3>
-          <p>{t('docs.zones')}</p>
-          <h3>{t('docs.glossaryTitle')}</h3>
-          <p>{t('docs.glossaryIntro')}</p>
-          <dl className="doc-glossary">
-            {GLOSSARY.map(({ termKey, defKey }) => (
-              <React.Fragment key={termKey}>
-                <dt>{t(termKey)}</dt>
-                <dd>{t(defKey)}</dd>
-              </React.Fragment>
-            ))}
-          </dl>
           <h3>{t('docs.warningsTitle')}</h3>
           <p>{t('docs.warnings')}</p>
           <h3>{t('docs.enforcementTitle')}</h3>

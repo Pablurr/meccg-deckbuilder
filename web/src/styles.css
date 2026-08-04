@@ -545,6 +545,13 @@ body {
   display: flex;
   flex-direction: column;
 }
+/* The two halves of the help page: what the app does, then what the rules say. */
+.doc-part {
+  margin: 18px 0 4px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+}
+.doc-intro { margin: 0 0 8px; }
 .doc-head {
   display: flex;
   align-items: center;
