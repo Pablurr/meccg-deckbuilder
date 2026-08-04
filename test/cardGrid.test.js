@@ -19,7 +19,7 @@ describe('deckZoneWidth', () => {
     expect(deckZoneWidth(360)).toBe(360 - BODY_PADDING_X);
   });
 
-  it('is total for junk rather than producing a negative width', () => {
+  it('is zero for junk rather than producing a negative width', () => {
     expect(deckZoneWidth(undefined)).toBe(0);
     expect(deckZoneWidth('abc')).toBe(0);
     expect(deckZoneWidth(10)).toBe(0);

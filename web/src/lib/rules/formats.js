@@ -1,11 +1,12 @@
 // Game lengths -> numeric thresholds. STUB values from the local rules KB
 // (modes-de-jeu.md); to be confirmed against councilofelrond.org.
-// NOTE: a "+10 sideboard cards against a Fallen-wizard opponent" allowance
-// existed here as `fwExtra: 10` on every length, but nothing read it -- the
-// allowance depends on the *opponent's* side, which this app does not model
-// (there is no second player/deck in scope). Deliberately left out rather
-// than re-added: if the app ever models an opponent, source and wire this
-// properly instead of restoring a field nothing consumed.
+// NOTE (2026-08-03): the "+10 sideboard cards against a Fallen-wizard
+// opponent" allowance is now modelled properly -- as its own deck zone,
+// `zones.sideboardFw`, rather than as a field on LENGTHS. It doesn't belong
+// in this table: the app still doesn't model an opponent (there is no second
+// player/deck in scope), and the allowance is 10 cards flat regardless of
+// game length -- a fifth LENGTHS column would imply it varies the way
+// sideboardMax does, which it never has. See SIDEBOARD_FW_MAX below.
 export const LENGTHS = {
   starter:  { id: 'starter',  sideboardMax: 30 },
   standard: { id: 'standard', sideboardMax: 30 },

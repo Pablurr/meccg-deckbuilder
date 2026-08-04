@@ -29,6 +29,7 @@
 import { cardName } from './lang.js';
 import { deckSections } from './export/deckSections.js';
 import { TYPE_ORDER } from './constants.js';
+import { emptyZones } from './deck.js';
 
 export { TYPE_ORDER } from './constants.js';
 
@@ -77,7 +78,7 @@ export function buildGroups(entries, lang) {
 // under `## Notes` is prose for a human to read — see importDeck.js for how
 // the parser is kept from ever mistaking a note line (e.g. "3x Gandalf is
 // the plan") for a card entry.
-export function buildDeckListText(cardsById, quantities = {}, deckName = 'Deck', lang = 'fr', { zones = { sideboard: {}, pool: {} }, notes = {}, mode = 'freeform', ruleset = null } = {}) {
+export function buildDeckListText(cardsById, quantities = {}, deckName = 'Deck', lang = 'fr', { zones = emptyZones(), notes = {}, mode = 'freeform', ruleset = null } = {}) {
   const lines = [`# ${deckName}`, ''];
 
   // Always emitted, even in freeform: a block that is sometimes absent is a

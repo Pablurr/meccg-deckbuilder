@@ -59,8 +59,13 @@ export const TABLE = [
   [['Sideboard', 'Side', 'SB', 'Talon', SECTION_TITLES.sideboard], zone('sideboard')],
   // -- zone: the 1.6.1 Fallen-wizard sideboard. Its canonical title comes from
   // SECTION_TITLES like every other section's, so our own export re-imports.
-  // The rest are community shapes; "vs" and "vs." normalize alike, so both
-  // spellings are one word here rather than two entries.
+  // The rest are community shapes. "Sideboard vs FW" and "Sideboard vs. FW"
+  // are BOTH listed below for a human reading this table, even though
+  // normalizeName() strips the period, so they'd resolve to the same map key
+  // either way -- first-writer-wins in the HEADINGS loop below dedupes the
+  // second one silently. Listed anyway so a reader scanning this array for
+  // "does the dotted form work" finds the answer without having to trace
+  // normalizeName.
   //
   // These all CONTAIN the word "Sideboard", which is safe only because the
   // lookup matches a whole normalized heading and never a prefix -- see the

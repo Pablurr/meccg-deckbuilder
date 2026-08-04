@@ -58,6 +58,22 @@ Pas de numéro de version de schéma : la compatibilité ascendante tient parce 
 gagne une zone vide. C'est l'invariant §4 ; toute évolution du schéma passe par cette
 fonction et par elle seule.
 
+**Correction post-review (2026-08-04, revue finale de branche) :** l'affirmation ci-dessus
+est vraie pour tout ce qui est *lu depuis `localStorage`* — `normalizeDeck` s'y applique
+sans exception. Elle passait sous silence les objets `zones` construits **en mémoire**, hors
+de `normalizeDeck`, par `App.jsx` (l'état initial, `newDeck`, `importDeckData`) et par
+l'import (`importDeck.js`, `ImportDialog.jsx`) : sept endroits au total construisaient un
+littéral `{ sideboard: {}, pool: {} }` sans jamais passer par cette fonction, et quatre
+d'entre eux étaient sur un chemin de production réel. Le trou n'était pas une fonctionnalité
+manquante mais une exception non levée : `bumpCount` (dans `deckMutations.js`) fait
+`map[id]`, et un `zones.sideboardFw` valant `undefined` y plante — pendant un rendu React côté
+import, ce qui démonte l'arbre entier faute de error boundary. Corrigé en centralisant la
+forme vide dans `deck.js` (`emptyZones()`), que `normalizeDeck` construit désormais à partir
+de ses propres clés au lieu de les re-lister, et que les sept sites en mémoire appellent tous.
+**La leçon pour la prochaine zone : l'invariant ne tient que si *chaque* construction de
+`zones` passe par `emptyZones()` ou par `normalizeDeck` — pas seulement celles qui touchent
+`localStorage`.**
+
 `totalCopies(quantities, zones)` ajoute `zones.sideboardFw` à sa somme. C'est ce total qui
 alimente l'en-tête (§6) et le badge du rail replié.
 
@@ -152,9 +168,32 @@ Une entrée dans le `TABLE` de `vocabulary.js` :
   'Talon vs SD', 'Talon contre Sorcier déchu', 'SB vs MC'], zone('sideboardFw')],
 ```
 
-`target.js` n'est pas touché : il demande déjà la légalité à `zoneTargets()` plutôt que de
-la re-dériver, ce qui maintient l'invariant « un import ne peut pas construire un deck que
-l'interface refuserait de construire à la main ».
+**Correction post-review (2026-08-04, revue finale de branche) :** `target.js` **est** touché,
+et devait l'être. `ZONE_BY_TARGET` (la table qui traduit un nom de section de
+`parseDocument` en zone `rules/zones.js`) doit gagner une entrée `sideboardFw: 'sideboardFw'`,
+et `bucketFor` doit savoir rendre `zones.sideboardFw` quand `targetForCard` choisit cette
+zone. Le raisonnement d'origine avait raison sur un point étroit et l'a généralisé à tort :
+c'est la **légalité** (quelle zone une carte a le droit d'occuper) qui vient déjà de
+`zoneTargets()` sans rien à changer — mais la **plomberie** (quelle carte de code va lire et
+écrire dans quelle zone) est un sujet distinct, et celui-là exigeait un changement dans
+`target.js`, dans la table `TABLE` de `vocabulary.js` (ci-dessus) et dans **trois autres
+endroits que cette section ne mentionnait pas** :
+
+- `App.jsx` (`importDeckData`) — reconstruisait `zones` depuis un littéral qui ne nommait que
+  `sideboard`/`pool`, donc tout ce que l'import routait vers `sideboardFw` était routé
+  correctement par `target.js`… puis silencieusement jeté à la réception.
+- `ImportDialog.jsx` (`importable`, la prévisualisation live de la fenêtre d'import) — même
+  littéral tronqué, en amont : `bucketFor(card, 'sideboardFw', { quantities, zones })` y
+  retournait `zones.sideboardFw` → `undefined`, et l'écriture suivante (`bucket[id] = …`)
+  levait une exception **pendant le rendu** (l'appel vit dans un `useMemo`), ce qui démonte
+  tout l'arbre React faute de error boundary dans `web/src`.
+- `importDeck.js` (`importDeckList`, le chemin non interactif) — le même littéral tronqué,
+  même plantage, sans passer par la fenêtre.
+
+Ces trois sites ne construisaient jamais leur `zones` via `normalizeDeck` ou une fonction
+équivalente (voir §3, corrigé) : c'est la même cause, pas trois bugs différents. Corrigé en
+centralisant la forme vide dans `deck.js` (`emptyZones()`) et en la faisant utiliser partout
+où un `zones` vide se construisait.
 
 **Piège à couvrir par un test** : les alias contenant `Sideboard` ne doivent pas être
 capturés par l'entrée `Sideboard` existante. L'ordre de résolution et la normalisation des

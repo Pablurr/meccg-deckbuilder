@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import * as api from './api.js';
-import { expandQuantities, countOccurrences, deckCounts, deckWarnings, normalizeDeck, totalCopies, EMPTY_NOTES } from './lib/deck.js';
+import { expandQuantities, countOccurrences, deckCounts, deckWarnings, normalizeDeck, totalCopies, emptyZones, EMPTY_NOTES } from './lib/deck.js';
 import { baseOptions } from './lib/tags.js';
 import { I18nProvider } from './i18n.jsx';
 import { makeT } from './lib/i18n.js';
@@ -29,7 +29,7 @@ export default function App() {
   const [uiLang, setUiLang] = useState('fr'); // display language for card names
   const [quantities, setQuantities] = useState({}); // id -> copy count
   const [deck, setDeck] = useState(() => normalizeDeck({ id: null, name: 'Nouveau deck', backAssignments: {} }));
-  const [zones, setZones] = useState({ sideboard: {}, pool: {} }); // id -> copy count, per zone
+  const [zones, setZones] = useState(() => emptyZones()); // id -> copy count, per zone
   const [showManager, setShowManager] = useState(false);
   const [showSetup, setShowSetup] = useState(false);
   const [showExport, setShowExport] = useState(false);
@@ -154,10 +154,13 @@ export default function App() {
       return out;
     };
     setQuantities(clamp(imported));
-    setZones({
-      sideboard: clamp(importedZones && importedZones.sideboard),
-      pool: clamp(importedZones && importedZones.pool),
-    });
+    // Derived from normalizeDeck's own zone set (via emptyZones), not a
+    // hand-listed sideboard/pool pair: the previous version silently dropped
+    // any zone it didn't name, which is exactly how the Fallen-wizard
+    // sideboard's imported cards used to vanish with no warning (C4, final
+    // review). A zone added later needs no edit here to survive an import.
+    const importedAll = normalizeDeck({ zones: importedZones }).zones;
+    setZones(Object.fromEntries(Object.entries(importedAll).map(([z, m]) => [z, clamp(m)])));
     setDeck((prev) => normalizeDeck({
       ...prev,
       // A new deck drops the previous id so saving creates a record instead of
@@ -183,7 +186,7 @@ export default function App() {
   function newDeck() {
     setDeck(normalizeDeck({ id: null, name: t('app.newDeck'), backAssignments: {} }));
     setQuantities({});
-    setZones({ sideboard: {}, pool: {} });
+    setZones(emptyZones());
     setShowManager(false);
     setShowSetup(true);
   }

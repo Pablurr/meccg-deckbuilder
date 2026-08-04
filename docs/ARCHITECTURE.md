@@ -13,7 +13,11 @@ où le talon l'est déjà et jamais aux sites ; plafond de copies d'avatar au ta
 sur les deux talons (interprétation propriétaire) ; panneau de deck refondu — en-tête devenu
 nom du deck + pastille de camp + total réel, curseur de zoom retiré au profit de la règle CSS
 `.grid` déjà utilisée par le sélecteur de cartes
-(état : branche `deck-panel-fw-sideboard`, dix commits `103737f..bc07b80`).
+(état : branche `deck-panel-fw-sideboard`, dix commits `103737f..bc07b80`) — **plus la revue
+finale de branche qui a suivi** : `emptyZones()` (`deck.js`) comme unique façon de construire
+un `zones` vide, qui referme les cinq trouvailles Critical (import de `sideboardFw` qui
+plantait toute l'app, cartes importées perdues sans avertissement, glisser-déposer qui
+plantait sur un deck neuf) plus quatre trouvailles Important et cinq Minor — voir §15.
 
 ---
 
@@ -110,7 +114,7 @@ web/src/            toute l'application
     export/         pipeline d'export pur (10 modules, aucun import React)
     *.js            deck, deckStore, filter, importDeck, lang, proxy, tags, zoom…
 web/public/         servi tel quel : cards.json, card-backs/, proxy-patches/, _redirects
-test/               33 fichiers Vitest, 594 tests
+test/               33 fichiers Vitest, 619 tests
 docs/superpowers/   specs et plans d'implémentation, datés (historique des intentions)
 scripts/            make_proxy_patches.py (génération des patchs proxy, hors build)
 ```
@@ -244,6 +248,22 @@ lecture. Toute évolution du schéma **doit** passer par cette fonction.
   cette zone existe se relit comme la possédant, vide. `totalCopies` somme désormais **quatre**
   zones (`quantities` + `sideboard` + `pool` + `sideboardFw`) — c'est ce total, pas une liste de
   zones tenue à la main, qui répond à « ce deck contient-il des cartes ? » (§5).
+- **`emptyZones()` (`deck.js`, 2026-08-04, revue finale de branche) — l'unique façon de
+  construire un `zones` vide.** `normalizeDeck` garantit la forme ci-dessus pour tout ce qui
+  passe par `localStorage`, mais **sept endroits** construisaient un `zones` en mémoire sans
+  jamais appeler `normalizeDeck` : l'état initial d'`App.jsx`, `newDeck`, `importDeckData`,
+  le littéral de `ImportDialog.jsx`, celui d'`importDeck.js`, et deux paramètres par défaut
+  (`deckList.js`, `ExportDialog.jsx`). Quatre de ces sept étaient sur un chemin de production
+  réel, et chacun ne nommait que `sideboard`/`pool` — un oubli qui n'était pas une
+  fonctionnalité manquante mais une exception non levée : `bumpCount`
+  ([`deckMutations.js`](../web/src/lib/deckMutations.js)) fait `map[id]` sans repli, et un
+  `zones.sideboardFw` valant `undefined` y plante — pendant un rendu React côté fenêtre
+  d'import (`ImportDialog.jsx`, dans un `useMemo`), ce qui démonte l'arbre entier faute de
+  error boundary dans `web/src`. `emptyZones()` est maintenant la seule source de la forme
+  vide ; `normalizeDeck` construit son propre `zones` à partir des clés d'`emptyZones()`
+  plutôt que de les re-lister, pour que les deux ne puissent plus diverger. **Une sixième zone
+  n'exige d'éditer qu'`emptyZones()`** — un `grep` de `sideboard: {}` dans `web/src` après
+  coup doit ne renvoyer que sa propre définition.
 
 ### Pipeline d'import (`web/src/lib/import/`, 2026-08-03)
 
@@ -324,14 +344,18 @@ lib/importDeck.js = façade, API publique inchangée (263 → 139 lignes)
 |---|---|---|
 | `meccg.decks.v1` | tous les decks (tableau JSON) | [`deckStore.js`](../web/src/lib/deckStore.js) |
 | `meccg.proxyMode` | `'1'` / `'0'` — défaut **activé** | `App.jsx` |
-| `meccg.cardZoom` | pourcentage de zoom du panneau | `App.jsx` via `ZOOM_STORAGE_KEY` |
+| `meccg.cardZoom` | **orpheline** (§14 n°7) — plus rien ne l'écrit ni ne la lit | — |
 
 - **Quota (~5 Mo) :** les dos personnalisés sont des data URL JPEG et sont volumineux.
   `deckStore.writeAll` relance une erreur explicite `storage-full` sur `QuotaExceededError`,
   que `DeckManager` affiche (clé i18n `decks.storageFull`).
 - **Toute valeur lue de `localStorage` est validée**, car l'utilisateur peut l'écrire et
-  d'autres onglets la partagent. Une valeur de zoom aberrante retombe sur le **défaut**,
-  elle n'est pas *clampée* — clamper présenterait une donnée corrompue comme une préférence.
+  d'autres onglets la partagent — `normalizeDeck` (ci-dessus) pour chaque deck,
+  `proxyMode` par comparaison stricte à `'0'`. L'exemple historique de cette règle était le
+  zoom du panneau (une valeur aberrante retombait sur le défaut plutôt que d'être *clampée*,
+  pour ne pas présenter une donnée corrompue comme une préférence) ; le curseur a disparu
+  (§10, §12) et cette validation-là avec lui — la clé qui la déclenchait est maintenant
+  la ligne orpheline ci-dessus.
 - **Pas de synchronisation multi-onglets.** Deux onglets ouverts peuvent s'écraser
   mutuellement. Connu, non traité (voir §14).
 
@@ -343,9 +367,10 @@ Pas de Redux, pas de Zustand, pas de `useReducer` global : **`App.jsx` détient 
 descend en props**. Le seul contexte React est `I18nContext`.
 
 **États principaux de `App.jsx` :** `cards`, `facets`, `defaultBacks`, `deck`, `quantities`,
-`zones`, `filters`, `uiLang`, `proxyMode`, `cardZoom`, `panelCollapsed`, `panelWidth`,
+`zones`, `filters`, `uiLang`, `proxyMode`, `panelCollapsed`, `panelWidth`,
 `previewCard`, `deckSheetOpen`, les booléens de modales (`showManager`, `showSetup`,
-`showExport`, `showImport`, `showDocs`) et `error`.
+`showExport`, `showImport`, `showDocs`) et `error`. (`cardZoom` a disparu avec le curseur de
+zoom, §10/§12 ; la clé `localStorage` correspondante reste orpheline, §4/§14.)
 
 **Dérivés (`useMemo`) :** `cardsById`, `derivedFacets`, `capCtx` (contexte de plafonds de
 copies, `null` hors mode deckbuilding), `ruleWarnings`.
@@ -1054,7 +1079,7 @@ délibérée dans `aria-label` plutôt qu'un simple renvoi vers `title`.
 
 ## §11 — Tests
 
-`npm test` → Vitest, **33 fichiers, 594 tests**. Node pur, pas de DOM : les composants ne
+`npm test` → Vitest, **33 fichiers, 619 tests**. Node pur, pas de DOM : les composants ne
 sont pas montés, ce sont les **modules purs** qui sont testés.
 
 C'est ce qui dicte la façon d'aborder un travail d'interface ici : **on extrait la décision
@@ -1282,3 +1307,4 @@ transformation*, donc lis le compte de **fichiers**, pas seulement celui des tes
 | 2026-08-03 | Trois fonctionnalités, onze commits (`523beb7..40e1c84`). §9 : filtre Type trié sur l'ordre de jeu (`TYPE_ORDER`/`sortFacetOptions`), plutôt que sur le libellé — exception à la règle générale du paragraphe Sets, corrigée en conséquence ; nouvelles clés `import.*` ; piège « réserve » pour le vocabulaire du parseur. §6 : `isLegalForSide` gagne la passe `specific` au niveau camp (46 cartes BA `specific: "Balrog"` quittent un navigateur Spectre de l'Anneau) et absorbe l'ancien cas spécial balrog-only. §7 : bloc `## Metadata` toujours émis à l'export texte, `tournament` volontairement absent. §4 : nouvelle sous-section décrivant le pipeline d'import en cinq modules (`normalize → line → vocabulary → document → resolve`, façade `importDeck.js` réduite à 137 lignes) et ses deux invariants. §10 : fenêtre d'import en deux temps (analyser avant de régler), pourquoi ça élimine tout conflit affiché. §13 : ligne import réécrite, passe accessibilité `polish-ui-a11y` marquée Livrée (déjà fusionnée en `84304fe`, la ligne était restée « En cours »). §2/§11 : compte de tests à jour (32 fichiers, 584 tests) et nouveaux fichiers de test du pipeline d'import listés — stale depuis le 2026-08-02, corrigé en marge de cette tâche. |
 | 2026-08-03 | Deux bugs signalés par le propriétaire, corrigés. §6 : `isDropAllowed` pose désormais **deux** questions au lieu d'une — la zone (`zoneTargets`) *et* l'onglet qui affichera la carte (`backGroupForType`) ; `play` et `location` étant deux vues d'une seule zone, un personnage glissé de la réserve vers l'onglet **Sites** comptait comme un dépôt légal et atterrissait dans la **pioche**. §4/§9 : « Sites » et « Regions » deviennent des titres de **zone** portant leur indice de type, au lieu de simples indices de groupe qui ne fermaient pas la section précédente — c'est ce qui envoyait dans le talon tous les sites d'une liste écrite à la main. §4 : nouveau module `import/target.js` (`targetForCard`/`bucketFor`), sixième étage du pipeline, qui fait arbitrer la zone de destination par `zoneTargets` pour les **deux** appelants (`importDeckList` et la prévisualisation d'`ImportDialog`) : un import ne peut plus construire un deck que l'interface refuserait de construire à la main. §11 : `test/importTarget.test.js`, 33 fichiers / 594 tests. |
 | 2026-08-04 | Deux lots indépendants, dix commits (`103737f..bc07b80`). **Talon contre Sorcier déchu (règle 1.6.1) :** quatrième zone `sideboardFw` garantie par `normalizeDeck`, comptée par `totalCopies` (§4) ; offerte partout où le talon ordinaire l'est, toujours en dernier dans `extra`, jamais aux sites — `dropTargets.js` non touché, ce qui prouve que sa garantie tient par construction (§6) ; plafond `SIDEBOARD_FW_MAX = 10` en constante à plat, hors de `LENGTHS`, plus la règle `SIDEBOARD-FW-MAX` (31 règles au total) ; la sous-limite d'avatar 1.6.2 relue **combinée** sur les deux talons, une interprétation datée (§12), qui a fait passer le `scope` d'un plafond de `{ zone }` à `{ zones }` dans `copies.js` **et** `validate.js` (§6) ; export en cinq sections (`Sideboard vs FW` en queue, §7) et alias d'import associés (§4) ; onglet dédié, invitation en tirets tant qu'il est vide, `aria-label` composé pour WCAG 2.5.3 (§9, §10). **Panneau de deck refondu :** en-tête devenu nom + pastille de camp + total réel au lieu de trois pastilles répétant un total partiel ; curseur de zoom retiré, la grille du panneau reprenant la règle `.grid` du sélecteur de cartes — le CSS possède désormais la mise en page, `deckCardWidth()` ne fait plus que la prédire pour choisir une vignette (§10, §12). §14 : trois dettes consignées (`meccg.cardZoom` orpheline, `deckStore.list()` vs en-tête du panneau — deux nombres vérifiés pour un même deck —, point de rupture CSS peut-être mort). Quatre commentaires de `styles.css`/`MiniCard.jsx` décrivant encore le curseur de zoom disparu, réécrits. |
+| 2026-08-04 | Revue finale de branche avant merge, cinq trouvailles Critical (une seule cause) + quatre Important + cinq Minor. **§4 : `emptyZones()`** — sept endroits construisaient un `zones` en mémoire sans passer par `normalizeDeck`, quatre sur un chemin de production réel, tous ne nommant que `sideboard`/`pool` ; `bucketFor(card, 'sideboardFw', …)` y rendait `undefined`, et l'écriture suivante plantait — pendant un rendu React côté fenêtre d'import (`ImportDialog.jsx`, dans un `useMemo`, sans error boundary dans `web/src`) et dans `changeZoneQty`/`bumpCount` (`App.jsx`) au premier glisser-déposer sur un deck neuf. `normalizeDeck` construit désormais son `zones` à partir des clés d'`emptyZones()` au lieu de les re-lister. `App.importDeckData` reconstruit tout l'objet `zones` importé via `normalizeDeck({ zones: importedZones }).zones` plutôt que de lister `sideboard`/`pool` à la main — c'est ce qui avait fait disparaître silencieusement, sans avertissement, les cartes qu'un import routait vers `sideboardFw`. `ImportDialog.jsx` : `importCount` (bouton d'envoi) utilise désormais `totalCopies`, pas un trio de maps codé en dur — une importation résolue entièrement dans `sideboardFw` affichait `0` et bloquait le bouton. **§9/§10 : `ZoneTabs.jsx`** — l'`aria-label` composé de l'onglet `sideboardFw` (WCAG 2.5.3, ajouté le 2026-08-03) remplaçait tout le nom accessible, y compris le compteur porté par le texte des autres onglets ; le compteur est maintenant réinjecté dans le label composé. **§6 : `formats.js`** — la note au-dessus de `LENGTHS` qui disait l'allocation « +10 » délibérément non modélisée est réécrite : elle l'est, comme zone dédiée, et la note explique maintenant pourquoi une constante à plat plutôt qu'une cinquième colonne. **Documentation :** cette table de `localStorage` et la liste des états d'`App.jsx` (ci-dessus) créditaient encore `meccg.cardZoom` d'être vivante ; le spec `2026-08-03-deck-panel-fw-sideboard-design.md` (§3, §5) affirmait que la compatibilité ascendante ne dépendait que de `normalizeDeck` et que `target.js` n'avait pas été touché — les deux corrigés pour que la prochaine zone ajoutée ne reproduise pas cette lacune. `README.md` : conjonction manquante restaurant le rattachement de « pour les camps qui en utilisent un » à la réserve, pas au talon. **Tests :** `test/deckModel.test.js` gagne un test qui dérive l'ensemble des zones attendues de `zoneTargets()` plutôt que de le re-lister, et `test/importDeck.test.js` gagne le round-trip export → import de `sideboardFw` plus un test direct « n'explose pas » — les deux échouaient contre le code d'avant cette entrée, preuve que C1-C4 étaient réels. §11 : 33 fichiers, 619 tests (33 fichiers / 594 tests, cité en deux endroits de ce document depuis le 2026-08-03, était déjà périmé par rapport aux 616 tests d'avant cette tâche — corrigé en marge). |

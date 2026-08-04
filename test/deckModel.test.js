@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeDeck, totalCopies } from '../web/src/lib/deck.js';
+import { normalizeDeck, totalCopies, emptyZones } from '../web/src/lib/deck.js';
 import { createDeckStore } from '../web/src/lib/deckStore.js';
 import { bumpCount, applyDelta, applyToggle, applySelectAll } from '../web/src/lib/deckMutations.js';
+import { zoneTargets } from '../web/src/lib/rules/zones.js';
 
 function memStorage() {
   const m = new Map();
@@ -78,6 +79,41 @@ describe('sideboardFw zone (1.6.1)', () => {
 
   it('totalCopies still works when sideboardFw is absent', () => {
     expect(totalCopies({ d: 3 }, { sideboard: { a: 2 }, pool: {} })).toBe(5);
+  });
+});
+
+// Final review, C5: changeZoneQty (App.jsx) calls bumpCount(prev[zone], id,
+// delta), and bumpCount does `map[id]` with no `|| {}` guard -- unlike
+// remainingCopies, which is why roomFor survived the same gap. A `zones`
+// object missing a key that zoneTargets() can route a card to is therefore
+// not a missing feature but a crash the first time a card lands there.
+// emptyZones() is the fix; THIS test is what keeps it a fix and not just a
+// snapshot of today's zones -- it derives the expected zone set from
+// rules/zones.js (the actual authority on zone legality) instead of
+// restating a literal list that would silently go stale the next time
+// zonesFor() grows a zone.
+describe('emptyZones() covers every zone zoneTargets() can route a card to', () => {
+  it('has a key for every non-deck zone any card family in zonesFor can target', () => {
+    // One fixture per branch of rules/zones.js's zonesFor -- Site/Region,
+    // avatar, non-avatar Character, eligible Minor Item / Stage permanent
+    // event, and the plain default -- so the union of their zoneTargets()
+    // output is every zone the rules engine can currently produce.
+    const fixtures = [
+      { type: 'Site' },
+      { type: 'Region' },
+      { type: 'Character', attributes: { avatar: true } },
+      { type: 'Character', attributes: {} },
+      { type: 'Resource', attributes: { subtype: 'Minor Item' } },
+      { type: 'Resource', attributes: { playableAsStartingMinorItem: true } },
+      { type: 'Resource', alignment: 'Stage', attributes: { subtype: 'Permanent-event' } },
+      { type: 'Hazard', attributes: {} },
+    ];
+    const reachable = new Set(fixtures.flatMap((card) => zoneTargets(card)));
+    reachable.delete('deck'); // 'deck' is `quantities`, not a key of the `zones` object (§4)
+    const covered = new Set(Object.keys(emptyZones()));
+    for (const zone of reachable) {
+      expect(covered.has(zone)).toBe(true);
+    }
   });
 });
 

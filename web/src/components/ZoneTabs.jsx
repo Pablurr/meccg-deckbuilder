@@ -44,8 +44,18 @@ export default function ZoneTabs({ tabs, active, onSelect, onDrop, labels, count
             // or voice control stops matching what the user can actually read on
             // the pill. So the long name is appended to the short one rather
             // than replacing it. Undefined when there is no long name, which
-            // leaves the button's own text as its accessible name.
-            aria-label={titles && titles[id] ? `${labels[id]} — ${titles[id]}` : undefined}
+            // leaves the button's own text (label + count) as its accessible
+            // name -- which is also why the count has to be re-appended here:
+            // an aria-label REPLACES the whole accessible name, content and
+            // all, so without this a sighted user sees "Talon vs SD  4 / 10"
+            // while a screen reader hears the name and the long description
+            // but no count -- the one tab this attribute touches is the one
+            // tab that lost its count. Omitted while `inviting`, matching the
+            // visible pill, which shows no count either while the zone is
+            // still just an invitation.
+            aria-label={titles && titles[id]
+              ? `${labels[id]}${!inviting && count != null ? ` ${cap != null ? `${count} / ${cap}` : count}` : ''} — ${titles[id]}`
+              : undefined}
             onClick={() => onSelect(id)}
             onDragOver={(e) => e.preventDefault()}
             onDragEnter={() => setDragOver(id)}

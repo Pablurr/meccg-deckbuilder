@@ -14,6 +14,17 @@ export function backGroupForType(type) {
   return BACK_GROUPS[type] || 'playdeck';
 }
 
+// The empty shape of `zones`, in one place. normalizeDeck guarantees this for
+// anything read from storage, but App and the importer build zones objects in
+// memory that never pass through it -- and a map missing here is not a missing
+// feature, it is a TypeError in bumpCount (deckMutations.js) the first time a
+// card is routed to that zone. Adding a sixth zone must mean editing exactly
+// this function; grep the repo for `sideboard: {}` afterwards to make sure no
+// hand-rolled copy of this shape survived the edit.
+export function emptyZones() {
+  return { sideboard: {}, pool: {}, sideboardFw: {} };
+}
+
 // Expand a { id: count } map into an ordered list with repeats (for export/counts).
 export function expandQuantities(quantities = {}) {
   const out = [];
@@ -84,15 +95,13 @@ export const EMPTY_NOTES = { starting: '', resourceStrategy: '', hazardStrategy:
 // (every pre-existing deck) reads as freeform; a deckbuilding record whose
 // side or length is unknown falls back to freeform rather than throwing.
 export function normalizeDeck(d = {}) {
-  const zones = {
-    sideboard: { ...((d.zones && d.zones.sideboard) || {}) },
-    pool: { ...((d.zones && d.zones.pool) || {}) },
-    // 1.6.1 -- the ten cards preselected for a Fallen-wizard OPPONENT, on top
-    // of the sideboard's own 30/35/40. Defaulted here like the other two
-    // because there is no schema version to branch on: every deck written
-    // before this zone existed reads as having it, empty.
-    sideboardFw: { ...((d.zones && d.zones.sideboardFw) || {}) },
-  };
+  // Built from emptyZones()'s own keys, not a re-listing of them, so the two
+  // cannot drift: a zone added to emptyZones() alone is enough for a deck
+  // written before it existed to read as having it, empty -- there is no
+  // schema version number to branch on instead.
+  const zones = Object.fromEntries(
+    Object.keys(emptyZones()).map((z) => [z, { ...((d.zones && d.zones[z]) || {}) }]),
+  );
   const notes = { ...EMPTY_NOTES, ...(d.notes || {}) };
   let mode = d.mode === 'deckbuilding' ? 'deckbuilding' : 'freeform';
   let ruleset = null;

@@ -9,7 +9,7 @@ import { isDropAllowed, resolveDropTarget } from '../lib/rules/dropTargets.js';
 import { moveTargets } from '../lib/rules/zones.js';
 import { LENGTHS, SIDEBOARD_FW_MAX } from '../lib/rules/formats.js';
 import { SIDES } from '../lib/rules/sides.js';
-import { backGroupForType, totalCopies } from '../lib/deck.js';
+import { backGroupForType, totalCopies, emptyZones } from '../lib/deck.js';
 import { buildGroups } from '../lib/deckList.js';
 import { REPORT_ISSUES_URL } from '../lib/constants.js';
 import { COE, RULE_BY_ID } from '../lib/rules/catalog.js';
@@ -122,7 +122,7 @@ function poolCharCount(pool, cardsById) {
 export default function DeckPanel({
   cardsById,
   quantities,
-  zones = { sideboard: {}, pool: {} },
+  zones = emptyZones(),
   deck,
   changeZoneQty,
   moveCopy,

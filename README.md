@@ -97,7 +97,7 @@ Chaque deck a un **mode**, choisi à sa création et modifiable ensuite via « R
 ### Zones
 
 Un deck a jusqu'à cinq zones : la **pioche** (Personnage/Ressource/Péril), le **deck de
-sites** (Site/Région), un **talon** (sideboard) optionnel, pour les camps qui en utilisent
+sites** (Site/Région), un **talon** (sideboard) optionnel et, pour les camps qui en utilisent
 un, une **réserve** de personnages et d'objets mineurs mis de côté avant la partie (le pool de
 départ), et un **talon contre Sorcier déchu** optionnel — jusqu'à 10 cartes supplémentaires,
 en plus du talon normal, préselectionnées pour un adversaire jouant Sorcier déchu (règle
