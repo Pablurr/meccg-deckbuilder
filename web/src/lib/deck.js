@@ -34,7 +34,7 @@ export function expandQuantities(quantities = {}) {
 // only way to reach those zones at all.
 export function totalCopies(quantities = {}, zones = {}) {
   const sum = (m) => Object.values(m || {}).reduce((a, b) => a + b, 0);
-  return sum(quantities) + sum(zones.sideboard) + sum(zones.pool);
+  return sum(quantities) + sum(zones.sideboard) + sum(zones.pool) + sum(zones.sideboardFw);
 }
 
 // Rebuild a { id: count } map from a (possibly repeated) list of ids.
@@ -87,6 +87,11 @@ export function normalizeDeck(d = {}) {
   const zones = {
     sideboard: { ...((d.zones && d.zones.sideboard) || {}) },
     pool: { ...((d.zones && d.zones.pool) || {}) },
+    // 1.6.1 -- the ten cards preselected for a Fallen-wizard OPPONENT, on top
+    // of the sideboard's own 30/35/40. Defaulted here like the other two
+    // because there is no schema version to branch on: every deck written
+    // before this zone existed reads as having it, empty.
+    sideboardFw: { ...((d.zones && d.zones.sideboardFw) || {}) },
   };
   const notes = { ...EMPTY_NOTES, ...(d.notes || {}) };
   let mode = d.mode === 'deckbuilding' ? 'deckbuilding' : 'freeform';

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeDeck } from '../web/src/lib/deck.js';
+import { normalizeDeck, totalCopies } from '../web/src/lib/deck.js';
 import { createDeckStore } from '../web/src/lib/deckStore.js';
 import { bumpCount, applyDelta, applyToggle, applySelectAll } from '../web/src/lib/deckMutations.js';
 
@@ -13,7 +13,7 @@ describe('normalizeDeck', () => {
     const d = normalizeDeck({ id: 'x', name: 'Old', quantities: { 'TW-1': 2 } });
     expect(d.mode).toBe('freeform');
     expect(d.ruleset).toBeNull();
-    expect(d.zones).toEqual({ sideboard: {}, pool: {} });
+    expect(d.zones).toEqual({ sideboard: {}, pool: {}, sideboardFw: {} });
     expect(d.notes).toEqual({ starting: '', resourceStrategy: '', hazardStrategy: '', other: '' });
   });
   it('keeps a valid deckbuilding ruleset', () => {
@@ -53,6 +53,31 @@ describe('normalizeDeck', () => {
       ruleset: { side: 'balrog', length: 'long', tournament: true, ruleOverrides: restoredOverrides },
     });
     expect(backToDeckbuilding.ruleset.ruleOverrides).toEqual({ 'BALROG-MIND': false });
+  });
+});
+
+describe('sideboardFw zone (1.6.1)', () => {
+  it('normalizeDeck always provides an empty sideboardFw map', () => {
+    expect(normalizeDeck({}).zones.sideboardFw).toEqual({});
+    expect(normalizeDeck({ zones: {} }).zones.sideboardFw).toEqual({});
+    // A deck written before this zone existed must read as having it, empty:
+    // that is the whole of the ascending-compatibility guarantee, since there
+    // is no schema version number to branch on.
+    expect(normalizeDeck({ zones: { sideboard: { 'TW-1': 2 } } }).zones.sideboardFw).toEqual({});
+  });
+
+  it('normalizeDeck preserves an existing sideboardFw map', () => {
+    const d = normalizeDeck({ zones: { sideboardFw: { 'TW-1': 3 } } });
+    expect(d.zones.sideboardFw).toEqual({ 'TW-1': 3 });
+  });
+
+  it('totalCopies counts the sideboardFw zone', () => {
+    const zones = { sideboard: { a: 2 }, pool: { b: 1 }, sideboardFw: { c: 4 } };
+    expect(totalCopies({ d: 3 }, zones)).toBe(10);
+  });
+
+  it('totalCopies still works when sideboardFw is absent', () => {
+    expect(totalCopies({ d: 3 }, { sideboard: { a: 2 }, pool: {} })).toBe(5);
   });
 });
 
