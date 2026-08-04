@@ -934,7 +934,7 @@ import React, { useState } from 'react';
 // does not read as a target at all. It is the tab's own state rather than the
 // panel's: nothing outside this bar needs to know, and a drop or a leave
 // always clears it, so it cannot get stuck lit.
-export default function ZoneTabs({ tabs, active, onSelect, onDrop, labels, counts, caps, optional }) {
+export default function ZoneTabs({ tabs, active, onSelect, onDrop, labels, counts, caps, optional, titles }) {
   const [dragOver, setDragOver] = useState(null);
   return (
     <div className="ztabs">
@@ -954,6 +954,9 @@ export default function ZoneTabs({ tabs, active, onSelect, onDrop, labels, count
               inviting ? 'optional' : '',
               dragOver === id ? 'drop-over' : '',
             ].filter(Boolean).join(' ')}
+            // Undefined for every tab whose label is already its full name,
+            // which renders no attribute at all rather than an empty tooltip.
+            title={titles && titles[id]}
             onClick={() => onSelect(id)}
             onDragOver={(e) => e.preventDefault()}
             onDragEnter={() => setDragOver(id)}
@@ -1029,7 +1032,18 @@ Ligne 344, la branche des zones éditables :
   } else if (tab === 'pool' || tab === 'sideboard' || tab === 'sideboardFw') {
 ```
 
-Et à l'appel de `<ZoneTabs …>` (ligne 411), ajouter `optional={optionalTabs}` ainsi qu'un `title` explicite sur la nouvelle zone en passant par les libellés — laisser `ZoneTabs` tel quel et poser l'infobulle par le CSS n'est pas possible, donc ajouter à la place la ligne suivante juste sous `tabLabels` et n'en rien faire de plus : le nom long est déjà porté par la section d'export et par la doc des règles.
+Juste sous `tabLabels`, la table des noms longs. `Talon vs SD` est une abréviation ; le survol est ce qui la rend explicite sans coûter de place dans la pastille, et `zones.sideboardFwFull` existe déjà (Task 2) pour le dire. Les autres onglets n'en ont pas besoin : leur libellé est déjà leur nom complet.
+
+```js
+  const tabTitles = { sideboardFw: t('zones.sideboardFwFull') };
+```
+
+Et à l'appel de `<ZoneTabs …>` (ligne 411), passer les deux nouvelles props :
+
+```jsx
+          optional={optionalTabs}
+          titles={tabTitles}
+```
 
 Importer `SIDEBOARD_FW_MAX` en tête de fichier, à côté de `LENGTHS` :
 
