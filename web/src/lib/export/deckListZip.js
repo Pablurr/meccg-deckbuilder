@@ -2,11 +2,9 @@ import JSZip from 'jszip';
 
 // Same sanitising as the single-deck text export (ExportDialog.runExport), so
 // a deck exported alone and the same deck exported in a batch land on the same
-// filename. Strip trailing underscores so "Deck #1" and "Deck (1)" both become
-// "Deck_1" and collide as expected.
+// filename.
 export function safeFileName(name) {
-  const sanitized = String(name || 'deck').replace(/[^a-zA-Z0-9_-]+/g, '_').replace(/_+$/, '');
-  return sanitized || '_';
+  return String(name || 'deck').replace(/[^a-zA-Z0-9_-]+/g, '_') || 'deck';
 }
 
 // One .txt per deck. The dedup pass is the whole point of this module:

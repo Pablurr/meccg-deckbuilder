@@ -13,6 +13,10 @@ describe('safeFileName', () => {
     expect(safeFileName('')).toBe('deck');
     expect(safeFileName('***')).toBe('_');
   });
+
+  it('preserves trailing punctuation as underscores, exactly as the single-deck export does', () => {
+    expect(safeFileName('Deck (1)')).toBe('Deck_1_');
+  });
 });
 
 describe('buildDeckListZip', () => {
@@ -42,12 +46,12 @@ describe('buildDeckListZip', () => {
     expect(await namesIn(bytes)).toEqual(['Draft-2.txt', 'Draft-3.txt', 'Draft.txt']);
   });
 
-  // Sanitising is what CREATES most collisions: "Deck #1" and "Deck (1)" are
+  // Sanitising is what CREATES most collisions: "Deck #1" and "Deck/1" are
   // one filename once punctuation is stripped.
   it('detects collisions after sanitising, not before', async () => {
     const bytes = await buildDeckListZip([
       { name: 'Deck #1', text: '1' },
-      { name: 'Deck (1)', text: '2' },
+      { name: 'Deck/1', text: '2' },
     ]);
     expect(await namesIn(bytes)).toEqual(['Deck_1-2.txt', 'Deck_1.txt']);
   });
