@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { UI_LANGUAGES, setLabel } from '../lib/lang.js';
 import { useT } from '../i18n.jsx';
 import { localize } from '../lib/rules/docText.js';
+import { sortFacetOptions } from '../lib/filter.js';
+import { TYPE_ORDER } from '../lib/constants.js';
 
 // Facet values come straight from cards.json, so they are English data --
 // "Hazard", "Minion" -- and showed as such in a French or Spanish UI, the last
@@ -17,7 +19,7 @@ const FACET_PREFIX = { types: 'panel.group', alignments: 'alignment', races: 'ra
 // Controlled facet dropdown: the parent owns which one is open, so opening one
 // closes the others. The menu sizes to its content (see .facet-menu) so long
 // options — e.g. artist names — stay readable.
-function FacetDropdown({ label, options, selected = [], onChange, open, onToggle, optionLabel }) {
+function FacetDropdown({ label, options, selected = [], onChange, open, onToggle, optionLabel, order }) {
   const active = selected.length > 0;
   function toggle(value) {
     const next = selected.includes(value) ? selected.filter((v) => v !== value) : [...selected, value];
@@ -26,7 +28,7 @@ function FacetDropdown({ label, options, selected = [], onChange, open, onToggle
   const show = optionLabel || ((v) => v);
   // Sorted on what is displayed, not on the raw data value: the menu is read,
   // so "Périls" belongs under P even though the value behind it is "Hazard".
-  const ordered = [...options].sort((a, b) => show(a).localeCompare(show(b)));
+  const ordered = sortFacetOptions(options, { order, label: show });
   return (
     <div className="facet">
       <button className={active ? 'active' : ''} onClick={onToggle}>
@@ -130,7 +132,7 @@ export default function FilterBar({ facets, setNames = {}, filters, onChange, la
   };
 
   // Render a facet dropdown wired to the single-open state.
-  const facet = (key, label) => (
+  const facet = (key, label, order) => (
     <FacetDropdown
       label={label}
       options={facets[key] || []}
@@ -139,6 +141,7 @@ export default function FilterBar({ facets, setNames = {}, filters, onChange, la
       open={openKey === key}
       onToggle={() => setOpenKey((k) => (k === key ? null : key))}
       optionLabel={optionLabel(key)}
+      order={order}
     />
   );
 
@@ -177,7 +180,7 @@ export default function FilterBar({ facets, setNames = {}, filters, onChange, la
       )}
       <div className="filterbar-bottom" style={isMobile && !filtersOpen ? { display: 'none' } : undefined}>
         {facet('sets', t('filter.set'))}
-        {facet('types', t('filter.type'))}
+        {facet('types', t('filter.type'), TYPE_ORDER)}
         {facet('alignments', t('filter.alignment'))}
         {facet('rarities', t('filter.rarity'))}
         {facet('artists', t('filter.artist'))}

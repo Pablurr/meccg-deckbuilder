@@ -87,7 +87,7 @@ export default function ExportDialog({ deck, cardsById, quantities, zones = { si
           (r.failures.length ? t('export.result.failures', { n: r.failures.length }) : '')
         );
       } else {
-        const text = buildDeckListText(cardsById, quantities, deck.name, listLang, { zones, notes: deck.notes });
+        const text = buildDeckListText(cardsById, quantities, deck.name, listLang, { zones, notes: deck.notes, mode: deck.mode, ruleset: deck.ruleset });
         downloadText(text, `${(deck.name || 'deck').replace(/[^a-zA-Z0-9_-]+/g, '_')}.txt`);
         setResult(t('export.result.list'));
       }

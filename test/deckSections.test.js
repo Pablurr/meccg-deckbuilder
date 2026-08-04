@@ -110,8 +110,17 @@ describe('markdown round-trip', () => {
     expect(back.notes).toEqual({ starting: '', resourceStrategy: '', hazardStrategy: '', other: '' });
   });
 
-  it('an unrecognized note heading falls back to the "other" field', () => {
+  // Pre-refactor, ANY "###" line was a field selector by markdown level alone
+  // and was swallowed even when its text meant nothing -- "Something New"
+  // used to vanish, falling back to 'other'. import/vocabulary.js's design
+  // deliberately dropped that: a heading is recognised by its normalized
+  // CONTENT, never by its level, so unrecognized "### Something New" is no
+  // longer a heading at all -- it survives as literal text in whichever
+  // field is active (here 'other', since the generic "## Notes" opener
+  // selects none), per document.js's own "nothing is lost" guarantee. See
+  // task-8-report.md for the trace that found this.
+  it('an unrecognized "###" line is not swallowed as a heading; it survives as note text', () => {
     const doc = parseDeckListDocument('# D\n\n## Notes\n\n### Something New\n\nhello\n');
-    expect(doc.notes.other).toBe('hello');
+    expect(doc.notes.other).toBe('### Something New\n\nhello');
   });
 });

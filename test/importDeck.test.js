@@ -16,6 +16,7 @@ const cards = [
   { id: 'AS-44', name: { en: 'All the Bells Ringing', fr: 'Sonner le tocsin' } },
   { id: 'TW-1', name: { en: 'Star-glass', fr: 'Verre-étoile' } },
   { id: 'DM-1', name: { en: 'Thrór’s Map', fr: 'Carte de Thrór' } },
+  { id: 'TW-350', name: { en: 'Bag End', fr: 'Cul-de-Sac' }, type: 'Site' },
 ];
 
 describe('parseDeckList', () => {
@@ -160,6 +161,28 @@ describe('parseDeckListDocument / importDeckList (reachable path — legacy comp
     expect(quantities).toEqual({ 'AS-1': 1, 'AS-58': 2, 'AS-44': 3 });
     expect(zones).toEqual({ pool: {}, sideboard: {} });
     expect(unmatched.map((l) => l.name)).toEqual(['glamour']);
+  });
+
+  it('never lets a site into the sideboard or the pool, whatever the paste says', () => {
+    // Belt to the vocabulary's braces: even a list that spells the section
+    // out ("## Sideboard" then a site by name) cannot produce an illegal
+    // deck, because the zone a card may occupy is a rule, not a heading.
+    const sb = importDeckList(['## Sideboard', '1x Bag End', '1x burat'].join('\n'), cards);
+    expect(sb.zones.sideboard).toEqual({ 'AS-1': 1 });
+    expect(sb.quantities).toEqual({ 'TW-350': 1 });
+
+    const pool = importDeckList(['## Pool', '1x Bag End'].join('\n'), cards);
+    expect(pool.zones.pool).toEqual({});
+    expect(pool.quantities).toEqual({ 'TW-350': 1 });
+  });
+
+  it('reads a "Sites" section as the location deck, not as the section above it', () => {
+    const { quantities, zones } = importDeckList(
+      ['## Sideboard', '1x burat', '## Sites', '1x Bag End'].join('\n'),
+      cards,
+    );
+    expect(zones.sideboard).toEqual({ 'AS-1': 1 });
+    expect(quantities).toEqual({ 'TW-350': 1 });
   });
 
   it('matches a French name through the reachable path', () => {

@@ -151,7 +151,12 @@ export default function App() {
   // the old importQuantities (quantities always fully replaced, never
   // merged) — zones/notes default to empty so a legacy paste (no sections,
   // no ## Notes) clears them rather than leaving stale state behind.
-  function importDeckData({ quantities: imported = {}, zones: importedZones, notes: importedNotes }) {
+  //
+  // `target: 'new'` builds a fresh deck rather than overwriting the open one:
+  // pasting a forum list is usually "make me a deck from this", and a failed
+  // import must not destroy work in progress. `target: 'replace'` keeps the
+  // open deck's name -- nobody's deck gets renamed under their feet.
+  function importDeckData({ quantities: imported = {}, zones: importedZones, notes: importedNotes, name, mode, ruleset, target = 'replace' }) {
     const clamp = (map) => {
       const out = {};
       for (const [id, count] of Object.entries(map || {})) out[id] = Math.max(1, count);
@@ -162,7 +167,15 @@ export default function App() {
       sideboard: clamp(importedZones && importedZones.sideboard),
       pool: clamp(importedZones && importedZones.pool),
     });
-    setDeck((prev) => ({ ...prev, notes: { ...EMPTY_NOTES, ...(importedNotes || {}) } }));
+    setDeck((prev) => normalizeDeck({
+      ...prev,
+      // A new deck drops the previous id so saving creates a record instead of
+      // overwriting one.
+      ...(target === 'new' ? { id: null, name: name || t('app.newDeck'), backAssignments: {} } : {}),
+      mode,
+      ruleset,
+      notes: { ...EMPTY_NOTES, ...(importedNotes || {}) },
+    }));
     setShowImport(false);
   }
 
@@ -328,6 +341,8 @@ export default function App() {
         <ImportDialog
           cards={cards}
           lang={uiLang}
+          deck={deck}
+          setNames={setNames}
           onClose={() => setShowImport(false)}
           onImport={importDeckData}
         />

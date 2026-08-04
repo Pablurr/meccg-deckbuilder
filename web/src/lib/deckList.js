@@ -3,6 +3,10 @@
 //
 //   # Deck name
 //
+//   ## Metadata
+//
+//   - Mode: Deckbuilding
+//
 //   ## Notes
 //
 //   ### Starting notes
@@ -24,14 +28,31 @@
 
 import { cardName } from './lang.js';
 import { deckSections } from './export/deckSections.js';
+import { TYPE_ORDER } from './constants.js';
 
-export const TYPE_ORDER = ['Character', 'Resource', 'Hazard', 'Site', 'Region'];
+export { TYPE_ORDER } from './constants.js';
 
 // Canonical (English) section/group/note headings — must match the reverse
 // lookups in importDeck.js exactly.
 export const SECTION_TITLES = { pool: 'Pool', play: 'Play deck', locations: 'Locations', sideboard: 'Sideboard' };
 export const GROUP_TITLES = { avatars: 'Avatars', characters: 'Characters', resources: 'Resources', hazards: 'Hazards', sites: 'Sites', regions: 'Regions', other: 'Other' };
 export const NOTE_TITLES = { starting: 'Starting notes', resourceStrategy: 'Resource strategy', hazardStrategy: 'Hazard strategy', other: 'Other notes' };
+
+// Deck metadata, emitted right under the title so a pasted list can restore
+// the mode/side/length the deck was built under.
+//
+// The heading is "Metadata" and NOT "Deck": the import vocabulary already
+// reads the bare word "deck" as the play deck, which is how community lists
+// use it, and one reading per word is what keeps that vocabulary a flat table.
+export const METADATA_TITLE = 'Metadata';
+export const META_KEYS = { mode: 'Mode', side: 'Side', length: 'Game length' };
+
+// Canonical English values, like every heading here and for the same reason:
+// a list exported in French must re-import. The parser additionally accepts
+// the localized labels and the raw ids, because a human will write them.
+const META_MODE = { freeform: 'Freeform', deckbuilding: 'Deckbuilding' };
+const META_SIDE = { wizard: 'Wizard', ringwraith: 'Ringwraith', 'fallen-wizard': 'Fallen-wizard', balrog: 'Balrog' };
+const META_LENGTH = { starter: 'Starter', standard: 'Standard', long: 'Long', campaign: 'Campaign' };
 
 // Bucket a { card, qty } entry list by TYPE_ORDER, sorted by name within each
 // group, dropping empty groups. Shared by the deck panel's zone tabs (play,
@@ -56,8 +77,19 @@ export function buildGroups(entries, lang) {
 // under `## Notes` is prose for a human to read — see importDeck.js for how
 // the parser is kept from ever mistaking a note line (e.g. "3x Gandalf is
 // the plan") for a card entry.
-export function buildDeckListText(cardsById, quantities = {}, deckName = 'Deck', lang = 'fr', { zones = { sideboard: {}, pool: {} }, notes = {} } = {}) {
+export function buildDeckListText(cardsById, quantities = {}, deckName = 'Deck', lang = 'fr', { zones = { sideboard: {}, pool: {} }, notes = {}, mode = 'freeform', ruleset = null } = {}) {
   const lines = [`# ${deckName}`, ''];
+
+  // Always emitted, even in freeform: a block that is sometimes absent is a
+  // conditional the reader has to reconstruct, and "Mode: Freeform" is two
+  // lines that make the round trip total.
+  lines.push(`## ${METADATA_TITLE}`, '');
+  lines.push(`- ${META_KEYS.mode}: ${META_MODE[mode] || META_MODE.freeform}`);
+  if (mode === 'deckbuilding' && ruleset) {
+    if (META_SIDE[ruleset.side]) lines.push(`- ${META_KEYS.side}: ${META_SIDE[ruleset.side]}`);
+    if (META_LENGTH[ruleset.length]) lines.push(`- ${META_KEYS.length}: ${META_LENGTH[ruleset.length]}`);
+  }
+  lines.push('');
 
   const noteEntries = Object.entries(NOTE_TITLES).filter(([field]) => (notes[field] || '').trim());
   if (noteEntries.length) {

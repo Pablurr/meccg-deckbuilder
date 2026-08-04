@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildDeckListText } from '../web/src/lib/deckList.js';
+import { buildDeckListText, METADATA_TITLE, META_KEYS } from '../web/src/lib/deckList.js';
 
 const cardsById = new Map([
   ['AS-1', { id: 'AS-1', type: 'Character', attributes: {}, name: { en: 'Bûrat', fr: 'Bûrat' } }],
@@ -14,6 +14,10 @@ describe('buildDeckListText', () => {
     expect(text).toBe(
       [
         '# My Deck',
+        '',
+        '## Metadata',
+        '',
+        '- Mode: Freeform',
         '',
         '## Play deck',
         '',
@@ -88,6 +92,10 @@ describe('buildDeckListText', () => {
       [
         '# Full Deck',
         '',
+        '## Metadata',
+        '',
+        '- Mode: Freeform',
+        '',
         '## Notes',
         '',
         '### Starting notes',
@@ -123,4 +131,37 @@ describe('buildDeckListText', () => {
       ].join('\n') + '\n'
     );
   });
+});
+
+it('buildDeckListText: a deckbuilding deck carries its mode, side and length in canonical English', () => {
+  const text = buildDeckListText(new Map(), {}, 'Mon deck', 'fr', {
+    mode: 'deckbuilding',
+    ruleset: { side: 'balrog', length: 'standard', tournament: true, ruleOverrides: {} },
+  });
+  expect(text).toContain('## Metadata');
+  expect(text).toContain('- Mode: Deckbuilding');
+  expect(text).toContain('- Side: Balrog');
+  expect(text).toContain('- Game length: Standard');
+  // tournament is deliberately out: the import dialog cannot set it.
+  expect(text).not.toContain('Tournament');
+});
+
+it('buildDeckListText: a freeform deck still carries a block, with the mode alone', () => {
+  const text = buildDeckListText(new Map(), {}, 'Mon deck', 'fr', { mode: 'freeform', ruleset: null });
+  expect(text).toContain('## Metadata');
+  expect(text).toContain('- Mode: Freeform');
+  expect(text).not.toContain('- Side:');
+});
+
+it('buildDeckListText: the block sits between the title and the notes', () => {
+  const text = buildDeckListText(new Map(), {}, 'Mon deck', 'fr', {
+    mode: 'freeform', ruleset: null, notes: { starting: 'garder Bûrat' },
+  });
+  expect(text.indexOf('# Mon deck')).toBeLessThan(text.indexOf('## Metadata'));
+  expect(text.indexOf('## Metadata')).toBeLessThan(text.indexOf('## Notes'));
+});
+
+it('the metadata heading is not "Deck", which the vocabulary already reads as the play deck', () => {
+  expect(METADATA_TITLE).toBe('Metadata');
+  expect(META_KEYS).toEqual({ mode: 'Mode', side: 'Side', length: 'Game length' });
 });

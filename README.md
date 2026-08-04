@@ -59,10 +59,20 @@ npx wrangler pages deploy web/dist
    personnages et les ressources héros/séide quand tu joues **sorcier déchu**), et **aucune
    limite** pour les **havres** ni pour les sites de sorcier déchu de ce même camp. Ces
    plafonds se comptent sur **l'ensemble des zones** réunies, pas zone par zone.
-3. **Importer une liste** : bouton « Importer » → colle une liste `Nx nom de carte`
-   (accents ignorés, nom complet). L'écran d'analyse signale les cartes introuvables et, quand
-   un nom correspond à plusieurs cartes (ex. version héros / serviteur), propose un menu pour
-   choisir la bonne. L'import **remplace** la sélection courante.
+3. **Importer une liste** : bouton « Importer » → colle une liste, puis « Analyser ». Les
+   sections (pioche, talon, réserve, lieux, sites, régions, notes) sont reconnues **dans
+   n'importe quel ordre**, en markdown ou en texte brut, et en **français, anglais ou
+   espagnol** ; une carte finit toujours dans une zone où elle a le droit d'être, même si
+   la liste collée la range ailleurs (un site listé sous « Talon » rejoint les sites). La
+   quantité peut se lire **devant ou derrière** le nom (`3x Bûrat`, `Bûrat - 3`, `Bûrat
+   (3)`) ; une parenthèse après le nom sert aussi à désambiguïser (`Angmarim (Hero)`,
+   `Bûrat (AS)`) quand plusieurs cartes portent le même nom (accents ignorés, nom complet
+   requis). Tout ce qui n'est ni un titre de section ni une ligne de carte est conservé
+   comme note. Une fois l'analyse faite, choisis la **cible** (nouveau deck ou remplacement
+   du deck ouvert), le **mode** et, en construction de deck, le **camp** et la **longueur de
+   partie** — préremplis depuis le bloc `## Metadata` du texte collé s'il y en a un, sinon
+   depuis le deck ouvert. Les cartes ambiguës proposent un menu de choix, et les cartes
+   illégales pour le camp choisi sont marquées (jamais bloquées).
 4. **Sauvegarder** : « Mes decks » → nommer et enregistrer. Les decks sont stockés dans le
    `localStorage` du navigateur (pas de compte, pas de synchronisation entre appareils). Pour
    sauvegarder/transférer un deck, utilise l'export « Deck list (texte) » (voir plus bas) : le
@@ -85,19 +95,20 @@ Chaque deck a un **mode**, choisi à sa création et modifiable ensuite via « R
 
 ### Zones
 
-Un deck a jusqu'à quatre zones : le **talon** (Personnage/Ressource/Péril), le **deck de sites**
-(Site/Région), une **réserve** (sideboard) optionnelle et, pour les camps qui en utilisent un, un
-**pool de départ** de personnages et d'objets mineurs mis de côté avant la partie. Le tiroir du
-bas affiche des onglets par zone avec compteurs et plafonds (ex. `Pool 3 / 10`), et déposer une
-carte sur un onglet l'y déplace. Dans le navigateur de cartes, chaque carte affiche un compteur
-par zone ; en mode Construction de deck, un filtre de **légalité** (activé par défaut) masque les
-cartes non éligibles au camp choisi (la longueur de partie n'affecte que la limite de réserve, pas
-la légalité d'une carte) — bascule « Afficher les cartes illégales » pour tout voir quand même.
+Un deck a jusqu'à quatre zones : la **pioche** (Personnage/Ressource/Péril), le **deck de
+sites** (Site/Région), un **talon** (sideboard) optionnel et, pour les camps qui en utilisent
+un, une **réserve** de personnages et d'objets mineurs mis de côté avant la partie (le pool de
+départ). Le tiroir du bas affiche des onglets par zone avec compteurs et plafonds (ex.
+`Réserve 3 / 10`), et déposer une carte sur un onglet l'y déplace. Dans le navigateur de
+cartes, chaque carte affiche un compteur par zone ; en mode Construction de deck, un filtre de
+**légalité** (activé par défaut) masque les cartes non éligibles au camp choisi (la longueur
+de partie n'affecte que la limite de talon, pas la légalité d'une carte) — bascule « Afficher
+les cartes illégales » pour tout voir quand même.
 
 ### Avertissements de règles
 
 En mode Construction de deck, chaque règle vérifiée signale les problèmes en direct (trop
-d'exemplaires d'une carte, taille de talon hors plage, pool de départ hors limites, etc.) en
+d'exemplaires d'une carte, taille de talon hors plage, réserve hors limites, etc.) en
 nommant la carte concernée. **Rien n'est jamais bloqué.** Par deck, tu peux **ignorer une règle**
 (elle ne sera plus signalée pour ce deck précis) ou **la signaler** (ouvre un ticket GitHub
 pré-rempli si tu penses qu'elle est fausse).
@@ -200,6 +211,12 @@ zone (pool, réserve) contient des cartes, elle apparaît en section (`## Pool`,
 `## Locations`, `## Sideboard`, dans cet ordre — le même ordre que le ZIP et le PDF) et les notes
 sont reprises en tête du fichier sous `## Notes` ; ré-importer ce fichier restaure les cartes
 **dans leurs zones d'origine** ainsi que les notes.
+
+Juste sous le titre, un bloc `## Metadata` indique le **mode** du deck (Freeform ou
+Deckbuilding) et, en construction de deck, le **camp** et la **longueur de partie** — ces
+valeurs préremplissent la fenêtre d'import quand ce fichier est recollé. La sévérité
+(tournoi/casual) n'y figure pas : la fenêtre d'import ne propose aucun réglage pour la
+restaurer.
 
 ## Langue de l'interface
 
