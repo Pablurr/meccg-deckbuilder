@@ -40,6 +40,12 @@ export default function ZoneTabs({ tabs, active, onSelect, onDrop, labels, count
             // Undefined for every tab whose label is already its full name,
             // which renders no attribute at all rather than an empty tooltip.
             title={titles && titles[id]}
+            // WCAG 2.5.3 -- the accessible name must CONTAIN the visible label,
+            // or voice control stops matching what the user can actually read on
+            // the pill. So the long name is appended to the short one rather
+            // than replacing it. Undefined when there is no long name, which
+            // leaves the button's own text as its accessible name.
+            aria-label={titles && titles[id] ? `${labels[id]} — ${titles[id]}` : undefined}
             onClick={() => onSelect(id)}
             onDragOver={(e) => e.preventDefault()}
             onDragEnter={() => setDragOver(id)}
