@@ -9,7 +9,7 @@ import { isDropAllowed, resolveDropTarget } from '../lib/rules/dropTargets.js';
 import { moveTargets } from '../lib/rules/zones.js';
 import { LENGTHS, SIDEBOARD_FW_MAX } from '../lib/rules/formats.js';
 import { SIDES } from '../lib/rules/sides.js';
-import { backGroupForType } from '../lib/deck.js';
+import { backGroupForType, totalCopies } from '../lib/deck.js';
 import { buildGroups } from '../lib/deckList.js';
 import { REPORT_ISSUES_URL } from '../lib/constants.js';
 import { COE, RULE_BY_ID } from '../lib/rules/catalog.js';
@@ -280,6 +280,15 @@ export default function DeckPanel({
   const sbMax = deck && deck.ruleset ? LENGTHS[deck.ruleset.length].sideboardMax : null;
   const poolMax = deck && deck.ruleset ? SIDES[deck.ruleset.side].pool.maxCharacters : null;
 
+  // The header's own count. totalCopies, not counts.total: counts.total is the
+  // PLAY DECK, which is what the three pills that used to sit here reported --
+  // and reporting a partial number under the word "Total", beside zone tabs
+  // that each report their own, is what made them worth removing.
+  const deckTotal = totalCopies(quantities, zones);
+  // Same derivation and same class as DeckManager's list rows, so the badge a
+  // deck wears in the list is the badge it wears open. Freeform has no side.
+  const sideKey = deckbuilding && deck.ruleset ? deck.ruleset.side : 'freeform';
+
   const tabCounts = {
     play: counts.byGroup.playdeck,
     location: counts.byGroup.locationdeck,
@@ -347,7 +356,10 @@ export default function DeckPanel({
       <div className="deckpanel collapsed">
         <button className="deckpanel-toggle" onClick={onToggleCollapsed} aria-label={t('panel.expand')}>
           <span className="chevron">‹</span>
-          <span className="deckpanel-badge">{counts.total}</span>
+          {/* The same number the open header shows: two totals for one deck,
+              differing by whichever zones one of them forgot, is worse than
+              either. */}
+          <span className="deckpanel-badge">{deckTotal}</span>
         </button>
       </div>
     );
@@ -365,7 +377,9 @@ export default function DeckPanel({
             <span className="chevron">›</span>
           </button>
         )}
-        <b>{t('panel.title')}</b>
+        <b>{deck && deck.name ? t('panel.titleNamed', { name: deck.name }) : t('panel.title')}</b>
+        <span className={`side-badge ${sideKey}`}>{t(`side.${sideKey}`)}</span>
+        <span className="muted deckpanel-total">({deckTotal})</span>
         {!asSheet && (
           <button
             className="deckpanel-max"
@@ -374,11 +388,6 @@ export default function DeckPanel({
             title={isMaxed ? t('panel.restore') : t('panel.maximize')}
           >{isMaxed ? '⇥' : '⤢'}</button>
         )}
-        <div className="deckpanel-counts">
-          <span className="count-pill">{t('drawer.total')} <b>{counts.total}</b></span>
-          <span className="count-pill">{t('drawer.playdeck')} <b>{counts.byGroup.playdeck}</b></span>
-          <span className="count-pill">{t('drawer.location')} <b>{counts.byGroup.locationdeck}</b></span>
-        </div>
       </div>
 
       <div className="ztabs-row">

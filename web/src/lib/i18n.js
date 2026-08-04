@@ -94,6 +94,7 @@ export const translations = {
 
     // Deck panel (right)
     'panel.title': 'Deck',
+    'panel.titleNamed': 'Deck « {name} »',
     'panel.expand': 'Déplier le deck',
     'panel.collapse': 'Replier le deck',
     'panel.maximize': 'Agrandir le volet',
@@ -467,6 +468,7 @@ export const translations = {
     'warn.missingImage': '{n} card(s) without a source image.',
 
     'panel.title': 'Deck',
+    'panel.titleNamed': 'Deck "{name}"',
     'panel.expand': 'Expand deck',
     'panel.collapse': 'Collapse deck',
     'panel.maximize': 'Maximize panel',
@@ -835,6 +837,7 @@ export const translations = {
 
     // Deck panel (right)
     'panel.title': 'Mazo',
+    'panel.titleNamed': 'Mazo «{name}»',
     'panel.expand': 'Expandir mazo',
     'panel.collapse': 'Contraer mazo',
     'panel.maximize': 'Maximizar panel',
