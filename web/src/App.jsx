@@ -65,7 +65,11 @@ export default function App() {
 
   // When the deck empties the mobile sheet unmounts; reset its flag so re-adding
   // a card doesn't pop the sheet back open unprompted.
-  const deckEmpty = Object.keys(quantities).length === 0 && Object.keys(zones.sideboard).length === 0 && Object.keys(zones.pool).length === 0;
+  //
+  // Asked of totalCopies rather than by listing the zones here: a zone added
+  // later and forgotten in this expression would make its cards unreachable on
+  // mobile, which is exactly the bug totalCopies' own comment records.
+  const deckEmpty = totalCopies(quantities, zones) === 0;
   useEffect(() => { if (deckEmpty) setDeckSheetOpen(false); }, [deckEmpty]);
 
   useEffect(() => {
@@ -114,8 +118,8 @@ export default function App() {
     setQuantities((prev) => applyDelta(prev, id, delta, enforce ? roomFor(id, 'deck', prev, zones) : Infinity));
   }
 
-  // zone is 'deck' | 'sideboard' | 'pool'; 'deck' routes to the existing
-  // quantities map rather than being a zone of its own.
+  // zone is 'deck' | 'sideboard' | 'pool' | 'sideboardFw'; 'deck' routes to the
+  // existing quantities map rather than being a zone of its own.
   function changeZoneQty(zone, id, delta, { enforce = true } = {}) {
     if (zone === 'deck') return changeQty(id, delta, { enforce });
     setZones((prev) => {
@@ -242,7 +246,7 @@ export default function App() {
   const cardIds = expandQuantities(quantities);
   const counts = deckCounts(cardsById, cardIds);
   const warnings = deckWarnings(cardsById, cardIds, deck.backAssignments, defaultBacks);
-  const hasSelection = counts.total > 0 || Object.keys(zones.sideboard).length > 0 || Object.keys(zones.pool).length > 0;
+  const hasSelection = totalCopies(quantities, zones) > 0;
 
   return (
     <I18nProvider lang={textLang}>
