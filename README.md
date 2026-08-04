@@ -74,10 +74,14 @@ npx wrangler pages deploy web/dist
    partie** — préremplis depuis le bloc `## Metadata` du texte collé s'il y en a un, sinon
    depuis le deck ouvert. Les cartes ambiguës proposent un menu de choix, et les cartes
    illégales pour le camp choisi sont marquées (jamais bloquées).
-4. **Sauvegarder** : « Mes decks » → nommer et enregistrer. Les decks sont stockés dans le
-   `localStorage` du navigateur (pas de compte, pas de synchronisation entre appareils). Pour
-   sauvegarder/transférer un deck, utilise l'export « Deck list (texte) » (voir plus bas) : le
-   fichier `.txt` produit est ré-importable via « Importer ».
+4. **Sauvegarder** : le bouton **« Enregistrer »** en tête du panneau de deck s'active dès
+   qu'une modification n'a pas encore été écrite, et se grise à nouveau une fois enregistrée.
+   Tant qu'aucun deck n'a été créé, il ouvre « Mes decks », où l'on nomme le deck avant de le
+   créer. Les decks sont stockés dans le `localStorage` du navigateur (pas de compte, pas de
+   synchronisation entre appareils). Pour sauvegarder/transférer un deck, utilise l'export
+   « Deck list (texte) » (voir plus bas) : le fichier `.txt` produit est ré-importable via
+   « Importer ». Depuis « Mes decks », plusieurs decks cochés s'exportent d'un coup, en une
+   seule archive.
 5. **Exporter** : « Exporter » ouvre la fenêtre d'export, avec les formats ci-dessous. Les dos
    sont pré-remplis avec les défauts du projet (voir `web/public/card-backs/`) et peuvent être
    remplacés par une image perso (stockée avec le deck, en `localStorage`).
@@ -129,9 +133,10 @@ pré-rempli si tu penses qu'elle est fausse).
 dont elle vient. Elles sont donc **toutes actives par défaut**. Quelques-unes sont explicitement
 marquées comme des **interprétations** (une lecture plus stricte que la lettre du texte) ou comme
 des **avis maison** — ces derniers n'affichent aucune citation, justement parce qu'ils ne
-viennent pas de la source. La page **Règles et modes** (bouton `?` en haut) documente chaque
-règle — description, sévérité, statut, clause citée — à partir des mêmes données que le
-validateur, et la case à cocher de chaque ligne permet d'en **désactiver** une pour ce deck si tu
+viennent pas de la source. La page **Aide** (bouton `?` en haut) se lit en deux parties :
+« Utiliser l'application », qui décrit ce que l'app sait faire, puis « Règles », qui documente
+chaque règle — description, sévérité, statut, clause citée — à partir des mêmes données que le
+validateur. La case à cocher de chaque ligne permet d'en **désactiver** une pour ce deck si tu
 n'es pas d'accord avec elle.
 
 ### Notes
@@ -274,7 +279,7 @@ npm test
 
 - `web/` — front Vite + React (toute l'app, y compris la logique d'export en `web/src/lib/export/`)
 - `web/src/lib/rules/` — moteur de règles pur (validation en mode Construction de deck) ;
-  chaque règle cite sa clause, voir la page « Règles et modes » dans l'app
+  chaque règle cite sa clause, voir la partie « Règles » de la page d'aide dans l'app
 - `web/public/` — assets statiques servis tels quels : `cards.json`, `card-backs/`,
   `proxy-patches/`, `_redirects`
 - `docs/superpowers/` — specs et plans d'implémentation, datés

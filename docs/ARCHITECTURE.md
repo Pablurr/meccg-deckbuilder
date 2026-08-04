@@ -7,17 +7,18 @@
 > Public : LLM. Style : dense, factuel, pas de prose d'introduction.
 > Doc utilisateur : [`README.md`](../README.md). Ce fichier-ci décrit le *comment* et le *pourquoi*.
 
-**Dernière mise à jour : 2026-08-04** — talon contre Sorcier déchu (règle 1.6.1) : quatrième
-zone `sideboardFw`, dix cartes préselectionnées en plus du talon ordinaire, offerte partout
-où le talon l'est déjà et jamais aux sites ; plafond de copies d'avatar au talon lu **combiné**
-sur les deux talons (interprétation propriétaire) ; panneau de deck refondu — en-tête devenu
-nom du deck + pastille de camp + total réel, curseur de zoom retiré au profit de la règle CSS
-`.grid` déjà utilisée par le sélecteur de cartes
-(état : branche `deck-panel-fw-sideboard`, dix commits `103737f..bc07b80`) — **plus la revue
-finale de branche qui a suivi** : `emptyZones()` (`deck.js`) comme unique façon de construire
-un `zones` vide, qui referme les cinq trouvailles Critical (import de `sideboardFw` qui
-plantait toute l'app, cartes importées perdues sans avertissement, glisser-déposer qui
-plantait sur un deck neuf) plus quatre trouvailles Important et cinq Minor — voir §15.
+**Dernière mise à jour : 2026-08-04** — six changements de confort
+(branche `qol-minor-features`, `8cf904e..2e4ab4a`) : `deckSignature`/`deckPayload`
+(`deck.js`) donnent au deck ouvert la capacité de dire s'il diffère de ce qui est enregistré,
+d'où un **bouton Enregistrer dans l'en-tête du panneau** piloté par `savedSignature` (§4, §5) ;
+**export massif** de plusieurs deck lists en une archive (`deckListZip.js`, §7) ; les **deux
+talons** deviennent des onglets optionnels qui s'affichent en invitation tant qu'ils sont vides
+(`OPTIONAL_TABS`/`tabPresentation`, §10) ; la page « ? » devient une **page d'aide en deux
+parties** (`FeaturesDoc.jsx` + `RulesDoc.jsx`, §10) ; lien **« Suggérer une amélioration »**
+dans la rangée du logo (§10) ; et le garde de terminologie FR **perd sa dernière exemption** —
+`GLOSSARY_KEYS` supprimé, toute chaîne française y est désormais soumise (§9). Deux pièges
+trouvés en revue et consignés : la **renommage** d'un deck ouvert certifiait à tort un accord
+disque/mémoire (§5), et `zip.file()` **écrase silencieusement** un chemin dupliqué (§7).
 
 ---
 
@@ -114,7 +115,7 @@ web/src/            toute l'application
     export/         pipeline d'export pur (10 modules, aucun import React)
     *.js            deck, deckStore, filter, importDeck, lang, proxy, tags, zoom…
 web/public/         servi tel quel : cards.json, card-backs/, proxy-patches/, _redirects
-test/               33 fichiers Vitest, 619 tests
+test/               35 fichiers Vitest, 637 tests
 docs/superpowers/   specs et plans d'implémentation, datés (historique des intentions)
 scripts/            make_proxy_patches.py (génération des patchs proxy, hors build)
 ```
@@ -265,6 +266,32 @@ lecture. Toute évolution du schéma **doit** passer par cette fonction.
   n'exige d'éditer qu'`emptyZones()`** — un `grep` de `sideboard: {}` dans `web/src` après
   coup doit ne renvoyer que sa propre définition.
 
+### `deckPayload()` et `deckSignature()` (`deck.js`, 2026-08-04)
+
+**`deckPayload({ deck, cardIds, quantities, zones, name })` est la définition unique de ce
+qu'un enregistrement contient.** Les deux chemins de sauvegarde — le bouton de l'en-tête du
+panneau (`App.saveDeck`) et le formulaire de `DeckManager.save()` — la traversent, si bien
+qu'un champ ajouté là atteint `localStorage` depuis l'un comme depuis l'autre. C'est
+précisément ce que les deux littéraux écrits à la main qu'elle remplace ne pouvaient pas
+promettre : ils listaient les mêmes neuf champs deux fois, et rien n'obligeait la deuxième
+liste à suivre la première.
+
+**`deckSignature({ deck, quantities, zones })` répond à « ce deck diffère-t-il de ce qui est
+sur le disque ? »** — c'est elle qui allume ou éteint le bouton Enregistrer (§5). Deux points
+sont indispensables et aucun ne se déduit du code :
+
+- **Les clés d'objet sont triées à *tous* les niveaux** (`stable()`). `JSON.stringify` suit
+  l'**ordre d'insertion** : deux decks portant exactement les mêmes cartes, ajoutées dans un
+  ordre différent, produiraient deux textes différents, et un deck qu'on vient d'ouvrir sans
+  y toucher se lirait comme modifié. Le tri doit rester **récursif** — `quantities` et chaque
+  map de `zones` sont des objets dont les clés arrivent dans l'ordre des clics de
+  l'utilisateur, donc c'est en profondeur que le problème vit, pas au premier niveau.
+- **`id`, `order` et `updatedAt` sont délibérément exclus.** Aucun des trois n'est modifiable
+  depuis l'écran de deck, et les inclure ferait lire le deck comme modifié à l'instant même
+  où le stockage renvoie l'`id` ou l'horodatage qu'il vient d'attribuer — c'est-à-dire juste
+  après une sauvegarde réussie, exactement quand le bouton doit s'éteindre. Sont couverts :
+  `name`, `mode`, `ruleset`, `notes`, `backAssignments`, `quantities`, `zones`.
+
 ### Pipeline d'import (`web/src/lib/import/`, 2026-08-03)
 
 ```
@@ -368,9 +395,10 @@ descend en props**. Le seul contexte React est `I18nContext`.
 
 **États principaux de `App.jsx` :** `cards`, `facets`, `defaultBacks`, `deck`, `quantities`,
 `zones`, `filters`, `uiLang`, `proxyMode`, `panelCollapsed`, `panelWidth`,
-`previewCard`, `deckSheetOpen`, les booléens de modales (`showManager`, `showSetup`,
-`showExport`, `showImport`, `showDocs`) et `error`. (`cardZoom` a disparu avec le curseur de
-zoom, §10/§12 ; la clé `localStorage` correspondante reste orpheline, §4/§14.)
+`previewCard`, `deckSheetOpen`, `savedSignature`, `saveState`, les booléens de modales
+(`showManager`, `showSetup`, `showExport`, `showImport`, `showDocs`) et `error`. (`cardZoom` a
+disparu avec le curseur de zoom, §10/§12 ; la clé `localStorage` correspondante reste
+orpheline, §4/§14.)
 
 **Dérivés (`useMemo`) :** `cardsById`, `derivedFacets`, `capCtx` (contexte de plafonds de
 copies, `null` hors mode deckbuilding), `ruleWarnings`.
@@ -387,6 +415,44 @@ remplace la sélection courante (jamais de fusion — sémantique héritée de l
 `{}` et prend `name` (ou `app.newDeck` à défaut), pour que la sauvegarde crée un enregistrement
 au lieu d'écraser celui en cours — coller une liste de forum, c'est en général « fais-moi un
 deck avec ça », et un import raté ne doit pas détruire un travail en cours.
+
+### `savedSignature` et `saveState` (2026-08-04)
+
+`savedSignature` est la signature (§4) de **ce qui est sur le disque** pour le deck ouvert.
+`dirty = deckSignature({ deck, quantities, zones }) !== savedSignature` est recalculé à chaque
+rendu et pilote le bouton Enregistrer du panneau (§10). `saveState` vaut `'idle'`, `'saving'`,
+`'saved'` ou **le message d'erreur lui-même** — c'est une chaîne, pas un énuméré fermé, ce qui
+évite un second état parallèle pour porter l'erreur.
+
+**`savedSignature` n'est réécrite qu'à quatre moments**, et la liste est fermée :
+
+1. **au montage** (l'initialiseur du `useState`, sur le deck neuf par défaut) ;
+2. dans **`loadDeckIntoState`** — on vient de lire l'enregistrement, la mémoire *est* le disque ;
+3. dans **`newDeck`** — un deck vide n'a rien à enregistrer ;
+4. après une **sauvegarde réussie**, ce qui recouvre deux sites d'appel : `saveDeck()`
+   (le bouton de l'en-tête) et `DeckManager.onSaved` (le formulaire de la fenêtre « Mes decks »).
+
+**Un import n'en fait délibérément pas partie.** `importDeckData` remet `saveState` à `'idle'`
+mais **ne touche pas** `savedSignature` : le travail importé n'est pas sur le disque, donc le
+deck doit rester *dirty* et le bouton allumé. C'est l'invariant à protéger — **un cinquième
+site de réécriture désarme silencieusement le bouton Enregistrer**, et le symptôme (« j'ai
+cliqué Enregistrer, il était déjà gris ») ne pointe vers rien dans la pile.
+
+**Le piège du renommage (trouvé en revue, 2026-08-04).** `DeckManager.commitRename` écrit le
+nouveau nom **directement dans le stockage** (`api.updateDeck(id, { name })`), sans rien
+déplacer dans `App`. Avant le correctif, renommer le deck ouvert laissait donc l'en-tête
+afficher **l'ancien** nom avec le bouton **grisé** — c'est-à-dire l'application affirmant que
+disque et mémoire concordaient alors qu'ils divergeaient — et la sauvegarde suivante réécrivait
+`deck.name`, **écrasant le renommage**. Le correctif ajoute le callback `onRenamed(saved)`, qui
+met à jour le nom *et* refait la ligne de base.
+
+> **Cette ligne de base est reconstruite depuis l'enregistrement rendu par le stockage,
+> jamais depuis l'état vivant.** `onRenamed` lit `saved.quantities` et
+> `normalizeDeck(saved).zones`, pas les `quantities`/`zones` de `App`. Repartir de l'état
+> vivant aurait certifié comme enregistrées des **modifications de cartes non sauvegardées** —
+> un bug pire que celui qu'on corrigeait, parce qu'il fait perdre du travail au lieu
+> d'afficher un mauvais nom. Un renommage est une écriture disque partielle : seule la partie
+> réellement écrite a le droit d'entrer dans la ligne de base.
 
 **Deux exceptions à connaître :**
 
@@ -597,6 +663,7 @@ Modules purs, sans React. `api.js` est le seul orchestrateur.
 | `bleedOps.js` | Géométrie d'extension des bords |
 | `pngDpi.js` | `withPngDpi` — injection du chunk `pHYs` |
 | `zip.js` | `buildDeckZip` — arborescence + manifeste |
+| `deckListZip.js` | `safeFileName`, `buildDeckListZip` — une deck list texte par deck, en une archive |
 | `pdf.js` | `buildSheetPdf` — planches pdf-lib |
 | `sheetLayout.js` | `PAGE_SIZES`, `sheetLayout`, `backColumnIndex`, `chunk` |
 | `backGroups.js` | `backGroupForType`, `slug` |
@@ -692,6 +759,45 @@ promettre que ce qu'il tient vraiment. **Le titre est « Metadata » et non « D
 vocabulaire de l'import (`lib/import/vocabulary.js`) lit déjà le mot nu « deck » comme visant
 le play deck (voir §4), et une seule lecture par mot est ce qui garde ce vocabulaire une table
 plate plutôt qu'une résolution contextuelle.
+
+### Export massif de deck lists (`deckListZip.js`, 2026-08-04)
+
+`buildDeckListZip(entries)` empaquette un `.txt` par deck, chacun produit par
+`buildDeckListText` (§7 ci-dessus) — **réutilisé, jamais réécrit** : un second sérialiseur
+divergerait du premier sans que rien ne le signale, et ces `.txt` se recollent tels quels dans
+la fenêtre d'import, donc l'export massif fait aussi office de sauvegarde.
+
+**Texte seulement, pas d'images.** Plusieurs decks tirant leurs images en même temps est un
+problème de mémoire navigateur, pas une version plus grosse du même bouton. L'archive massive
+n'est donc **pas** une généralisation de l'export ZIP MPC.
+
+**Le piège qui justifie tout ce module : `zip.file()` sur un chemin déjà présent l'écrase
+sans un mot.** Deux decks dont les noms s'assainissent vers la même base partiraient donc
+comme **un seul fichier**, et l'utilisateur n'aurait aucun moyen de s'en apercevoir — pas
+d'erreur, pas d'avertissement, une archive plus courte que la sélection. D'où la passe de
+déduplication (`used`, base assainie → nombre de prétendants ; le premier garde le nom nu, les
+suivants prennent `-2`, `-3`…).
+
+**La déduplication se fait *après* l'assainissement, et c'est l'ordre correct** :
+l'assainissement est ce qui **crée** la plupart des collisions. « Deck #1 » et « Deck/1 » sont
+deux noms distincts à l'écran et un seul fichier une fois passés par le remplacement des
+caractères hors `[a-zA-Z0-9_-]`. Dédupliquer sur les noms d'origine ne verrait pas la collision.
+
+**`safeFileName` doit rester caractère pour caractère identique à l'assainissement de l'export
+d'un deck seul** (`ExportDialog.jsx`, `replace(/[^a-zA-Z0-9_-]+/g, '_')`), pour qu'un deck
+exporté seul et le même deck exporté dans un lot atterrissent sur le même nom de fichier. Une
+version qui retirait en plus les tirets bas de fin a brièvement cassé cette parité et a été
+annulée. **L'invariant est maintenant épinglé par un test :**
+`safeFileName('Deck (1)') === 'Deck_1_'` — c'est le tiret bas final, celui qu'on est tenté de
+trouver laid, qui prouve la parité. Ce n'est pas partagé dans un helper commun : la parité
+tient par ce test, pas par la structure (§14).
+
+**Un deck disparu en cours de lot est sauté, pas fatal.** `api.getDeck` **lève** au lieu de
+rendre `undefined`, donc une lecture non gardée dans la boucle jetait **tous les decks déjà
+rassemblés** à cause d'un seul deck supprimé entre le clic et son tour. Le `try`/`catch` autour
+de chaque lecture fait coûter à l'utilisateur ce deck-là et rien d'autre. Si *toutes* les
+lectures échouent, la fonction s'arrête sans rien télécharger : une archive vide serait un
+mensonge sur ce qui a été exporté.
 
 ### Cibles d'impression
 
@@ -807,6 +913,36 @@ bannit les anciens termes purement et simplement au lieu de les laisser à la re
 de carte. Le mot juste est **camp** (`side`). Un test vérifie qu'aucune chaîne liée aux
 camps n'emploie « faction ».
 
+**Autres termes arrêtés :** « Ruins & Lairs » se dit **« Ruines & Antres »** (2026-08-04, il
+disait « Ruines & Repaires »). Ce terme-là n'entre pas dans la liste des mots bannis : il n'a
+jamais désigné autre chose, ce n'est pas une rotation de sens — juste une occurrence à
+corriger. Les textes de carte de `cards.json` ne sont pas touchés : c'est une donnée
+d'entrée, pas de la traduction d'interface.
+
+#### Le garde n'a plus aucune exemption (2026-08-04)
+
+Jusqu'ici, six clés — la section « Vocabulaire » de la page « ? » — étaient les seules
+autorisées à citer un terme anglais retiré, entre guillemets (« en anglais *sideboard* »).
+C'était la raison d'être d'un glossaire : les cartes MECCG sont imprimées en anglais, et le
+joueur avait besoin de la correspondance. **Cette section a été retirée de la page d'aide sur
+demande du propriétaire** (elle se lisait comme une note de développeur), et l'exemption est
+partie avec elle : `GLOSSARY_KEYS` est **supprimé**, pas vidé — un `Set` vide aurait été une
+référence vivante vers une section morte — et le test qui l'itérait a disparu. Le garde
+restant parcourt **toutes** les chaînes `fr` sans `continue` ni liste d'autorisation.
+
+> **Ajouter une exemption pour faire taire un échec futur est le mauvais geste.** Le message
+> d'échec nomme la clé et le mot : c'est la **chaîne française** qu'il faut corriger. Le seul
+> effet de bord assumé est que l'application ne donne plus nulle part la correspondance
+> FR↔EN — c'est le prix de la demande, pas un oubli.
+
+**Trois choses portent le nom de « vocabulaire » dans ce dépôt et une seule a bougé :**
+
+| | quoi | sort |
+|---|---|---|
+| `lib/import/vocabulary.js` | la table qui reconnaît « Pioche » / « Playdeck » / « Mazo de juego » comme une même section quand on colle une liste | **intacte** |
+| `RETIRED_FR` (`test/i18n.test.js`) | les *règles* de vocabulaire FR | **conservées, rendues inconditionnelles** |
+| `docs.glossary.*` + le `<dl>` de `RulesDoc.jsx` | la *section texte* de la page d'aide | **supprimée** |
+
 ### Les libellés des filtres viennent de deux sources
 
 `optionLabel()` dans `FilterBar.jsx` décide, par facette, comment une valeur brute de
@@ -902,7 +1038,8 @@ symétrique, donc la parité de clés `fr`/`en`/`es` qu'`i18n.test.js` vérifie 
 
 ```
 App
-├── FilterBar          (facettes, recherche, LangPicker, ProxyToggle, bouton « ? »)
+├── FilterBar          (facettes, recherche, LangPicker, ProxyToggle, bouton « ? »,
+│                       lien « Suggérer une amélioration »)
 ├── CardBrowser        (grille filtrée)
 │   ├── ZoneCtrls      (compteurs par zone, interne) → ZoneRow (× n)
 │   └── ProxyStamp
@@ -913,7 +1050,7 @@ App
 ├── DeckDrawer         (barre d'actions du bas)
 ├── CardPreview        (aperçu au survol, desktop)
 └── modales : DeckManager · DeckSetupDialog · ImportDialog · ExportDialog
-             · RulesDoc · CardPreviewModal
+             · RulesDoc → FeaturesDoc · CardPreviewModal
 ```
 
 ### Mobile
@@ -1028,6 +1165,21 @@ ce qui les a fait retirer. Le badge de la barre repliée (`.deckpanel-badge`) af
 ce même `totalCopies` : un deck ne montre jamais deux nombres différents selon qu'il est
 ouvert ou replié.
 
+**Bouton Enregistrer (2026-08-04).** Dans l'en-tête, après le total, dans les **deux**
+variantes du panneau — latéral desktop et feuille mobile (`asSheet`) : le manquer dans l'une
+des deux fait simplement disparaître la fonctionnalité sur téléphone. Grisé tant que
+`dirty` est faux (§5). Si le deck a déjà un `id`, il écrit directement et affiche
+« ✓ Enregistré » pendant 2 s ; **sinon il ouvre « Mes decks »** — créer un enregistrement est
+l'endroit où le nom et les réglages exacts se décident, et ce formulaire y existe déjà. Un
+échec s'affiche sous l'en-tête (`.deckpanel-save-error`), pas dans une alerte : le bouton qui
+a échoué est juste au-dessus.
+
+> **Le panneau ne se monte pas tant que le deck est vide** (`hasSelection` conditionne les
+> deux instances dans `App.jsx`). Le bouton n'est donc pas *grisé* pour un deck sans cartes :
+> il est **inatteignable**. C'est cohérent — il n'y a rien à enregistrer — mais cela signifie
+> que le scénario « deck vide, bouton grisé » ne s'observe pas, et qu'un test manuel qui le
+> cherche cherche quelque chose qui n'existe pas.
+
 **Grille (`lib/cardGrid.js`, remplace `lib/zoom.js`).** Le curseur de zoom a disparu ; la
 grille du panneau porte la classe `.grid` littérale, la même règle CSS que le navigateur de
 cartes (`repeat(auto-fill, minmax(120px, 1fr))`, §3) — une seule règle à tenir plutôt que deux
@@ -1051,7 +1203,7 @@ de dépôt qu'elle ait jamais eu — état interne à `ZoneTabs` (pas remonté a
 d'autre n'a besoin de le savoir), effacé par tout dépôt ou tout `dragleave`, donc jamais
 bloqué allumé.
 
-**Onglet optionnel — `sideboardFw`, seule zone concernée pour l'instant.** Tant qu'elle est
+**Onglets optionnels — les deux talons depuis le 2026-08-04.** Tant qu'elle est
 vide, la zone se propose en **invitation** : bordure en tirets, texte atténué, préfixée
 `+`, sans compteur (`0 / 10` réclamerait un budget que le joueur n'a jamais choisi). Elle
 redevient un onglet ordinaire, compteur compris, dès qu'elle contient une carte — piloté par
@@ -1059,12 +1211,71 @@ le prop `optional` (le `Set` que `DeckPanel` lui passe), pas codé en dur dans `
 freeform, la zone n'apparaît d'ailleurs pas du tout tant qu'elle est vide, comme `pool` et
 `sideboard` déjà.
 
+`sideboardFw` fut la première ; **`sideboard` l'a rejointe** — l'argument valait mot pour mot
+pour lui, un deck peut parfaitement n'avoir aucun talon. Les deux sont dans
+`OPTIONAL_TABS` (exporté au niveau module par `DeckPanel.jsx`). La pioche, le deck de sites
+et la réserve n'y sont **pas** : les deux premiers sont ce qu'un deck *est*, et la réserve
+est dictée par le camp.
+
+**`tabPresentation({ count, cap, optional })` (`ZoneTabs.jsx`) porte toute la règle
+d'affichage d'une pastille**, extraite du rendu pour être testable : ce dépôt n'a **ni jsdom
+ni `@testing-library`** et ne monte jamais un composant dans un test — la façon d'y couvrir un
+composant est de tester la fonction pure d'où il rend (même idiome que
+`test/i18n-rules-contract.test.js`, qui importe `warningKey` de `DeckPanel.jsx`).
+
+> **Le test strict `count === 0`, pas `!count`.** `count === null` signifie « cet onglet ne
+> porte aucun compteur » — c'est le cas de l'onglet Notes — et ne doit **jamais** se lire
+> comme une zone vide : un test de fausseté afficherait « + Notes » sur un onglet qui n'a
+> rien à proposer. La distinction est épinglée par un test qui échoue si l'on revient à
+> `!count`, et c'est le seul intérêt réel de ce fichier de test.
+
 **Nom accessible composé (`2942873`).** `aria-label` colle le libellé court au nom long
 (`` `${labels[id]} — ${titles[id]}` ``) plutôt que de le remplacer : le nom accessible doit
 **contenir** le libellé visible ou la commande vocale cesse de reconnaître ce que
 l'utilisateur lit sur la pastille — c'est WCAG 2.5.3 (Label in Name). `title` seul
 (l'infobulle) n'atteint ni le tactile ni les lecteurs d'écran, d'où la duplication
 délibérée dans `aria-label` plutôt qu'un simple renvoi vers `title`.
+
+### Page d'aide en deux parties (`FeaturesDoc.jsx` + `RulesDoc.jsx`, 2026-08-04)
+
+La page « ? » était une référence de règles titrée « Règles et modes ». Elle est désormais
+titrée **« Aide »** et se lit en deux parties :
+
+- **Partie 1 — « Utiliser l'application ».** `FeaturesDoc.jsx`, qui rend **des sections
+  seulement**, sans coquille de modale. Les rubriques sont pilotées par une liste
+  (`TOPICS = ['search', 'decks', 'import', 'export', 'proxy', 'lang']`) plutôt qu'écrites en
+  JSX une par une : une fonctionnalité nouvelle coûte une entrée et deux clés i18n
+  (`docs.feat.<sujet>Title` / `docs.feat.<sujet>`), et rien ne peut afficher un titre sans son
+  corps.
+- **Partie 2 — « Règles ».** Inchangée : tableau des règles avec cases à cocher par deck,
+  lacunes connues, camps, longueurs, cartes bannies.
+
+`RulesDoc.jsx` **reste propriétaire de la modale**, de son titre et de son bouton Fermer, et
+n'a pas été renommé. La section « Vocabulaire » et sa constante `GLOSSARY` ont disparu — voir
+§9 pour ce que cela entraîne côté garde de terminologie, qui est la partie non évidente.
+
+### Lien « Suggérer une amélioration » (`FilterBar.jsx`, 2026-08-04)
+
+Dans la rangée du logo, à droite du `?`. C'est un **`<a target="_blank" rel="noreferrer">`,
+pas un `<button>`** : la destination est une URL, donc le lien s'ouvre dans un nouvel onglet,
+se copie et s'annonce correctement. Il vise
+`${REPORT_ISSUES_URL}?labels=enhancement&title=…&body=…`, chaque valeur passée séparément
+dans `encodeURIComponent` — même mécanique que `reportRuleUrl` dans `RulesDoc.jsx`. Le
+contenu visible est une seule émoji, donc `title` **et** `aria-label` portent le libellé
+traduit : sans eux un lecteur d'écran n'annoncerait qu'une ampoule.
+
+### Sélection multiple dans « Mes decks » (`DeckManager.jsx`, 2026-08-04)
+
+Une case par ligne, une barre « Tout sélectionner » + « Exporter la sélection (n) ».
+**Cocher n'est pas saisir :** les lignes restent glissables pour la réorganisation manuelle
+pendant qu'une sélection se construit, et réordonner ne vide pas la sélection — elle est
+indexée par `id`, pas par position.
+
+`refresh()` purge la sélection des `id` disparus, sinon supprimer un deck coché laisserait un
+fantôme dans le compteur du bouton. Le test d'identité (`next.size === prev.size ? prev :
+next`) est sûr parce que `next` est **filtré depuis `prev`** : `next ⊆ prev` toujours, donc
+une taille égale implique des ensembles égaux. Il évite un rendu inutile à chaque
+rafraîchissement.
 
 ### Conventions de style
 
@@ -1079,7 +1290,7 @@ délibérée dans `aria-label` plutôt qu'un simple renvoi vers `title`.
 
 ## §11 — Tests
 
-`npm test` → Vitest, **33 fichiers, 619 tests**. Node pur, pas de DOM : les composants ne
+`npm test` → Vitest, **35 fichiers, 637 tests**. Node pur, pas de DOM : les composants ne
 sont pas montés, ce sont les **modules purs** qui sont testés.
 
 C'est ce qui dicte la façon d'aborder un travail d'interface ici : **on extrait la décision
@@ -1215,7 +1426,10 @@ son en-tête, et le passage de `scope: { zone: 'sideboard' }` à
 | Moteur de règles — 31 règles, toutes `verified` | **Livré** |
 | Ignorer une règle par deck / signaler une règle (ticket GitHub pré-rempli) | **Livré** |
 | Filtre de légalité dans le navigateur de cartes | **Livré** |
-| Page « Règles et modes » générée depuis les mêmes données que le validateur | **Livré** |
+| Page d'aide en deux parties — « Utiliser l'application » puis « Règles », ces dernières générées depuis les mêmes données que le validateur | **Livré** — 2026-08-04 (ex-« Règles et modes ») |
+| Bouton Enregistrer dans l'en-tête du panneau de deck, grisé quand rien n'a changé | **Livré** — 2026-08-04 |
+| Export massif : plusieurs decks cochés dans « Mes decks » → une archive de deck lists texte | **Livré** — 2026-08-04 |
+| Lien « Suggérer une amélioration » (ticket GitHub pré-rempli) | **Livré** — 2026-08-04 |
 | Notes de deck (4 champs) + reprises dans l'export texte | **Livré** |
 | Sauvegarde `localStorage`, duplication, réordonnancement par glisser-déposer | **Livré** |
 | Import de liste : sections en tout ordre (markdown ou texte brut, FR/EN/ES), quantité aux quatre positions, désambiguïsation, restauration des zones, zone de destination arbitrée par les règles | **Livré** |
@@ -1229,6 +1443,7 @@ son en-tête, et le passage de `scope: { zone: 'sideboard' }` à
 | Passe accessibilité / polish | **Livré** — branche `polish-ui-a11y` fusionnée en `84304fe` |
 | Curseur de zoom du panneau de deck | **Retiré** — 2026-08-03, remplacé par la largeur du panneau elle-même, alignée sur la grille du sélecteur (§10, §12) |
 | Pastilles `Total / Pioche / Sites` en en-tête du panneau | **Retiré** — 2026-08-03, remplacées par le nom du deck, sa pastille de camp et le total réel (§10) |
+| Section « Vocabulaire » de la page d'aide | **Retiré** — 2026-08-04, sur demande du propriétaire (elle se lisait comme une note de développeur). Le garde de terminologie FR, lui, reste et perd sa dernière exemption (§9) |
 
 ---
 
@@ -1281,6 +1496,31 @@ son en-tête, et le passage de `scope: { zone: 'sideboard' }` à
    bouton pourrait ne plus jamais s'exécuter. Non vérifié, non retiré : modifier une règle de
    cible tactile à l'aveugle est plus risqué que de la garder.
 
+11. **`DeckManager.duplicate()` construit encore son payload à la main**, et omet `order`
+    volontairement (une copie ne doit pas revendiquer la position de l'original). `deckPayload`
+    (§4) est donc à un chemin près d'être la source unique : un champ persisté ajouté demain
+    atteindrait les deux chemins de sauvegarde et **pas** la duplication. Repéré en revue, hors
+    du périmètre de la tâche qui l'a créé.
+
+12. **Confirmations « ✓ Enregistré » qui se chevauchent.** Deux sauvegardes rapprochées : le
+    minuteur de la première éteint la confirmation de la seconde au bout de son propre délai,
+    qui affiche donc ~500 ms au lieu de 2 s. Cosmétique — le minuteur est un `setState`
+    fonctionnel, il ne peut pas laisser le bouton bloqué.
+
+13. **Panneau replié : pas de bouton Enregistrer, et l'erreur de sauvegarde disparaît.** La
+    variante repliée du panneau desktop retourne avant l'en-tête (§10). L'état est conservé,
+    donc le message revient en dépliant — mais un échec de sauvegarde suivi d'un repli donne
+    l'impression que l'erreur s'est effacée d'elle-même.
+
+14. **`.deckpanel-head` est en `flex-wrap: wrap`** et le libellé du bouton s'élargit de
+    « Enregistrer » à « ✓ Enregistré » : dans un panneau étroit ou la feuille mobile,
+    l'en-tête peut passer sur deux lignes pendant les 2 s de la confirmation. Non mesuré.
+
+15. **Le test d'`OPTIONAL_TABS` s'affirme contre lui-même.** Il vérifie que la constante
+    contient les deux talons, mais rien ne vérifie qu'elle est bien celle passée en prop
+    `optional` à `ZoneTabs` — sans environnement de test DOM (dette n°2), il n'y a pas de
+    façon évidente de le fermer.
+
 *Réglé le 2026-08-02 :* le `README.md` décrivait les règles comme des « stubs » non
 vérifiés démarrant désactivés — périmé depuis que les 30 règles portent
 `status: 'verified'`. Les trois passages concernés (limites de copies, avertissements de
@@ -1308,3 +1548,4 @@ transformation*, donc lis le compte de **fichiers**, pas seulement celui des tes
 | 2026-08-03 | Deux bugs signalés par le propriétaire, corrigés. §6 : `isDropAllowed` pose désormais **deux** questions au lieu d'une — la zone (`zoneTargets`) *et* l'onglet qui affichera la carte (`backGroupForType`) ; `play` et `location` étant deux vues d'une seule zone, un personnage glissé de la réserve vers l'onglet **Sites** comptait comme un dépôt légal et atterrissait dans la **pioche**. §4/§9 : « Sites » et « Regions » deviennent des titres de **zone** portant leur indice de type, au lieu de simples indices de groupe qui ne fermaient pas la section précédente — c'est ce qui envoyait dans le talon tous les sites d'une liste écrite à la main. §4 : nouveau module `import/target.js` (`targetForCard`/`bucketFor`), sixième étage du pipeline, qui fait arbitrer la zone de destination par `zoneTargets` pour les **deux** appelants (`importDeckList` et la prévisualisation d'`ImportDialog`) : un import ne peut plus construire un deck que l'interface refuserait de construire à la main. §11 : `test/importTarget.test.js`, 33 fichiers / 594 tests. |
 | 2026-08-04 | Deux lots indépendants, dix commits (`103737f..bc07b80`). **Talon contre Sorcier déchu (règle 1.6.1) :** quatrième zone `sideboardFw` garantie par `normalizeDeck`, comptée par `totalCopies` (§4) ; offerte partout où le talon ordinaire l'est, toujours en dernier dans `extra`, jamais aux sites — `dropTargets.js` non touché, ce qui prouve que sa garantie tient par construction (§6) ; plafond `SIDEBOARD_FW_MAX = 10` en constante à plat, hors de `LENGTHS`, plus la règle `SIDEBOARD-FW-MAX` (31 règles au total) ; la sous-limite d'avatar 1.6.2 relue **combinée** sur les deux talons, une interprétation datée (§12), qui a fait passer le `scope` d'un plafond de `{ zone }` à `{ zones }` dans `copies.js` **et** `validate.js` (§6) ; export en cinq sections (`Sideboard vs FW` en queue, §7) et alias d'import associés (§4) ; onglet dédié, invitation en tirets tant qu'il est vide, `aria-label` composé pour WCAG 2.5.3 (§9, §10). **Panneau de deck refondu :** en-tête devenu nom + pastille de camp + total réel au lieu de trois pastilles répétant un total partiel ; curseur de zoom retiré, la grille du panneau reprenant la règle `.grid` du sélecteur de cartes — le CSS possède désormais la mise en page, `deckCardWidth()` ne fait plus que la prédire pour choisir une vignette (§10, §12). §14 : trois dettes consignées (`meccg.cardZoom` orpheline, `deckStore.list()` vs en-tête du panneau — deux nombres vérifiés pour un même deck —, point de rupture CSS peut-être mort). Quatre commentaires de `styles.css`/`MiniCard.jsx` décrivant encore le curseur de zoom disparu, réécrits. |
 | 2026-08-04 | Revue finale de branche avant merge, cinq trouvailles Critical (une seule cause) + quatre Important + cinq Minor. **§4 : `emptyZones()`** — huit endroits construisaient un `zones` en mémoire sans passer par `normalizeDeck`, quatre sur un chemin de production réel, tous ne nommant que `sideboard`/`pool` ; `bucketFor(card, 'sideboardFw', …)` y rendait `undefined`, et l'écriture suivante plantait — pendant un rendu React côté fenêtre d'import (`ImportDialog.jsx`, dans un `useMemo`, sans error boundary dans `web/src`) et dans `changeZoneQty`/`bumpCount` (`App.jsx`) au premier glisser-déposer sur un deck neuf. `normalizeDeck` construit désormais son `zones` à partir des clés d'`emptyZones()` au lieu de les re-lister. `App.importDeckData` reconstruit tout l'objet `zones` importé via `normalizeDeck({ zones: importedZones }).zones` plutôt que de lister `sideboard`/`pool` à la main — c'est ce qui avait fait disparaître silencieusement, sans avertissement, les cartes qu'un import routait vers `sideboardFw`. `ImportDialog.jsx` : `importCount` (bouton d'envoi) utilise désormais `totalCopies`, pas un trio de maps codé en dur — une importation résolue entièrement dans `sideboardFw` affichait `0` et bloquait le bouton. **§9/§10 : `ZoneTabs.jsx`** — l'`aria-label` composé de l'onglet `sideboardFw` (WCAG 2.5.3, ajouté le 2026-08-03) remplaçait tout le nom accessible, y compris le compteur porté par le texte des autres onglets ; le compteur est maintenant réinjecté dans le label composé. **§6 : `formats.js`** — la note au-dessus de `LENGTHS` qui disait l'allocation « +10 » délibérément non modélisée est réécrite : elle l'est, comme zone dédiée, et la note explique maintenant pourquoi une constante à plat plutôt qu'une cinquième colonne. **Documentation :** cette table de `localStorage` et la liste des états d'`App.jsx` (ci-dessus) créditaient encore `meccg.cardZoom` d'être vivante ; le spec `2026-08-03-deck-panel-fw-sideboard-design.md` (§3, §5) affirmait que la compatibilité ascendante ne dépendait que de `normalizeDeck` et que `target.js` n'avait pas été touché — les deux corrigés pour que la prochaine zone ajoutée ne reproduise pas cette lacune. `README.md` : conjonction manquante restaurant le rattachement de « pour les camps qui en utilisent un » à la réserve, pas au talon. **Tests :** `test/deckModel.test.js` gagne un test qui dérive l'ensemble des zones attendues de `zoneTargets()` plutôt que de le re-lister, et `test/importDeck.test.js` gagne le round-trip export → import de `sideboardFw` plus un test direct « n'explose pas » — les deux échouaient contre le code d'avant cette entrée, preuve que C1-C4 étaient réels. §11 : 33 fichiers, 619 tests (33 fichiers / 594 tests, cité en deux endroits de ce document depuis le 2026-08-03, était déjà périmé par rapport aux 616 tests d'avant cette tâche — corrigé en marge). |
+| 2026-08-04 | Six améliorations de confort demandées par le propriétaire, branche `qol-minor-features` (`8cf904e..2e4ab4a`). **§4 :** `deckPayload` comme définition unique d'un enregistrement, et `deckSignature` — clés triées **à tous les niveaux** (l'ordre d'insertion ferait lire comme modifié un deck qu'on n'a pas touché), `id`/`order`/`updatedAt` exclus pour qu'une sauvegarde réussie n'allume pas le bouton qu'elle vient d'éteindre. **§5 :** `savedSignature` et `saveState` ; la **liste fermée des quatre moments** où la ligne de base est réécrite, et le fait qu'un import n'en est délibérément pas un — un cinquième site désarme silencieusement le bouton. Plus le piège trouvé en revue : renommer le deck ouvert depuis « Mes decks » écrivait sur le disque sans rien déplacer dans `App`, laissant le bouton **grisé sur un désaccord disque/mémoire**, et la sauvegarde suivante écrasait le renommage ; le correctif (`onRenamed`) reconstruit la ligne de base **depuis l'enregistrement rendu par le stockage, jamais depuis l'état vivant** — repartir du vivant aurait certifié des modifications de cartes non sauvegardées, un bug pire que celui corrigé. **§7 :** `deckListZip.js` — `zip.file()` écrase silencieusement un chemin dupliqué, d'où la déduplication, faite **après** l'assainissement parce que c'est l'assainissement qui crée les collisions ; parité caractère pour caractère avec l'export d'un deck seul, brièvement cassée par un défaut du plan puis annulée, désormais épinglée par `safeFileName('Deck (1)') === 'Deck_1_'` ; un deck disparu en cours de lot est sauté, `api.getDeck` levant au lieu de rendre `undefined`. **§9 :** « Ruines & Antres » ; la section « Vocabulaire » quitte la page d'aide et **le garde de terminologie perd sa dernière exemption** — `GLOSSARY_KEYS` supprimé et non vidé, toute chaîne FR y est soumise, et le tableau des trois « vocabulaires » du dépôt dit lequel n'a pas bougé (`lib/import/vocabulary.js`). **§10 :** bouton Enregistrer dans les deux variantes du panneau, et la note que le panneau ne se monte pas sur un deck vide — le bouton n'y est pas grisé, il est inatteignable ; `OPTIONAL_TABS` (les deux talons) et `tabPresentation`, dont le `count === 0` strict distingue une zone vide d'un onglet sans compteur ; page d'aide en deux parties (`FeaturesDoc.jsx`) ; lien de suggestion ; sélection multiple de `DeckManager` et pourquoi son test d'identité sur la taille est sûr. **§13/§14 :** quatre lignes livrées, une retirée, cinq dettes consignées (n°11-15). **§11 :** 35 fichiers, 637 tests. |
