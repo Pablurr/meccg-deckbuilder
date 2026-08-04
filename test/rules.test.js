@@ -93,7 +93,7 @@ describe('zoneTargets / moveTargets', () => {
     // An empty list is what tells MiniCard to render no move action at all.
     expect(moveTargets(site, 'deck')).toEqual([]);
   });
-  it('an avatar Character offers the deck and the sideboard, never the pool (1.7)', () => {
+  it('an avatar Character offers the deck and both sideboards, never the pool (1.7)', () => {
     const avatar = index.get('TW-156'); // Gandalf
     expect(avatar).toBeTruthy();
     expect(avatar.attributes.avatar).toBe(true);
@@ -109,13 +109,13 @@ describe('zoneTargets / moveTargets', () => {
     expect(zoneTargets(chr)).toEqual(['pool', 'deck', 'sideboard', 'sideboardFw']);
     expect(moveTargets(chr, 'pool')).toEqual(['deck', 'sideboard', 'sideboardFw']);
   });
-  it('a Minor Item Resource reaches all three zones (1.7)', () => {
+  it('a Minor Item Resource reaches all four zones (1.7)', () => {
     const item = cards.find((c) => c.type === 'Resource' && (c.attributes || {}).subtype === 'Minor Item');
     expect(item).toBeTruthy();
     expect(zoneTargets(item)).toEqual(['deck', 'sideboard', 'pool', 'sideboardFw']);
     expect(moveTargets(item, 'sideboard')).toEqual(['deck', 'pool', 'sideboardFw']);
   });
-  it('an ordinary Hazard offers the deck and the sideboard', () => {
+  it('an ordinary Hazard offers the deck and both sideboards', () => {
     const hz = cards.find((c) => c.type === 'Hazard');
     expect(hz).toBeTruthy();
     expect(zoneTargets(hz)).toEqual(['deck', 'sideboard', 'sideboardFw']);

@@ -904,7 +904,7 @@ export const translations = {
     'zones.pool': 'Reserva',
     'zones.sideboard': 'Sideboard',
     'zones.sideboardFw': 'SB vs MC',
-    'zones.sideboardFwFull': 'Reserva contra un Mago caído',
+    'zones.sideboardFwFull': 'Sideboard contra un Mago caído',
     'zones.location': 'Localizaciones',
     'zones.notes': 'Notas',
     'zones.cards': 'Cartas',
