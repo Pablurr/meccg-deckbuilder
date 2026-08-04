@@ -31,6 +31,15 @@ describe('tabPresentation', () => {
     expect(tabPresentation({ count: null, cap: null, optional: false }))
       .toEqual({ inviting: false, over: false, showCount: false });
   });
+
+  // The distinction the strict `count === 0` exists for: a tab that carries no
+  // count at all is not an empty zone, even when it is optional. A falsy check
+  // (`!count`) would call this an invitation and render "+ …" over a tab that
+  // has nothing to invite.
+  it('does not invite an optional tab that carries no count', () => {
+    expect(tabPresentation({ count: null, cap: 10, optional: true }))
+      .toEqual({ inviting: false, over: false, showCount: false });
+  });
 });
 
 describe('OPTIONAL_TABS', () => {
