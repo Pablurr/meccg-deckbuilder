@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import raw from '../web/public/cards.json';
 import { parseCards } from '../web/src/lib/parseCards.js';
 import { deckSections, flattenSections } from '../web/src/lib/export/deckSections.js';
-import { buildDeckListText } from '../web/src/lib/deckList.js';
+import { buildDeckListText, SECTION_TITLES } from '../web/src/lib/deckList.js';
 import { importDeckList, parseDeckListDocument } from '../web/src/lib/importDeck.js';
 
 const { cards, index } = parseCards(raw);
@@ -39,6 +39,42 @@ describe('deckSections', () => {
   it('drops empty sections and groups', () => {
     const sections = deckSections({ quantities: { [res.id]: 1 }, zones: { sideboard: {}, pool: {} }, cardsById: index, lang: 'en' });
     expect(sections.map((s) => s.id)).toEqual(['play']);
+  });
+});
+
+describe('the Fallen-wizard sideboard section (1.6.1)', () => {
+  const playCard = find((c) => c.type === 'Character' && !c.attributes.avatar);
+  const sideboardCard = find((c) => c.type === 'Resource');
+  const hazard = find((c) => c.type === 'Hazard');
+
+  it('comes last, after the ordinary sideboard', () => {
+    const sections = deckSections({
+      quantities: { [playCard.id]: 1 },
+      zones: { pool: {}, sideboard: { [sideboardCard.id]: 1 }, sideboardFw: { [sideboardCard.id]: 1 } },
+      cardsById: index,
+    });
+    expect(sections.map((s) => s.id)).toEqual(['play', 'sideboard', 'sideboardFw']);
+  });
+
+  it('is dropped entirely when the zone is empty', () => {
+    const sections = deckSections({
+      quantities: { [playCard.id]: 1 },
+      zones: { pool: {}, sideboard: {}, sideboardFw: {} },
+      cardsById: index,
+    });
+    expect(sections.map((s) => s.id)).not.toContain('sideboardFw');
+  });
+
+  it('groups like the ordinary sideboard does', () => {
+    const [section] = deckSections({
+      quantities: {}, zones: { pool: {}, sideboard: {}, sideboardFw: { [hazard.id]: 2 } }, cardsById: index,
+    });
+    expect(section.id).toBe('sideboardFw');
+    expect(section.groups.map((g) => g.id)).toEqual(['hazards']);
+  });
+
+  it('has a canonical English heading, so an export re-imports', () => {
+    expect(SECTION_TITLES.sideboardFw).toBe('Sideboard vs FW');
   });
 });
 

@@ -1,9 +1,19 @@
 // The single source of export order: the PDF, the ZIP and the text list all
 // consume it, so they cannot disagree. Applies in both deck modes — a freeform
 // deck exports in this order too (owner decision, 2026-07-26), so there is only
-// one export order to explain. Sections: Pool, Play deck, Locations, Sideboard.
+// one export order to explain. Sections: Pool, Play deck, Locations, Sideboard,
+// Sideboard vs FW.
 import { cardName } from '../lang.js';
 import { backGroupForType } from '../deck.js';
+
+// 1.6.1's Fallen-wizard sideboard holds the same kinds of card as the
+// ordinary one, so it groups the same way. Shared rather than copied: two
+// copies of this list are two things to keep in agreement for one rule.
+const SIDEBOARD_GROUPS = [
+  { id: 'characters', match: (c) => c.type === 'Character' },
+  { id: 'resources', match: (c) => c.type === 'Resource' },
+  { id: 'hazards', match: (c) => c.type === 'Hazard' },
+];
 
 const GROUP_DEFS = {
   pool: [
@@ -20,11 +30,10 @@ const GROUP_DEFS = {
     { id: 'sites', match: (c) => c.type === 'Site' },
     { id: 'regions', match: (c) => c.type === 'Region' },
   ],
-  sideboard: [
-    { id: 'characters', match: (c) => c.type === 'Character' },
-    { id: 'resources', match: (c) => c.type === 'Resource' },
-    { id: 'hazards', match: (c) => c.type === 'Hazard' },
-  ],
+  sideboard: SIDEBOARD_GROUPS,
+  // A separate SECTION though it groups identically: it is a separate ten-card
+  // allowance, and the player has to be able to count it on its own.
+  sideboardFw: SIDEBOARD_GROUPS,
 };
 
 function toEntries(map, cardsById) {
@@ -59,6 +68,7 @@ export function deckSections({ quantities = {}, zones = {}, cardsById, lang = 'e
     { id: 'play', entries: play },
     { id: 'locations', entries: locations },
     { id: 'sideboard', entries: toEntries(zones.sideboard || {}, cardsById) },
+    { id: 'sideboardFw', entries: toEntries(zones.sideboardFw || {}, cardsById) },
   ];
   return sections
     .map((s) => ({ id: s.id, groups: grouped(s.id, s.entries, lang) }))

@@ -34,7 +34,7 @@ export { TYPE_ORDER } from './constants.js';
 
 // Canonical (English) section/group/note headings — must match the reverse
 // lookups in importDeck.js exactly.
-export const SECTION_TITLES = { pool: 'Pool', play: 'Play deck', locations: 'Locations', sideboard: 'Sideboard' };
+export const SECTION_TITLES = { pool: 'Pool', play: 'Play deck', locations: 'Locations', sideboard: 'Sideboard', sideboardFw: 'Sideboard vs FW' };
 export const GROUP_TITLES = { avatars: 'Avatars', characters: 'Characters', resources: 'Resources', hazards: 'Hazards', sites: 'Sites', regions: 'Regions', other: 'Other' };
 export const NOTE_TITLES = { starting: 'Starting notes', resourceStrategy: 'Resource strategy', hazardStrategy: 'Hazard strategy', other: 'Other notes' };
 
