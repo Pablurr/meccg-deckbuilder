@@ -57,6 +57,19 @@ export const TABLE = [
   [['Regions', 'Régions', 'Regiones', GROUP_TITLES.regions], zone('quantities', 'Region')],
   // -- zone: sideboard. Spanish keeps the English word (i18n zones.sideboard).
   [['Sideboard', 'Side', 'SB', 'Talon', SECTION_TITLES.sideboard], zone('sideboard')],
+  // -- zone: the 1.6.1 Fallen-wizard sideboard. Its canonical title comes from
+  // SECTION_TITLES like every other section's, so our own export re-imports.
+  // The rest are community shapes; "vs" and "vs." normalize alike, so both
+  // spellings are one word here rather than two entries.
+  //
+  // These all CONTAIN the word "Sideboard", which is safe only because the
+  // lookup matches a whole normalized heading and never a prefix -- see the
+  // "leaves a bare Sideboard heading alone" test in importVocabulary.test.js,
+  // which is what stops a future "startsWith" refactor from merging the two.
+  [['Sideboard vs FW', 'Sideboard vs. FW', 'Sideboard vs Fallen-wizard',
+    'FW sideboard', 'Fallen-wizard opponent sideboard', 'Anti-FW sideboard', 'SB vs FW',
+    'Talon vs SD', 'Talon contre Sorcier déchu', 'SB vs MC',
+    SECTION_TITLES.sideboardFw], zone('sideboardFw')],
   // -- zone: pool
   [['Pool', 'Starting pool', 'Réserve', 'Reserva', SECTION_TITLES.pool], zone('pool')],
 

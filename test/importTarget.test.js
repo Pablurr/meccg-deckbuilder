@@ -50,3 +50,22 @@ describe('bucketFor', () => {
     expect(bucketFor(site, 'sideboard', deck)).toBe(deck.quantities);
   });
 });
+
+describe('targeting the Fallen-wizard sideboard', () => {
+  it('accepts a hazard', () => {
+    expect(targetForCard(hazard, 'sideboardFw')).toBe('sideboardFw');
+  });
+
+  it('refuses a site and falls back to the main deck', () => {
+    // The invariant: an import cannot build a deck the interface would refuse
+    // to build by hand. targetForCard asks zoneTargets rather than deciding,
+    // so this holds for the new zone without a rule of its own.
+    expect(targetForCard(site, 'sideboardFw')).toBe('quantities');
+  });
+
+  it('buckets into the zones.sideboardFw map', () => {
+    const deck = { quantities: {}, zones: { sideboard: {}, pool: {}, sideboardFw: {} } };
+    expect(bucketFor(hazard, 'sideboardFw', deck)).toBe(deck.zones.sideboardFw);
+    expect(bucketFor(site, 'sideboardFw', deck)).toBe(deck.quantities);
+  });
+});
