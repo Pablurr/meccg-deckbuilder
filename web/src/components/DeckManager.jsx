@@ -33,6 +33,7 @@ export default function DeckManager({ deck, cardIds, quantities, zones, cardsByI
   useEffect(() => { refresh().catch(() => {}); }, []);
 
   function toggleSelected(id) {
+    setExportDone(false); // the note describes the last export, not the current selection
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id); else next.add(id);
@@ -41,6 +42,7 @@ export default function DeckManager({ deck, cardIds, quantities, zones, cardsByI
   }
 
   function toggleAll() {
+    setExportDone(false); // the note describes the last export, not the current selection
     setSelectedIds((prev) => (prev.size === decks.length ? new Set() : new Set(decks.map((d) => d.id))));
   }
 
@@ -60,7 +62,16 @@ export default function DeckManager({ deck, cardIds, quantities, zones, cardsByI
       // than parallelism nobody would perceive.
       for (const d of decks) {
         if (!selectedIds.has(d.id)) continue;
-        const full = await api.getDeck(d.id);
+        // A deck deleted between the click and its turn in this loop must cost
+        // the user that one deck, not the whole archive: getDeck throws rather
+        // than returning undefined, so an uncaught read would discard every
+        // deck already gathered.
+        let full;
+        try {
+          full = await api.getDeck(d.id);
+        } catch {
+          continue;
+        }
         entries.push({
           name: full.name,
           text: buildDeckListText(cardsById, full.quantities || {}, full.name, uiLang, {
@@ -68,6 +79,10 @@ export default function DeckManager({ deck, cardIds, quantities, zones, cardsByI
           }),
         });
       }
+      // Every ticked deck vanished before its turn: writing an empty archive
+      // would be a lie about what got exported, so just stop here. `finally`
+      // still clears `exporting`.
+      if (entries.length === 0) return;
       const bytes = await buildDeckListZip(entries);
       const url = URL.createObjectURL(new Blob([bytes], { type: 'application/zip' }));
       const a = document.createElement('a');
