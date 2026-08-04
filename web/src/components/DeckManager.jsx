@@ -3,8 +3,10 @@ import * as api from '../api.js';
 import { useT } from '../i18n.jsx';
 import { useIsMobile } from '../lib/useIsMobile.js';
 import { deckPayload } from '../lib/deck.js';
+import { buildDeckListZip } from '../lib/export/deckListZip.js';
+import { buildDeckListText } from '../lib/deckList.js';
 
-export default function DeckManager({ deck, cardIds, quantities, zones, onClose, onLoad, onSaved, onRenamed }) {
+export default function DeckManager({ deck, cardIds, quantities, zones, cardsById, uiLang, onClose, onLoad, onSaved, onRenamed }) {
   const t = useT();
   const isMobile = useIsMobile();
   const [decks, setDecks] = useState([]);
@@ -15,11 +17,73 @@ export default function DeckManager({ deck, cardIds, quantities, zones, onClose,
   const [renamingId, setRenamingId] = useState(null); // deck id whose name is being edited inline
   const [renameValue, setRenameValue] = useState('');
   const [dragIndex, setDragIndex] = useState(null); // index of the row currently being dragged (desktop reorder)
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [exporting, setExporting] = useState(false);
+  const [exportDone, setExportDone] = useState(false);
 
   async function refresh() {
-    setDecks(await api.listDecks());
+    const rows = await api.listDecks();
+    setDecks(rows);
+    setSelectedIds((prev) => {
+      const alive = new Set(rows.map((r) => r.id));
+      const next = new Set([...prev].filter((id) => alive.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
   }
   useEffect(() => { refresh().catch(() => {}); }, []);
+
+  function toggleSelected(id) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAll() {
+    setSelectedIds((prev) => (prev.size === decks.length ? new Set() : new Set(decks.map((d) => d.id))));
+  }
+
+  // Text lists only: several decks pulling their images at once is a browser
+  // memory problem, not a bigger version of the same button. These .txt files
+  // paste straight back into the importer, so a batch export doubles as a
+  // backup -- which is the reason to reuse buildDeckListText rather than write
+  // a second, quietly diverging serialiser here.
+  async function exportSelection() {
+    setExporting(true);
+    setError(null);
+    setExportDone(false);
+    try {
+      const entries = [];
+      // Sequential on purpose: reads come from localStorage and the list is
+      // short, so ordering the archive like the on-screen list is worth more
+      // than parallelism nobody would perceive.
+      for (const d of decks) {
+        if (!selectedIds.has(d.id)) continue;
+        const full = await api.getDeck(d.id);
+        entries.push({
+          name: full.name,
+          text: buildDeckListText(cardsById, full.quantities || {}, full.name, uiLang, {
+            zones: full.zones, notes: full.notes, mode: full.mode, ruleset: full.ruleset,
+          }),
+        });
+      }
+      const bytes = await buildDeckListZip(entries);
+      const url = URL.createObjectURL(new Blob([bytes], { type: 'application/zip' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `decks-${new Date().toISOString().slice(0, 10)}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setExportDone(true);
+    } catch (e) {
+      setError(t('common.error', { msg: e.message }));
+    } finally {
+      setExporting(false);
+    }
+  }
 
   function startRename(d) {
     setRenamingId(d.id);
@@ -145,6 +209,26 @@ export default function DeckManager({ deck, cardIds, quantities, zones, onClose,
         </p>
         {error && <p style={{ color: 'var(--danger)', marginTop: 0 }}>{error}</p>}
 
+        {decks.length > 0 && (
+          <div className="row deck-select-bar">
+            <label style={{ cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={selectedIds.size === decks.length}
+                onChange={toggleAll}
+              />
+              {' '}{t('decks.selectAll')}
+            </label>
+            <span className="spacer" />
+            {exportDone && <span className="muted">✅ {t('decks.exportDone')}</span>}
+            <button
+              className="btn secondary"
+              onClick={exportSelection}
+              disabled={exporting || selectedIds.size === 0}
+            >{t('decks.exportSelection')} ({selectedIds.size})</button>
+          </div>
+        )}
+
         <ul className="deck-list">
           {decks.length === 0 && <li className="muted">{t('decks.none')}</li>}
           {decks.map((d, i) => {
@@ -162,6 +246,13 @@ export default function DeckManager({ deck, cardIds, quantities, zones, onClose,
                 }}
                 onDragEnd={() => setDragIndex(null)}
               >
+                <input
+                  type="checkbox"
+                  className="deck-select"
+                  checked={selectedIds.has(d.id)}
+                  onChange={() => toggleSelected(d.id)}
+                  aria-label={t('decks.selectDeck')}
+                />
                 {isMobile && (
                   <span className="order-btns">
                     <button className="btn secondary small" disabled={i === 0} onClick={() => moveUp(i)} aria-label={t('decks.moveUp')}>▲</button>

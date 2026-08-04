@@ -847,6 +847,10 @@ body {
 .setup-mode.on { border-color: var(--accent); background: var(--panel-2); }
 .setup-mode input[type="radio"] { margin: 0; }
 
+/* Ticking is not grabbing: the rows stay draggable for reordering while a
+   selection is being built. */
+.deck-select-bar { border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+.deck-select { flex: 0 0 auto; }
 .deck-list { list-style: none; padding: 0; margin: 8px 0; }
 .deck-list li {
   display: flex; align-items: center; gap: 8px;

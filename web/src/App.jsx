@@ -362,6 +362,8 @@ export default function App() {
           cardIds={cardIds}
           quantities={quantities}
           zones={zones}
+          cardsById={cardsById}
+          uiLang={uiLang}
           onClose={() => setShowManager(false)}
           onLoad={loadDeckIntoState}
           onSaved={(d) => {
