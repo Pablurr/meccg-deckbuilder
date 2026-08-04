@@ -995,11 +995,13 @@ pour que les deux écrans ne puissent jamais se contredire sur ce qui est légal
 dérivation et même classe CSS que `DeckManager`, réutilisée plutôt que réinventée, pour
 qu'un deck ne porte jamais deux styles de pastille selon l'écran qui l'affiche) et total réel
 (`totalCopies`, §5). Les trois pastilles `Total / Pioche / Sites` qui occupaient l'en-tête
-sont retirées : elles répétaient un total **partiel** (`counts.total` = pioche seule) sous le
-mot « Total », juste à côté d'onglets de zone qui, eux, rapportent chacun leur propre compte
-— deux nombres différents affichés sous un même mot est ce qui les a fait retirer. Le badge
-de la barre repliée (`.deckpanel-badge`) affiche désormais ce même `totalCopies` : un deck ne
-montre jamais deux nombres différents selon qu'il est ouvert ou replié.
+sont retirées : la pastille « Total » répétait un total **partiel** (`counts.total`, le
+**deck principal** — `quantities`, pioche et lieux réunis (§4) — jamais les quatre zones que
+`totalCopies` additionne) sous le mot « Total », juste à côté d'onglets de zone qui, eux,
+rapportent chacun leur propre compte — deux nombres différents affichés sous un même mot est
+ce qui les a fait retirer. Le badge de la barre repliée (`.deckpanel-badge`) affiche désormais
+ce même `totalCopies` : un deck ne montre jamais deux nombres différents selon qu'il est
+ouvert ou replié.
 
 **Grille (`lib/cardGrid.js`, remplace `lib/zoom.js`).** Le curseur de zoom a disparu ; la
 grille du panneau porte la classe `.grid` littérale, la même règle CSS que le navigateur de
@@ -1240,10 +1242,12 @@ son en-tête, et le passage de `scope: { zone: 'sideboard' }` à
    tableau (§4).
 
 8. **Le compteur de la liste des decks ne compte pas comme l'en-tête du panneau ouvert.**
-   `deckStore.list()` (consommé par `DeckManager`) ne totalise que la pioche ; l'en-tête du
-   panneau affiche `totalCopies()`, les quatre zones réunies (§5, §10). **Vérifié en direct :**
-   un même deck affichait « 2 cartes » dans la liste et « (9) » une fois ouvert. Hors périmètre
-   de ce lot ; consigné pour ne pas être redécouvert de zéro à la prochaine session.
+   `deckStore.list()` (consommé par `DeckManager`) ne totalise que `quantities` — pioche
+   **et** lieux (§4), pas la pioche seule ; l'en-tête du panneau affiche `totalCopies()`, les
+   quatre zones réunies (§5, §10), donc l'écart entre les deux est précisément le talon, la
+   réserve et le talon FW. **Vérifié en direct :** un même deck affichait « 2 cartes » dans la
+   liste et « (9) » une fois ouvert. Hors périmètre de ce lot ; consigné pour ne pas être
+   redécouvert de zéro à la prochaine session.
 
 9. **Le point de rupture `@container (min-width: 80px)` sur `.deck-mini-move-btn` est peut-être
    devenu du code mort.** Il bascule le bouton « déplacer » vers sa taille tactile de 44 px une
