@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import * as api from './api.js';
-import { expandQuantities, countOccurrences, deckCounts, deckWarnings, normalizeDeck, totalCopies, emptyZones, EMPTY_NOTES } from './lib/deck.js';
+import { expandQuantities, countOccurrences, deckCounts, deckWarnings, normalizeDeck, totalCopies, emptyZones, EMPTY_NOTES, deckSignature, deckPayload } from './lib/deck.js';
 import { baseOptions } from './lib/tags.js';
 import { I18nProvider } from './i18n.jsx';
 import { makeT } from './lib/i18n.js';
@@ -30,6 +30,17 @@ export default function App() {
   const [quantities, setQuantities] = useState({}); // id -> copy count
   const [deck, setDeck] = useState(() => normalizeDeck({ id: null, name: 'Nouveau deck', backAssignments: {} }));
   const [zones, setZones] = useState(() => emptyZones()); // id -> copy count, per zone
+  // Signature of what is currently on disk for this deck. The Save button
+  // compares the live deck against it; anything that is not one of the four
+  // moments below (mount, load, new, successful save) must NOT touch it --
+  // an import in particular leaves the deck dirty on purpose, because the
+  // imported work is not stored yet.
+  const [savedSignature, setSavedSignature] = useState(() => deckSignature({
+    deck: normalizeDeck({ id: null, name: 'Nouveau deck', backAssignments: {} }),
+    quantities: {},
+    zones: emptyZones(),
+  }));
+  const [saveState, setSaveState] = useState('idle'); // 'idle' | 'saving' | 'saved' | <error message>
   const [showManager, setShowManager] = useState(false);
   const [showSetup, setShowSetup] = useState(false);
   const [showExport, setShowExport] = useState(false);
@@ -179,6 +190,8 @@ export default function App() {
     setQuantities(d.quantities || countOccurrences(d.cardIds || []));
     setZones(normalized.zones);
     setShowManager(false);
+    setSavedSignature(deckSignature({ deck: normalized, quantities: d.quantities || countOccurrences(d.cardIds || []), zones: normalized.zones }));
+    setSaveState('idle');
   }
 
   // "New" resets quantities/zones/notes first so the setup dialog (and the
@@ -189,12 +202,31 @@ export default function App() {
     setZones(emptyZones());
     setShowManager(false);
     setShowSetup(true);
+    setSavedSignature(deckSignature({ deck: normalizeDeck({ id: null, name: t('app.newDeck'), backAssignments: {} }), quantities: {}, zones: emptyZones() }));
+    setSaveState('idle');
   }
 
   // Called by DeckSetupDialog.onConfirm with { mode, ruleset }.
   function applySetup(partial) {
     setDeck((prev) => normalizeDeck({ ...prev, id: prev.id, ...partial }));
     setShowSetup(false);
+  }
+
+  // The header's Save button. An unsaved deck goes through the manager
+  // instead: creating a record is where the name and the exact deck settings
+  // get decided, and that form already exists there.
+  async function saveDeck() {
+    if (!deck.id) { setShowManager(true); return; }
+    setSaveState('saving');
+    try {
+      const saved = await api.updateDeck(deck.id, deckPayload({ deck, cardIds, quantities, zones }));
+      setDeck((prev) => normalizeDeck({ ...prev, ...saved }));
+      setSavedSignature(deckSignature({ deck, quantities, zones }));
+      setSaveState('saved');
+      setTimeout(() => setSaveState((s) => (s === 'saved' ? 'idle' : s)), 2000);
+    } catch (e) {
+      setSaveState(e.message === 'storage-full' ? t('decks.storageFull') : t('common.error', { msg: e.message }));
+    }
   }
 
   // Live rule warnings for deckbuilding decks (validateDeck is pure and runs
@@ -237,6 +269,7 @@ export default function App() {
   const counts = deckCounts(cardsById, cardIds);
   const warnings = deckWarnings(cardsById, cardIds, deck.backAssignments, defaultBacks);
   const hasSelection = totalCopies(quantities, zones) > 0;
+  const dirty = deckSignature({ deck, quantities, zones }) !== savedSignature;
 
   return (
     <I18nProvider lang={textLang}>
@@ -266,6 +299,9 @@ export default function App() {
             onChangeNote={changeNote}
             proxyMode={proxyMode}
             capCtx={capCtx}
+            dirty={dirty}
+            onSave={saveDeck}
+            saveState={saveState}
           />
         )}
       </div>
@@ -292,6 +328,9 @@ export default function App() {
           onClose={() => setDeckSheetOpen(false)}
           proxyMode={proxyMode}
           capCtx={capCtx}
+          dirty={dirty}
+          onSave={saveDeck}
+          saveState={saveState}
         />
       )}
       <DeckDrawer
@@ -324,7 +363,11 @@ export default function App() {
           zones={zones}
           onClose={() => setShowManager(false)}
           onLoad={loadDeckIntoState}
-          onSaved={(d) => setDeck((prev) => normalizeDeck({ ...prev, ...d }))}
+          onSaved={(d) => {
+            setDeck((prev) => normalizeDeck({ ...prev, ...d }));
+            setSavedSignature(deckSignature({ deck: { ...deck, ...d }, quantities, zones }));
+            setSaveState('idle');
+          }}
         />
       )}
       {showImport && (

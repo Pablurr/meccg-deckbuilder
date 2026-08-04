@@ -150,6 +150,9 @@ export default function DeckPanel({
   onPreview,
   proxyMode = false,
   capCtx = null,
+  dirty = false,
+  onSave,
+  saveState = 'idle',
 }) {
   const t = useT();
   const { previewRef, previewImgRef, stampRef, trackPointer, hidePreview } = useCardPreview(lang, proxyMode);
@@ -385,6 +388,12 @@ export default function DeckPanel({
         <b>{deck && deck.name ? t('panel.titleNamed', { name: deck.name }) : t('panel.title')}</b>
         <span className={`side-badge ${sideKey}`}>{t(`side.${sideKey}`)}</span>
         <span className="muted deckpanel-total">({deckTotal})</span>
+        <button
+          className="btn small deckpanel-save"
+          onClick={onSave}
+          disabled={!dirty || saveState === 'saving'}
+          title={t('decks.save')}
+        >{saveState === 'saved' ? `✓ ${t('decks.saved')}` : t('decks.save')}</button>
         {!asSheet && (
           <button
             className="deckpanel-max"
@@ -394,6 +403,9 @@ export default function DeckPanel({
           >{isMaxed ? '⇥' : '⤢'}</button>
         )}
       </div>
+      {saveState !== 'idle' && saveState !== 'saving' && saveState !== 'saved' && (
+        <p className="deckpanel-save-error">{saveState}</p>
+      )}
 
       <div className="ztabs-row">
         <ZoneTabs

@@ -653,6 +653,14 @@ body {
   padding: 10px 12px;
   border-bottom: 1px solid var(--line);
 }
+/* Save failure (storage full, most likely). It belongs under the header rather
+   than in an alert: the button that failed is right above it. */
+.deckpanel-save-error {
+  margin: 0;
+  padding: 6px 12px;
+  color: var(--danger);
+  font-size: 12px;
+}
 /* Pushes the count to the far end of the head, so the deck's name and its
    side badge stay together as one label. */
 .deckpanel-total { margin-left: auto; font-variant-numeric: tabular-nums; }
