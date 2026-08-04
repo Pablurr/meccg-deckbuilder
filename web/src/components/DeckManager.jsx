@@ -4,7 +4,7 @@ import { useT } from '../i18n.jsx';
 import { useIsMobile } from '../lib/useIsMobile.js';
 import { deckPayload } from '../lib/deck.js';
 
-export default function DeckManager({ deck, cardIds, quantities, zones, onClose, onLoad, onSaved }) {
+export default function DeckManager({ deck, cardIds, quantities, zones, onClose, onLoad, onSaved, onRenamed }) {
   const t = useT();
   const isMobile = useIsMobile();
   const [decks, setDecks] = useState([]);
@@ -35,7 +35,12 @@ export default function DeckManager({ deck, cardIds, quantities, zones, onClose,
     setRenamingId(null);
     if (!value) return; // empty name: cancel silently rather than saving a blank one
     try {
-      await api.updateDeck(id, { name: value });
+      const saved = await api.updateDeck(id, { name: value });
+      // Renaming the deck that is currently open moves what is on disk without
+      // moving anything in App -- which left the header showing the old name and
+      // the Save button claiming the two agreed. The next save then wrote
+      // deck.name back over the rename.
+      if (id === deck.id) onRenamed(saved);
       await refresh();
     } catch (e) {
       setError(e.message === 'storage-full' ? t('decks.storageFull') : t('common.error', { msg: e.message }));

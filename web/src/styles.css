@@ -661,8 +661,7 @@ body {
   color: var(--danger);
   font-size: 12px;
 }
-/* Pushes the count to the far end of the head, so the deck's name and its
-   side badge stay together as one label. */
+/* Pushes the count and everything after it (Save, maximize) to the far end of the head, so the deck's name and its side badge stay together as one label. */
 .deckpanel-total { margin-left: auto; font-variant-numeric: tabular-nums; }
 .deckpanel-toggle {
   background: var(--panel-2);

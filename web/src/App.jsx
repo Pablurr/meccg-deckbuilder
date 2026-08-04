@@ -182,6 +182,7 @@ export default function App() {
       notes: { ...EMPTY_NOTES, ...(importedNotes || {}) },
     }));
     setShowImport(false);
+    setSaveState('idle');
   }
 
   function loadDeckIntoState(d) {
@@ -216,7 +217,7 @@ export default function App() {
   // instead: creating a record is where the name and the exact deck settings
   // get decided, and that form already exists there.
   async function saveDeck() {
-    if (!deck.id) { setShowManager(true); return; }
+    if (!deck.id) { setSaveState('idle'); setShowManager(true); return; }
     setSaveState('saving');
     try {
       const saved = await api.updateDeck(deck.id, deckPayload({ deck, cardIds, quantities, zones }));
@@ -367,6 +368,16 @@ export default function App() {
             setDeck((prev) => normalizeDeck({ ...prev, ...d }));
             setSavedSignature(deckSignature({ deck: { ...deck, ...d }, quantities, zones }));
             setSaveState('idle');
+          }}
+          onRenamed={(saved) => {
+            setDeck((prev) => ({ ...prev, name: saved.name }));
+            // Baseline rebuilt from the STORED record, never from the live deck:
+            // a rename must not certify card edits the user has not saved.
+            setSavedSignature(deckSignature({
+              deck: { ...deck, ...saved },
+              quantities: saved.quantities || {},
+              zones: normalizeDeck(saved).zones,
+            }));
           }}
         />
       )}
