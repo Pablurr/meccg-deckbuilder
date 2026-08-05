@@ -5,17 +5,19 @@ import { fetchBytes, fetchCardImageBytes, dataUrlToBytes, mapLimit } from './lib
 import { toMpcPng, toStampedJpeg } from './lib/export/bleedCanvas.js';
 import { buildDeckZip } from './lib/export/zip.js';
 import { buildSheetPdf } from './lib/export/pdf.js';
-import { swatchKeyForCard } from './lib/proxy.js';
+import { swatchKeyForCard, proxyStampFor } from './lib/proxy.js';
 import { loadPatchBitmaps, closePatchBitmaps } from './lib/export/proxyDraw.js';
 
-let _index = null; // id -> card, set by getCards(); used by the export functions
+let _index = null;     // id -> card, set by getCards(); used by the export functions
+let _setNames = null;  // set code -> { en, es, fr }, likewise — the stamp labels need it
 
 export async function getCards() {
   const res = await fetch('/cards.json');
   if (!res.ok) throw new Error(`GET /cards.json → ${res.status}`);
-  const { cards, facets, index } = parseCards(await res.json());
+  const { cards, facets, index, setNames } = parseCards(await res.json());
   _index = index;
-  return { cards, facets, defaultBacks: { playdeck: true, locationdeck: true } };
+  _setNames = setNames;
+  return { cards, facets, setNames, defaultBacks: { playdeck: true, locationdeck: true } };
 }
 
 export function requireIndex() {
@@ -29,6 +31,7 @@ export const listDecks = () => store.list();
 export const getDeck = (id) => store.get(id);
 export const createDeck = (body) => store.create(body || {});
 export const updateDeck = (id, body) => store.update(id, body || {});
+export const reorderDecks = (orderedIds) => store.reorder(orderedIds);
 export const deleteDeck = async (id) => {
   await store.remove(id);
   return { ok: true };
@@ -94,18 +97,21 @@ async function prefetchFronts(cards, lang, process) {
   };
 }
 
-// (card) => { patchBmp, key } | null. Null when proxy mode is off or the card
-// takes no stamp (Regions). Loads only the patches this deck needs, in the
-// export's image language. Returns { stampFor, closePatches } so callers can
-// free the bitmaps after export.
+// (card) => { patchBmp, key, text, color } | null. Loads only the patches this
+// deck needs, in the export's image language. Returns { stampFor, closePatches }
+// so callers can free the bitmaps after export.
+//
+// The early bail is per-language, not global: en/es always mask the copyright
+// notice, so only fr can skip the work entirely when proxy mode is off.
 async function makeStampFor(cards, lang, proxyMode) {
-  if (!proxyMode) return { stampFor: () => null, closePatches: () => {} };
+  if (lang === 'fr' && !proxyMode) return { stampFor: () => null, closePatches: () => {} };
+  const setNames = _setNames || {};
   const keys = new Set(cards.map(swatchKeyForCard).filter(Boolean));
   const patches = await loadPatchBitmaps(keys, lang);
   return {
     stampFor: (card) => {
-      const key = swatchKeyForCard(card);
-      return key ? { patchBmp: patches.get(key), key } : null;
+      const spec = proxyStampFor(card, lang, proxyMode, setNames);
+      return spec ? { ...spec, patchBmp: patches.get(spec.key) } : null;
     },
     closePatches: () => closePatchBitmaps(patches),
   };
@@ -134,8 +140,10 @@ export async function exportPdf({ deckName, cardIds, backAssignments, includeBac
   const cards = cardIds.map((id) => index.get(id)).filter(Boolean);
   const { stampFor, closePatches } = await makeStampFor(cards, lang, proxyMode);
   try {
-    // Proxy off: raw CDN bytes, the PDF scales them (no resampling — unchanged).
-    // Proxy on: bake the stamp into a cut-size JPEG face instead.
+    // Gate is stamp = stampFor(card), not proxyMode directly: fr with proxy off is the
+    // only case where stampFor returns null, so only that case keeps raw CDN bytes (the
+    // PDF scales them, no resampling). Everything else (en/es always, fr proxy on) gets a
+    // stamp baked into a cut-size JPEG face — see ARCHITECTURE.md §7.
     const getFrontBytes = await prefetchFronts(cards, lang, (bytes, card) => {
       const stamp = stampFor(card);
       return stamp ? toStampedJpeg(bytes, stamp) : bytes;

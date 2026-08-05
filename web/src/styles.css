@@ -9,6 +9,15 @@
   --accent-2: #7a5cff;
   --warn: #d9a441;
   --danger: #d1495b;
+  --info: #5b9bd1;
+  /* Lighter danger, same hue/saturation as --danger, for small bold text
+     (.rule-warn.error .rule-sev) on --panel-2: --danger there measures
+     ~3.4:1, below WCAG AA's 4.5:1 for small text. This measures ~4.78:1
+     on #262632. Do not use elsewhere --danger itself is fine on --bg/--panel. */
+  --danger-label: #da7283;
+  /* Lighter ok color, same reasoning as --danger-label: readable as small
+     bold text on --panel-2 (used by .status-chip.verified). */
+  --ok-label: #8fc98f;
   --radius: 8px;
 }
 
@@ -51,9 +60,8 @@ body {
   display: block;
   margin-right: 4px;
 }
-/* Proxy toggle and language link sit at the far right of the top row. */
+/* Proxy toggle, language picker and ? sit at the far right of the top row. */
 .filterbar-top .proxy-toggle { margin-left: auto; margin-right: 10px; flex: 0 0 auto; }
-.filterbar-top .lang-link { margin-left: 0; }
 /* The two search boxes share one line and shrink together. */
 .search-group {
   display: flex;
@@ -140,26 +148,41 @@ body {
   justify-content: space-between;
   gap: 12px;
 }
-.btn.small { padding: 5px 10px; font-size: 13px; }
-
-/* Compact language selector: small text links, not a chunky toggle. */
-.lang-link {
+.browser-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.legality-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
 }
-.lang-link button {
+.btn.small { padding: 5px 10px; font-size: 13px; }
+
+/* Language picker: the trigger shows only the flag, so it costs about half of
+   the three side-by-side buttons it replaces. It reuses .facet / .facet-menu
+   for its shell; only the menu rows need styling, since those are buttons
+   rather than the checkbox labels a facet menu holds. */
+.lang-facet > button { display: inline-flex; align-items: center; gap: 4px; }
+.lang-flag { font-size: 15px; line-height: 1; }
+.lang-menu { min-width: 0; }
+.lang-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
   background: none;
   border: none;
-  color: var(--muted);
-  padding: 4px 6px;
-  cursor: pointer;
+  color: var(--text);
+  font: inherit;
   font-weight: 600;
-  font-size: 13px;
+  padding: 6px 8px;
   border-radius: 4px;
+  cursor: pointer;
 }
-.lang-link button:hover { color: var(--text); }
-.lang-link button.on { color: var(--accent); text-decoration: underline; }
+.lang-menu button:hover { background: var(--panel); }
+.lang-menu button.on { color: var(--accent); }
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -177,6 +200,22 @@ body {
 .cardcell img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .cardcell.selected { border-color: var(--accent); }
 .cardcell img { cursor: pointer; }
+/* Legality filter, "show illegal cards" mode: still fully addable, just
+   visibly marked — this filter never blocks. (Copy caps do, separately,
+   via the + button.) */
+.cardcell.illegal img { filter: grayscale(.6); }
+/* Was a ::after on .cardcell.illegal. Generated content cannot carry a text
+   alternative, so the marker that a card is illegal was purely visual; it is
+   now a real element with screen-reader text beside the glyph. */
+.illegal-mark {
+  position: absolute;
+  top: 4px; right: 4px;
+  z-index: 5;
+  font-size: 14px;
+  line-height: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.8));
+}
 /* Proxy-mode overlay: the card frame's own patch repainted over the copyright
    zone, plus "Proxy". Positioned in % of the card box; the label's size, colour
    and vertical nudge come from proxy.js as inline styles so the DOM and the
@@ -195,6 +234,11 @@ body {
   font-family: Arial, Helvetica, sans-serif;
   font-weight: 700;
   line-height: 1;
+  /* "Servidores de la Oscuridad" is 124px of the 179px box in Arial Bold, so
+     it fits -- but the canvas path never wraps, and a fallback font on a
+     machine without Arial could push it over. Wrapping is the one way these
+     two paths could visibly disagree. */
+  white-space: nowrap;
 }
 /* Shrink-wrapped positioned wrapper for the modal image (img keeps its own
    max constraints, so the wrapper box == the visible card bounds). */
@@ -250,6 +294,83 @@ body {
   color: var(--accent);
 }
 
+/* Deckbuilding mode: primary-zone counter always visible, in the same spot
+   as the freeform .qty-ctrl; a compact expander bar below it reveals the
+   remaining zones on click, per card cell (never shared across the grid). */
+.zone-ctrls {
+  position: absolute;
+  top: 20%; right: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  z-index: 3;
+}
+/* A row, not a column: see ZoneRow in CardBrowser.jsx. The vertical stack this
+   replaced cost ~65px per zone, so the three zones needed more height than the
+   tile has and only the first one was ever visible. */
+.qty-ctrl.zoned {
+  position: static;
+  flex-direction: row;
+  align-items: center;
+  height: auto;
+  gap: 2px;
+  padding: 1px 4px;
+}
+.qty-ctrl.zoned .qty-btn { width: 20px; height: 20px; font-size: 16px; }
+.qty-ctrl.zoned .qty-count { min-width: 12px; text-align: center; font-variant-numeric: tabular-nums; }
+.qty-ctrl.zoned .zlbl {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--accent);
+  line-height: 1;
+}
+/* Touch variants: a count with no controls, because the card modal owns
+   quantity editing there. pointer-events:none is what makes them work: the
+   tally sits over the image, and a tap has to pass through it to the image's
+   own handler, which is what opens that modal. Without it the badge would be
+   a dead zone on the card. */
+.zone-ctrls.readonly { gap: 2px; pointer-events: none; }
+.zone-tally {
+  background: rgba(0,0,0,.72);
+  border-radius: 6px;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 3px 5px;
+  white-space: nowrap;
+}
+.qty-ctrl.readonly { pointer-events: none; padding: 3px 6px; height: auto; }
+.qty-ctrl.zoned.muted { background: rgba(0,0,0,.55); }
+.qty-ctrl.zoned.muted .zlbl { color: var(--muted); }
+/* One panel around the whole set once opened, rather than three chips each
+   with their own backdrop: fewer edges to read and less of the card hidden. */
+.zone-ctrls.expanded {
+  background: rgba(0,0,0,.78);
+  border-radius: 6px;
+  padding: 3px 2px;
+  gap: 0;
+  align-items: stretch;
+}
+.zone-ctrls.expanded .qty-ctrl.zoned,
+.zone-ctrls.expanded .qty-ctrl.zoned.muted { background: none; }
+.zone-ctrls.expanded .zone-expander { background: none; padding: 2px 4px 0; }
+.zone-expander {
+  background: rgba(0,0,0,.7);
+  border: none;
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.3;
+  padding: 3px 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.zone-expander:hover { color: var(--text); }
+
 /* ---- Deck drawer ---- */
 .drawer {
   background: var(--panel);
@@ -261,10 +382,235 @@ body {
   flex-wrap: wrap;
 }
 .counts { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
-.count-pill { background: var(--panel-2); border: 1px solid var(--line); border-radius: 20px; padding: 4px 12px; }
-.count-pill b { color: var(--accent); }
 .warns { color: var(--warn); font-size: 12px; }
+
+/* Live rule warnings (deckbuilding mode): rendered above the tab content so
+   they stay visible regardless of which zone tab is active. Severity is
+   never colour-only — each row also carries an icon + text label, since
+   colour-inverting browser extensions and colour-vision deficiency both
+   make colour-only encoding unreadable. */
+/* The panel is a flex column of free-height blocks, and this one grows with
+   the deck, so without a cap it starves the card list: measured at 574px for
+   five warnings on a 14-card deck, which left the list 55px on the phone
+   sheet and 20px in the 648px desktop panel -- for 5769px of content. The cap
+   is therefore not cosmetic, and it applies at every width for the same
+   reason. 35vh shows roughly one full warning plus the next, and scrolls.
+
+   flex: none is load-bearing: giving the block a scroll container also drops
+   its automatic minimum size, and the column then shrinks it to ~97px, which
+   hides the warnings instead of bounding them. Pinning it yields
+   min(content, 35vh) and leaves the remainder to the list. */
+.rule-warns {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  flex: none;
+  max-height: 35vh;
+  overflow-y: auto;
+}
+.rule-warn {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  font-size: 12px;
+}
+.rule-warn.error { border-left: 3px solid var(--danger); }
+.rule-warn.warning { border-left: 3px solid var(--warn); }
+.rule-warn.info { border-left: 3px solid var(--info); }
+
+/* Hover panel showing a folded warning's full text (desktop pointer only).
+   position: fixed is the point of it, not a shortcut: .rule-warns is a scroll
+   container, and an absolutely positioned child would be clipped by it exactly
+   when the list is long enough to scroll -- the case worth having it for. A
+   fixed box takes the viewport as its containing block and escapes that clip.
+   Nothing between it and the viewport may have a transform, which would make
+   it the containing block instead; .deckpanel has none (the only transform in
+   this file is the mobile sheet's entry animation, and the panel is hover-only
+   so it never renders there).
+
+   Coordinates come from placePopover() in lib/popover.js, applied before paint
+   -- the 0,0 here is only ever the pre-positioning value. */
+.rule-popover {
+  position: fixed;
+  left: 0; top: 0;
+  z-index: 60;
+  max-width: min(340px, 90vw);
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  box-shadow: 0 8px 24px rgba(0,0,0,.45);
+  font-size: 12px;
+  /* The pointer must never reach it: it is a hint about the row underneath,
+     and letting it take hover would flicker as the mouse crossed the gap. */
+  pointer-events: none;
+}
+.rule-popover-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.rule-popover-head code {
+  font-size: 11px;
+  color: var(--muted);
+}
+.rule-popover-ref { margin-left: auto; font-size: 11px; color: var(--muted); }
+.rule-popover p { margin: 0; color: var(--text); line-height: 1.45; }
+.rule-popover .rule-sev.error { color: var(--danger-label); }
+.rule-popover .rule-sev.warning { color: var(--warn); }
+.rule-popover .rule-sev.info { color: var(--info); }
+/* Folded, a warning is one line: disclosure, severity icon, rule id, and a
+   shortcut to silence it. The message and the links appear only unfolded --
+   see the .rule-warns cap above for why the full text of every warning at once
+   is more than the panel can hold. */
+.rule-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rule-head code { flex: 1 1 auto; min-width: 0; }
+.rule-disclose, .rule-ignore {
+  flex: none;
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+  font-size: 13px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+}
+.rule-disclose { width: 16px; }
+.rule-ignore { width: 20px; font-size: 15px; }
+.rule-disclose:hover, .rule-ignore:hover { color: var(--accent); }
+/* Text that must be announced but not shown: the folded line drops the
+   severity word for space, leaving an icon with no accessible name. */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0; border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.rule-warn .rule-sev {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+}
+.rule-warn.error .rule-sev { color: var(--danger-label); }
+.rule-warn.warning .rule-sev { color: var(--warn); }
+.rule-warn.info .rule-sev { color: var(--info); }
+.rule-warn .msg { color: var(--text); }
+.rule-warn .rule-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.rule-warn .rule-meta code {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.linklike {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent-2);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  text-decoration: underline;
+}
+.linklike:hover { color: var(--accent); }
 .spacer { flex: 1; }
+
+/* ---- Rules documentation page (RulesDoc) ---- */
+.docs-btn { font-weight: 700; }
+/* Same footprint as the help button: the logo row is already full on a phone,
+   so the label lives in title/aria-label rather than on screen. */
+.suggest-btn { text-decoration: none; line-height: 1; }
+.modal.doc {
+  width: min(1100px, 96vw);
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+}
+/* The two halves of the help page: what the app does, then what the rules say. */
+.doc-part {
+  margin: 18px 0 4px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+}
+.doc-intro { margin: 0 0 8px; }
+.doc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 12px;
+}
+.doc-head h2 { margin: 0; }
+.doc-prose { max-width: 72ch; }
+.doc-prose h3 { margin-bottom: 4px; }
+.doc-prose p { margin-top: 0; color: var(--text); }
+.doc-section { margin-top: 24px; }
+.doc-section h3 { margin-bottom: 8px; }
+.doc-table-wrap { overflow-x: auto; }
+.doc-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.doc-table th, .doc-table td {
+  text-align: left;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+.doc-table th { color: var(--muted); font-weight: 600; white-space: nowrap; }
+.doc-table tr.unchecked { background: rgba(217, 164, 65, .06); }
+
+/* Status/severity chip: colour is never the only signal — the localized
+   word is always shown alongside it (see status.* / rules.severity.* keys),
+   so the chip reads fine under colour-vision deficiency or a colour-
+   inverting browser extension. */
+.status-chip {
+  display: inline-block;
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-size: 11px;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+.status-chip.verified { color: var(--ok-label); background: rgba(90, 160, 90, .12); }
+.status-chip.unverified { color: var(--warn); background: rgba(217, 164, 65, .12); }
+.status-chip.disputed { color: var(--danger-label); background: rgba(209, 73, 91, .12); }
+
+.doc-notchecked { list-style: none; padding: 0; margin: 8px 0; display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
+.doc-notchecked code { margin-right: 4px; }
+.doc-banned-side { margin-bottom: 14px; }
+.doc-banned-side h4 { margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
+.doc-banned-list { margin: 0; color: var(--muted); font-size: 12px; }
+
+@media (max-width: 720px) {
+  .modal.doc { width: 100vw; max-height: 100vh; height: 100vh; border-radius: 0; }
+}
 .btn {
   background: var(--accent-2);
   border: none;
@@ -322,17 +668,16 @@ body {
   padding: 10px 12px;
   border-bottom: 1px solid var(--line);
 }
-.deckpanel-counts { display: flex; gap: 8px; flex-wrap: wrap; width: 100%; }
-.deckpanel-zoom {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  color: var(--muted);
+/* Save failure (storage full, most likely). It belongs under the header rather
+   than in an alert: the button that failed is right above it. */
+.deckpanel-save-error {
+  margin: 0;
+  padding: 6px 12px;
+  color: var(--danger);
   font-size: 12px;
 }
-.deckpanel-zoom input[type="range"] { flex: 1; accent-color: var(--accent); cursor: pointer; }
-.deckpanel-zoom-val { min-width: 36px; text-align: right; color: var(--text); font-variant-numeric: tabular-nums; }
+/* Pushes the count and everything after it (Save, maximize) to the far end of the head, so the deck's name and its side badge stay together as one label. */
+.deckpanel-total { margin-left: auto; font-variant-numeric: tabular-nums; }
 .deckpanel-toggle {
   background: var(--panel-2);
   border: 1px solid var(--line);
@@ -355,6 +700,63 @@ body {
   padding: 1px 7px;
   font-size: 12px;
 }
+/* Zone tabs: the tab bar IS the drop target (zones live in separate tabs, so
+   source and destination are never both visible — this also works when the
+   destination zone is empty). */
+/* Wraps the tab strip; the border lives here rather than on .ztabs itself. */
+.ztabs-row {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid var(--line);
+}
+.ztabs-row > .ztabs { flex: 1; min-width: 0; border-bottom: none; }
+.ztabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+}
+/* Wider than they were (4px 10px): these are drop targets first and labels
+   second, and a 24px-tall pill is a hard thing to aim a dragged card at. */
+.ztab {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: var(--radius);
+  cursor: pointer;
+  padding: 8px 14px;
+  min-height: 34px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ztab:hover { border-color: var(--accent); }
+.ztab.on { font-weight: 700; border-color: currentColor; }
+.ztab .cnt { opacity: .65; font-variant-numeric: tabular-nums; }
+.ztab.over .cnt { color: var(--danger); font-weight: 700; opacity: 1; }
+/* An optional zone nobody has put a card in yet: an invitation, not a budget. */
+.ztab.optional { border-style: dashed; color: var(--muted); }
+/* A card is being held over this tab. Without it a tab gives no sign it will
+   accept the drop, which is most of why the pills read as labels. */
+.ztab.drop-over { border-color: var(--accent); border-style: solid; color: var(--text); }
+
+/* Notes tab: four free-text fields (starting/resource/hazard/other). */
+.deck-notes { display: flex; flex-direction: column; gap: 12px; }
+.deck-notes label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+.deck-notes label .label { color: var(--muted); }
+.deck-notes textarea {
+  min-height: 70px;
+  resize: vertical;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--text);
+  padding: 6px 8px;
+  font: inherit;
+}
+
 .deckpanel-body { overflow: auto; padding: 10px 12px; }
 .deck-group { margin-bottom: 14px; }
 .deck-group-head {
@@ -364,15 +766,9 @@ body {
   padding-bottom: 4px;
   margin-bottom: 8px;
 }
-/* Cards render at ~50% of the source image (570×796 → ~285px wide), so they
-   are noticeably larger than the browser grid cells. min(285px, 100%) keeps a
-   card from overflowing when the panel is dragged narrow. */
-.deck-mini-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(285px, 100%), 285px));
-  gap: 10px;
-}
-/* Otherwise identical to a browser grid cell (same image + −/count/+ control). */
+/* The deck grid IS the card selector's .grid — same rule, same card size, one
+   place to change either. A mini card is otherwise identical to a browser
+   grid cell (same image + −/count/+ control). */
 /* Confirmation overlay shown when a selected mini card is clicked. */
 .deck-mini-confirm {
   position: absolute;
@@ -387,6 +783,37 @@ body {
 }
 .deck-mini-confirm .btn { padding: 8px 6px; font-size: 14px; font-weight: 600; }
 .btn.danger { background: var(--danger); color: #fff; }
+
+/* "Move to" reuses the confirmation overlay's shape, but lists one button per
+   destination zone, so it can hold three where the confirmation holds two --
+   hence the tighter padding and the scroll fallback at small zoom levels. */
+.deck-mini-move { gap: 4px; overflow-y: auto; }
+.deck-mini-move .btn { padding: 6px 4px; font-size: 13px; }
+/* Bottom-left, opposite the .qty-ctrl stack on the right. That clears it at
+   this 20px size, but NOT at the 44px touch size below: 44 + the ~22px stack
+   exceeds the 60px minimum card width, so the mobile block also lifts the
+   stack to the top edge and the two clear each other vertically instead. */
+/* The tile is a query container so its controls can size against the CARD
+   rather than the viewport -- the panel's own width drives these tiles' size
+   via the shared .grid rule, so viewport-based sizing says nothing about the
+   room actually available. */
+.deck-mini { container-type: inline-size; }
+.deck-mini-move-btn {
+  position: absolute;
+  left: 4px; bottom: 4px;
+  width: 20px; height: 18px;
+  display: grid; place-items: center;
+  padding: 0;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--text);
+  background: rgba(0,0,0,.7);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  z-index: 3;
+}
+.deck-mini-move-btn:hover { color: var(--accent); }
 
 /* ---- Modal ---- */
 .modal-backdrop {
@@ -414,13 +841,57 @@ body {
   padding: 8px 10px;
   border-radius: var(--radius);
 }
+.setup-modes { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
+.setup-mode {
+  display: flex; align-items: baseline; gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  cursor: pointer;
+}
+.setup-mode.on { border-color: var(--accent); background: var(--panel-2); }
+.setup-mode input[type="radio"] { margin: 0; }
+
+/* Ticking is not grabbing: the rows stay draggable for reordering while a
+   selection is being built. */
+.deck-select-bar { border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+.deck-select { flex: 0 0 auto; }
 .deck-list { list-style: none; padding: 0; margin: 8px 0; }
 .deck-list li {
   display: flex; align-items: center; gap: 8px;
   padding: 8px; border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 6px;
 }
-.deck-list .name { flex: 1; }
+.deck-list li[draggable="true"] { cursor: grab; }
+.deck-list .name { flex: 1; cursor: text; }
+input.name {
+  flex: 1;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  padding: 6px 8px;
+  border-radius: var(--radius);
+  font: inherit;
+}
+.order-btns { display: flex; flex-direction: column; gap: 2px; }
+.order-btns .btn { padding: 0 6px; line-height: 1.4; }
 .muted { color: var(--muted); }
+
+/* Side badge: colour is decoration only, the label always carries the
+   meaning (readable under colour-vision deficiency and colour-inverting
+   browser extensions alike). */
+.side-badge {
+  display: inline-block;
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-size: 11px;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+.side-badge.wizard { color: #7aa2f7; background: rgba(122, 162, 247, .12); }
+.side-badge.ringwraith { color: #d1495b; background: rgba(209, 73, 91, .12); }
+.side-badge.fallen-wizard { color: #a56cff; background: rgba(165, 108, 255, .12); }
+.side-badge.balrog { color: #e08a3c; background: rgba(224, 138, 60, .12); }
+.side-badge.freeform { color: #9a9aab; background: rgba(154, 154, 171, .12); }
 .close-x { position: absolute; }
 
 /* ---- Import dialog ---- */
@@ -435,6 +906,11 @@ body {
   font-size: 13px;
   resize: vertical;
 }
+.import-settings { border: 1px solid var(--line); border-radius: 8px; padding: .5rem .75rem; margin: .5rem 0; }
+.import-settings legend { font-size: .85em; padding: 0 .35rem; }
+/* Marked, not hidden: the card still imports. Mirrors .cardcell.illegal. */
+.imp-illegal { color: var(--warn); }
+.import-prose pre { white-space: pre-wrap; font-size: .85em; margin: .25rem 0 0; }
 .import-list {
   list-style: none;
   padding: 0;
@@ -503,18 +979,44 @@ code {
   object-fit: contain;
   border-radius: 8px;
 }
+/* A column, not a row: the bar now holds one counter per zone the card may
+   occupy (one for a Site, three for a non-avatar Character), and laying a
+   variable number of them side by side would squeeze the 44px buttons below
+   a usable size on a narrow phone. */
 .card-modal-bar {
   flex: 0 0 auto;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 18px;
+  gap: 10px;
   padding: 12px;
   background: var(--panel);
   border-top: 1px solid var(--line);
 }
 .qty-btn.big { width: 44px; height: 44px; font-size: 26px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-2); }
 .card-modal-count { font-weight: 700; font-size: 20px; color: var(--accent); min-width: 28px; text-align: center; }
+.card-modal-zone { width: 100%; max-width: 420px; }
+.card-modal-zone-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.card-modal-zone-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 600;
+  font-size: 15px;
+}
+/* The cap reason is on-screen text rather than the title= tooltip it used to
+   be: a tooltip is unreachable by touch, and the disabled + button it explains
+   cannot take focus either, so a blocked + had no way to say why. */
+.card-modal-zone-reason {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--muted);
+  padding-top: 3px;
+}
 
 /* ---- Deck panel as full-screen bottom sheet (mobile) ---- */
 .deckpanel.sheet {
@@ -541,6 +1043,9 @@ code {
 }
 
 .drawer-viewdeck { display: inline-flex; align-items: center; gap: 8px; }
+/* Desktop shows the labels alone: there is room for them, and the icons exist
+   to shrink the mobile bar, not to redecorate a layout that already fits. */
+.drawer .ico { display: none; }
 
 /* ================= Mobile layout (keep in sync with MOBILE_QUERY) ============ */
 /* Width-only: a wide touchscreen desktop stays on the desktop layout. */
@@ -549,20 +1054,136 @@ code {
   .filterbar { padding: 8px 10px; }
   .brand-logo { height: 26px; }
   .filters-toggle { align-self: flex-start; }
-  /* Comfortable touch targets for the filter controls. */
-  .filters-toggle, .facet > button, .chip-toggle { min-height: 44px; }
+  /* Three rows, not four. Left to wrap on its own the top row broke into
+     logo / searches / proxy+languages+?, and with the Filtres button below it
+     that put four rows of chrome above the grid. The search pair takes a full
+     row of its own so the other four items share the first: measured at 375px
+     they need 293px of the 355 available, so nothing has to shrink.
+     `order` moves the searches visually below controls that follow them in the
+     DOM; the DOM order is kept as-is because reaching the search box early is
+     the better keyboard path, and desktop still wants it beside the logo. */
+  .search-group { flex: 1 0 100%; order: 1; }
+  /* Chrome buttons -- the filter row, the drawer, modal actions -- are sized
+     to 36px rather than the 44px Apple/WCAG-AAA target. They are wide,
+     text-labelled, low-frequency controls, and on a phone the header and
+     footer they fill are pure overhead competing with the card grid. 36px is
+     also the height these buttons take unforced (8px padding + a 14px line),
+     so this is really the removal of an override rather than a new size.
+     The floor that matters is WCAG 2.2 AA 2.5.8, which is 24x24: 32 still
+     leaves a third more than that. Controls that are icon-only, repeated, or
+     consequential keep 44 -- see .qty-btn.big, .ztab and .rule-meta below.
+     The padding is trimmed with the min-height on purpose: at 7px these were
+     36px tall from their content alone, so lowering only the min-height would
+     have changed nothing. */
+  .filters-toggle, .facet > button, .chip-toggle {
+    min-height: 32px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+  }
+  /* The picker's rows are a menu, not chrome: three infrequent choices where a
+     mis-tap switches language, so they keep the full target. */
+  .lang-menu button { min-height: 44px; }
 
   /* Card grid: ~3 columns, tighter gaps/padding. */
   .browser { padding: 8px; }
   .grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 6px; }
 
-  /* Bottom drawer: wraps, comfortable touch targets. */
-  .drawer { gap: 8px; padding: 8px 10px; }
-  .drawer .btn { padding: 10px 12px; min-height: 44px; }
-  .drawer-viewdeck { order: -1; }
+  /* Bottom drawer: icons instead of labels. The six labels measured 588px of
+     width against 355 available, so the bar always wrapped onto a second row
+     and cost 97px of a screen the card grid needs. */
+  /* nowrap makes one row structural rather than arithmetic: the buttons carry
+     a min-width well under the track, so they compress instead of dropping a
+     second 44px row onto a screen the grid needs. */
+  .drawer { gap: 6px; padding: 8px 8px; flex-wrap: nowrap; }
+  /* The spacer right-aligns the actions on desktop. On mobile it was taking
+     64px -- the whole margin the icons had just freed -- and pushing the last
+     button onto a second row. It is also the gap between "view deck" and the
+     actions that looked like a layout bug in the report. */
+  .drawer .spacer { display: none; }
+  /* min-width spends the room the icons freed: the glyphs alone gave 28-36px
+     targets. 40 rather than the full 44, and tighter gaps and padding with
+     it, because fitting on one row at 375px is not the same as fitting on a
+     real phone: the reporter's device lays these out wider than a 375px test
+     viewport does, and a bar that wraps costs a whole 44px row. At 40 the six
+     need ~285px of the 355, so a device rendering ~20% wider still fits. */
+  .drawer .btn { padding: 7px 8px; min-height: 36px; min-width: 40px; }
+  .drawer-viewdeck { order: -1; gap: 6px; }
+  .drawer .ico { display: inline; font-size: 16px; line-height: 1; }
+  /* Same declarations as .sr-only, applied by the layout rather than by a
+     class in the markup: the label must stay visually hidden AND announced,
+     because it is what names an otherwise icon-only button. display:none
+     would drop it from the accessibility tree and leave no name at all. */
+  .drawer .lbl {
+    position: absolute;
+    width: 1px; height: 1px;
+    margin: -1px; padding: 0; border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 
   /* Modals: use more of the screen, bigger touch targets, no h-overflow. */
   .modal { width: min(560px, 96vw); padding: 16px; }
-  .modal .btn { min-height: 44px; }
+  .modal .btn { min-height: 36px; }
+  /* The card modal is not a .modal, so the rule above never reached its Done
+     button: it stayed at 31px, the one sub-standard target on a surface whose
+     other controls are all 44. It also has room -- the bar is a column. */
+  .card-modal-bar .btn { min-height: 44px; }
   .import-textarea, .import-list select { width: 100%; }
+
+  /* ---- Deckbuilding surfaces ----
+     The rules above predate deck mode, so its controls never got a touch
+     pass. (The warnings cap that makes room for the card list is not here:
+     the same starvation happens on desktop, so it lives on .rule-warns
+     itself.) Everything below is touch-specific and deliberately stops at
+     this breakpoint -- 44px targets would only inflate the desktop panel. */
+
+  /* Zone tabs: one scrollable row rather than two wrapped ones. Wrapping to
+     a second row at 44px each would cost more height than it saves. */
+  .ztabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .ztab { min-height: 44px; white-space: nowrap; }
+
+  /* Folded, that one line is the whole control surface for a warning, so both
+     its buttons take the full target -- the ignore shortcut most of all, since
+     a single tap silences a rule for the deck. */
+  .rule-disclose, .rule-ignore { min-height: 44px; min-width: 44px; }
+
+  /* Each warning's footer holds three links, one of which disables a rule
+     for the deck -- too consequential for a 31px target. */
+  .rule-warn .rule-meta { flex-wrap: wrap; gap: 4px 10px; }
+  .rule-warn .rule-meta .linklike,
+  .rule-warn .rule-meta a {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* The tile's zone buttons and their 9px labels no longer render on touch --
+     the card modal owns that editing now, so the rules that used to enlarge
+     them are gone rather than left behind matching nothing. */
+
+  /* The only touch route to moving a copy between zones -- the card is not
+     draggable on mobile -- so it gets a full 44px target even though it costs
+     a visible corner of the thumbnail. */
+  /* Sized against the CARD, not the viewport: the panel's own width drives
+     these tiles' size via the shared .grid rule, independently of screen
+     width, so a flat 44px here collided with the qty stack at the card's
+     smallest size -- measured at the 60px floor, the button
+     spanned x 18-62 across a stack at x 44-66, making a tap there ambiguous.
+     Stacking them vertically does not rescue it either: the stack is 54px
+     tall and the card only 84px at that size.
+     So the touch size applies only once the card can hold it beside the stack
+     (44 + ~22 + margins), and below that the compact button stays. A target
+     smaller than the guideline is a compromise; two overlapping targets are a
+     defect. */
+  @container (min-width: 80px) {
+    .deck-mini-move-btn { width: 44px; height: 44px; font-size: 20px; border-radius: 8px; }
+  }
+  /* Destination buttons fill the tile, so they can afford the full height;
+     the overlay scrolls if a three-zone card is shown at a small zoom. */
+  .deck-mini-move .btn { min-height: 44px; font-size: 15px; }
+  /* Zone rows in the card modal: keep the name from crowding the 44px
+     buttons on a narrow phone. */
+  .card-modal-zone-name { font-size: 14px; }
+  .card-modal-zone-row { gap: 10px; }
 }

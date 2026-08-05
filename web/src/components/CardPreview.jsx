@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react';
 import { cardImageSrc, cardImageEn } from '../lib/lang.js';
 import {
-  swatchKeyForCard, PROXY_PATCH_RECT, PROXY_LABEL, PROXY_LABEL_COLOR,
+  proxyStampFor, PROXY_PATCH_RECT,
   PROXY_LABEL_FONT_CQW, PROXY_LABEL_DY_CQH, patchUrl,
 } from '../lib/proxy.js';
 
@@ -17,7 +17,7 @@ const PREVIEW_DELAY_MS = 600;
 // Shared full-size hover preview for card images, driven imperatively via refs
 // so moving the mouse never re-renders the (potentially hundreds of) cells that
 // use it. Consumed by both the browser grid and the deck panel.
-export function useCardPreview(lang, proxyOn = false) {
+export function useCardPreview(lang, proxyOn = false, setNames = {}) {
   const previewRef = useRef(null);
   const previewImgRef = useRef(null);
   const stampRef = useRef(null);
@@ -53,18 +53,18 @@ export function useCardPreview(lang, proxyOn = false) {
     // positioned imperatively too; .proxy-stamp CSS handles the label scaling.
     const stamp = stampRef.current;
     if (stamp) {
-      const key = proxyOn ? swatchKeyForCard(c) : null;
-      if (key) {
+      const spec = proxyStampFor(c, lang, proxyOn, setNames);
+      if (spec) {
         const r = PROXY_PATCH_RECT;
         stamp.style.left = `${r.x * 100}%`;
         stamp.style.top = `${r.y * 100}%`;
         stamp.style.width = `${r.w * 100}%`;
         stamp.style.height = `${r.h * 100}%`;
-        stamp.style.backgroundImage = `url(${patchUrl(key, lang)})`;
+        stamp.style.backgroundImage = `url(${patchUrl(spec.key, lang)})`;
         const span = stamp.firstElementChild;
         if (span) {
-          span.textContent = PROXY_LABEL;
-          span.style.color = PROXY_LABEL_COLOR[key];
+          span.textContent = spec.text;
+          span.style.color = spec.color;
           span.style.fontSize = `${PROXY_LABEL_FONT_CQW}cqw`;
           span.style.transform = `translateY(${PROXY_LABEL_DY_CQH}cqh)`;
         }

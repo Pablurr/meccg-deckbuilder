@@ -59,8 +59,30 @@ export function computeFacets(cards) {
   };
 }
 
-// One-stop parse: cards + facets + id index.
+// Set display names, keyed by set code: { AS: { en, es, fr }, … }.
+//
+// cards.json already carries these, in exactly the three UI languages, so the
+// Set filter needs no i18n keys of its own — and a set added to the data ships
+// its own name with it, in every language, instead of waiting on a dictionary
+// entry that would silently fall back to the bare code.
+//
+// flattenCards deliberately does not copy this onto each card: it is per-set
+// metadata, and 1683 copies of the same object is not a lookup table.
+export function collectSetNames(raw) {
+  const out = {};
+  for (const [setCode, setObj] of Object.entries(raw || {})) {
+    if (setObj && setObj.name) out[setCode] = setObj.name;
+  }
+  return out;
+}
+
+// One-stop parse: cards + facets + id index + set names.
 export function parseCards(raw) {
   const cards = flattenCards(raw);
-  return { cards, facets: computeFacets(cards), index: new Map(cards.map((c) => [c.id, c])) };
+  return {
+    cards,
+    facets: computeFacets(cards),
+    index: new Map(cards.map((c) => [c.id, c])),
+    setNames: collectSetNames(raw),
+  };
 }

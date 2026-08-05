@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { filterCards } from '../web/src/lib/filter.js';
+import { filterCards, sortFacetOptions } from '../web/src/lib/filter.js';
 
 const cards = [
   { id: 'AS-1', setCode: 'AS', type: 'Character', alignment: 'Minion', rarity: 'U2', artist: 'Omar Rayyan', name: { en: 'Bûrat', fr: 'Bûrat' }, text: 'Manifestation of Bert. +1 prowess against Dwarves.', attributes: { race: 'Troll', skills: 'Warrior/Ranger', unique: true, keywords: ['Maia'] } },
@@ -71,5 +71,28 @@ describe('filterCards', () => {
     expect(filterCards(cards, { cardText: 'dwarves' }).map((c) => c.id)).toEqual(['AS-1']);
     expect(filterCards(cards, { cardText: 'company' }).map((c) => c.id)).toEqual(['AS-44']);
     expect(filterCards(cards, { cardText: 'nothing here' })).toHaveLength(0);
+  });
+});
+
+describe('sortFacetOptions', () => {
+  const label = (v) => ({ Character: 'Personnages', Resource: 'Ressources', Hazard: 'Périls', Site: 'Sites', Region: 'Régions' }[v] || v);
+
+  it('sortFacetOptions: with an order, the display language cannot change the sequence', () => {
+    const opts = ['Region', 'Hazard', 'Character', 'Site', 'Resource'];
+    const order = ['Character', 'Resource', 'Hazard', 'Site', 'Region'];
+    expect(sortFacetOptions(opts, { order, label })).toEqual(order);
+  });
+
+  it('sortFacetOptions: a value missing from the order goes last, not first', () => {
+    const order = ['Character', 'Resource'];
+    expect(sortFacetOptions(['Zebra', 'Resource', 'Alpha'], { order, label: (v) => v }))
+      .toEqual(['Resource', 'Alpha', 'Zebra']);
+  });
+
+  it('sortFacetOptions: with no order it sorts on the label, which is the existing behaviour', () => {
+    // Returns raw values, ordered by what they DISPLAY as. French collation
+    // treats "é" as "e", so "Périls" sorts before "Personnages" — which is
+    // exactly why the Type facet needed an explicit order instead.
+    expect(sortFacetOptions(['Hazard', 'Character'], { label })).toEqual(['Hazard', 'Character']);
   });
 });

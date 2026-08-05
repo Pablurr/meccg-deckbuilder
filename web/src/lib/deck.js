@@ -1,3 +1,5 @@
+import { SIDE_IDS, LENGTH_IDS } from './constants.js';
+
 // Back-group mapping, duplicated from src/exporter.js (tiny, stable map;
 // kept here so the browser bundle needs no server import).
 export const BACK_GROUPS = {
@@ -12,18 +14,15 @@ export function backGroupForType(type) {
   return BACK_GROUPS[type] || 'playdeck';
 }
 
-// Copy limits:
-//  - Avatars (wizards, ringwraiths, fallen-wizards, balrog): unique but up to 3.
-//  - Sites: always 1.
-//  - Other unique cards: 1.
-//  - Everything else: 3.
-export const MAX_COPIES = 3;
-export function maxCopies(card) {
-  const a = (card && card.attributes) || {};
-  if (a.avatar === true) return MAX_COPIES;
-  if (card && card.type === 'Site') return 1;
-  if (a.unique === true) return 1;
-  return MAX_COPIES;
+// The empty shape of `zones`, in one place. normalizeDeck guarantees this for
+// anything read from storage, but App and the importer build zones objects in
+// memory that never pass through it -- and a map missing here is not a missing
+// feature, it is a TypeError in bumpCount (deckMutations.js) the first time a
+// card is routed to that zone. Adding a sixth zone must mean editing exactly
+// this function; grep the repo for `sideboard: {}` afterwards to make sure no
+// hand-rolled copy of this shape survived the edit.
+export function emptyZones() {
+  return { sideboard: {}, pool: {}, sideboardFw: {} };
 }
 
 // Expand a { id: count } map into an ordered list with repeats (for export/counts).
@@ -33,6 +32,20 @@ export function expandQuantities(quantities = {}) {
     for (let i = 0; i < count; i++) out.push(id);
   }
   return out;
+}
+
+// Every copy held anywhere in the deck: play deck plus sideboard plus pool.
+//
+// Distinct from deckCounts().total, which counts the play deck alone because
+// it feeds the per-type/per-alignment breakdown of that deck. Anything gating
+// on "does this deck have cards" must use THIS one: a card added only to the
+// pool or the sideboard is genuinely in the deck -- the panel lists it and the
+// export prints it -- so a play-deck-only total wrongly reported an empty deck
+// and left the drawer's "view deck" button disabled, which on mobile is the
+// only way to reach those zones at all.
+export function totalCopies(quantities = {}, zones = {}) {
+  const sum = (m) => Object.values(m || {}).reduce((a, b) => a + b, 0);
+  return sum(quantities) + sum(zones.sideboard) + sum(zones.pool) + sum(zones.sideboardFw);
 }
 
 // Rebuild a { id: count } map from a (possibly repeated) list of ids.
@@ -74,4 +87,85 @@ export function deckWarnings(cardsById, cardIds, backAssignments = {}, defaultBa
   const missingImg = cardIds.map((id) => cardsById.get(id)).filter((c) => c && !c.image);
   if (missingImg.length) warnings.push({ code: 'missingImage', count: missingImg.length });
   return warnings;
+}
+
+export const EMPTY_NOTES = { starting: '', resourceStrategy: '', hazardStrategy: '', other: '' };
+
+// Fill mode/ruleset/zones/notes with safe defaults. A record without `mode`
+// (every pre-existing deck) reads as freeform; a deckbuilding record whose
+// side or length is unknown falls back to freeform rather than throwing.
+export function normalizeDeck(d = {}) {
+  // Built from emptyZones()'s own keys, not a re-listing of them, so the two
+  // cannot drift: a zone added to emptyZones() alone is enough for a deck
+  // written before it existed to read as having it, empty -- there is no
+  // schema version number to branch on instead.
+  const zones = Object.fromEntries(
+    Object.keys(emptyZones()).map((z) => [z, { ...((d.zones && d.zones[z]) || {}) }]),
+  );
+  const notes = { ...EMPTY_NOTES, ...(d.notes || {}) };
+  let mode = d.mode === 'deckbuilding' ? 'deckbuilding' : 'freeform';
+  let ruleset = null;
+  if (mode === 'deckbuilding') {
+    const r = d.ruleset || {};
+    if (SIDE_IDS.includes(r.side) && LENGTH_IDS.includes(r.length)) {
+      ruleset = { side: r.side, length: r.length, tournament: !!r.tournament, ruleOverrides: { ...(r.ruleOverrides || {}) } };
+    } else {
+      mode = 'freeform';
+    }
+  }
+  // "Ignore this rule" choices must survive a deckbuilding -> freeform -> back
+  // round-trip: freeform has no `ruleset` to hold ruleOverrides (it's nulled
+  // above), so DeckSetupDialog.confirm losing that object would silently wipe
+  // every per-deck override. Kept as its own top-level field, independent of
+  // `ruleset`, and mirrored from ruleset.ruleOverrides whenever one exists so
+  // it's always the latest choices; when there's no ruleset (freeform), the
+  // previously-saved value passes through untouched instead of being reset.
+  const savedRuleOverrides = { ...((ruleset && ruleset.ruleOverrides) || d.savedRuleOverrides || {}) };
+  return { ...d, mode, ruleset, zones, notes, savedRuleOverrides, order: typeof d.order === 'number' ? d.order : null };
+}
+
+// Deterministic stringify: object keys are emitted sorted, at every depth.
+// JSON.stringify follows INSERTION order, so two decks holding the same cards
+// added in a different order would produce different text -- and the Save
+// button, which compares this against the last saved value, would light up
+// with nothing to save.
+function stable(value) {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value) ?? 'null';
+  if (Array.isArray(value)) return `[${value.map(stable).join(',')}]`;
+  const keys = Object.keys(value).sort();
+  return `{${keys.map((k) => `${JSON.stringify(k)}:${stable(value[k])}`).join(',')}}`;
+}
+
+// Everything a save persists, and nothing else. `id`, `order` and `updatedAt`
+// are deliberately absent: none is editable from the deck screen, and folding
+// them in would make a deck read as modified the instant storage handed back
+// the id it just assigned.
+export function deckSignature({ deck = {}, quantities = {}, zones = {} } = {}) {
+  return stable({
+    name: deck.name || '',
+    mode: deck.mode || 'freeform',
+    ruleset: deck.ruleset || null,
+    notes: deck.notes || {},
+    backAssignments: deck.backAssignments || {},
+    quantities,
+    zones,
+  });
+}
+
+// The one place that decides what a saved deck contains. Both save paths (the
+// deck panel's button and the deck manager's form) go through it, so a field
+// added here reaches storage from either -- which is exactly what the two
+// hand-built payloads it replaced could not promise.
+export function deckPayload({ deck = {}, cardIds = [], quantities = {}, zones = {}, name } = {}) {
+  return {
+    name: name ?? deck.name,
+    cardIds,
+    quantities,
+    backAssignments: deck.backAssignments || {},
+    mode: deck.mode,
+    ruleset: deck.ruleset,
+    zones,
+    notes: deck.notes,
+    order: deck.order,
+  };
 }

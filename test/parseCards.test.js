@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { flattenCards, computeFacets, parseCards } from '../web/src/lib/parseCards.js';
+import { flattenCards, computeFacets, parseCards, collectSetNames } from '../web/src/lib/parseCards.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CARDS_JSON = path.join(__dirname, '..', 'web', 'public', 'cards.json');
@@ -53,6 +53,20 @@ describe('computeFacets', () => {
   });
 });
 
+describe('collectSetNames', () => {
+  it('keys the per-set name objects by set code', () => {
+    const raw = { AS: { name: { en: 'Against the Shadow', fr: "Contre l'Ombre" }, cards: {} } };
+    expect(collectSetNames(raw)).toEqual({ AS: { en: 'Against the Shadow', fr: "Contre l'Ombre" } });
+  });
+
+  it('omits a set with no name rather than inventing an empty entry', () => {
+    // setLabel() falls back to the bare code for a missing entry, so the menu
+    // still shows something addressable — but only if the key is truly absent.
+    expect(collectSetNames(fixture)).toEqual({});
+    expect(collectSetNames(null)).toEqual({});
+  });
+});
+
 describe('parseCards (real data)', () => {
   it('parses all 1683 cards from web/public/cards.json', async () => {
     const raw = JSON.parse(await readFile(CARDS_JSON, 'utf-8'));
@@ -63,5 +77,22 @@ describe('parseCards (real data)', () => {
     expect(burat.name.en).toBe('Bûrat');
     expect(burat.image).toBe('Burat.jpg');
     expect(burat.imageBaseUrl.en).toMatch(/en-remaster\/as\/$/);
+  });
+
+  // The Set filter reads these instead of the dictionary, so every set the
+  // facet can offer must carry a name in all three UI languages. A set added
+  // to the data without one would show as a bare code, in every language, with
+  // nothing failing — which is exactly the silent gap this pins shut.
+  it('every set has a name in all three UI languages', async () => {
+    const raw = JSON.parse(await readFile(CARDS_JSON, 'utf-8'));
+    const { facets, setNames } = parseCards(raw);
+    for (const code of facets.sets) {
+      for (const lang of ['en', 'fr', 'es']) {
+        expect(setNames[code] && setNames[code][lang], `${code}.${lang} missing`).toBeTruthy();
+      }
+    }
+    expect(setNames.AS.fr).toBe("Contre l'Ombre");
+    expect(setNames.AS.en).toBe('Against the Shadow');
+    expect(setNames.AS.es).toBe('Contra la Sombra');
   });
 });

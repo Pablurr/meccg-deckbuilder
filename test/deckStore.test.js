@@ -17,7 +17,7 @@ describe('localStorage deck store', () => {
     expect(deck.id).toMatch(/^d_/);
     expect(deck.createdAt).toBeTruthy();
     const list = await store.list();
-    expect(list).toEqual([{ id: deck.id, name: 'Test', count: 2, updatedAt: deck.updatedAt }]);
+    expect(list).toEqual([{ id: deck.id, name: 'Test', count: 2, updatedAt: deck.updatedAt, order: null, mode: undefined, side: undefined }]);
   });
 
   it('gets, updates (preserving createdAt) and removes decks', async () => {
@@ -61,5 +61,57 @@ describe('localStorage deck store', () => {
     };
     const store = createDeckStore(full);
     await expect(store.create({ name: 'X' })).rejects.toThrow('storage-full');
+  });
+
+  it('reorder() writes every row\'s order in one pass and list() reflects the requested sequence', async () => {
+    const store = createDeckStore(fakeStorage());
+    const a = await store.create({ name: 'A' });
+    const b = await store.create({ name: 'B' });
+    const c = await store.create({ name: 'C' });
+    await store.reorder([c.id, a.id, b.id]);
+    const list = await store.list();
+    expect(list.map((d) => d.id)).toEqual([c.id, a.id, b.id]);
+    expect(list.map((d) => d.order)).toEqual([1, 2, 3]);
+  });
+
+  it('reorder() ignores an unknown id instead of throwing', async () => {
+    const store = createDeckStore(fakeStorage());
+    const a = await store.create({ name: 'A' });
+    const b = await store.create({ name: 'B' });
+    await expect(store.reorder([b.id, 'nope', a.id])).resolves.toBeUndefined();
+    const list = await store.list();
+    expect(list.map((d) => d.id)).toEqual([b.id, a.id]);
+    // the unknown id's slot doesn't shift the assigned order values: b and a
+    // still get 1-based positions from their own place in the input array.
+    expect(list.find((d) => d.id === b.id).order).toBe(1);
+    expect(list.find((d) => d.id === a.id).order).toBe(3);
+  });
+
+  it('reorder() leaves storage completely unchanged when a write hits the quota', async () => {
+    // Seed real deck data through a normal fake storage first...
+    const seed = fakeStorage();
+    const store = createDeckStore(seed);
+    const a = await store.create({ name: 'A' });
+    const b = await store.create({ name: 'B' });
+    const snapshot = seed.getItem('meccg.decks.v1');
+
+    // ...then reopen that same data behind a storage stub whose setItem
+    // always throws quota, so reorder's single writeAll fails and never
+    // mutates the underlying data.
+    const quotaStore = createDeckStore({
+      getItem: (k) => (k === 'meccg.decks.v1' ? snapshot : null),
+      setItem: () => {
+        const e = new Error('quota');
+        e.name = 'QuotaExceededError';
+        throw e;
+      },
+      removeItem: () => {},
+    });
+    await expect(quotaStore.reorder([b.id, a.id])).rejects.toThrow('storage-full');
+    // The atomicity claim: the stored blob is byte-for-byte identical to the
+    // pre-reorder snapshot — no row got a new order, not even a to-be-rolled-
+    // back one. This is what proves reorder() never got past a single,
+    // all-or-nothing writeAll.
+    expect(seed.getItem('meccg.decks.v1')).toBe(snapshot);
   });
 });

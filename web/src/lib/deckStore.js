@@ -30,9 +30,18 @@ export function createDeckStore(storage = globalThis.localStorage) {
 
   return {
     async list() {
-      return Object.values(readAll())
-        .map((d) => ({ id: d.id, name: d.name, count: (d.cardIds || []).length, updatedAt: d.updatedAt }))
-        .sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
+      const rows = Object.values(readAll()).map((d) => ({
+        id: d.id, name: d.name, count: Object.values(d.quantities || {}).reduce((s, n) => s + n, 0) || (d.cardIds || []).length,
+        updatedAt: d.updatedAt, order: typeof d.order === 'number' ? d.order : null,
+        mode: d.mode, side: d.ruleset && d.ruleset.side,
+      }));
+      return rows.sort((a, b) => {
+        if (a.order != null && b.order != null && a.order !== b.order) return a.order - b.order;
+        if (a.order != null && b.order == null) return -1;
+        if (a.order == null && b.order != null) return 1;
+        const t = String(b.updatedAt || '').localeCompare(String(a.updatedAt || ''));
+        return t !== 0 ? t : String(a.id).localeCompare(String(b.id));
+      });
     },
 
     async get(id) {
@@ -41,9 +50,9 @@ export function createDeckStore(storage = globalThis.localStorage) {
       return d;
     },
 
-    async create({ name, cardIds = [], quantities = {}, backAssignments = {} } = {}) {
+    async create({ name, cardIds = [], quantities = {}, backAssignments = {}, mode, ruleset, zones, notes, order } = {}) {
       const now = new Date().toISOString();
-      const deck = { id: newId(), name: name || 'Untitled', cardIds, quantities, backAssignments, createdAt: now, updatedAt: now };
+      const deck = { id: newId(), name: name || 'Untitled', cardIds, quantities, backAssignments, mode, ruleset, zones, notes, order, createdAt: now, updatedAt: now };
       const all = readAll();
       all[deck.id] = deck;
       writeAll(all);
@@ -57,6 +66,22 @@ export function createDeckStore(storage = globalThis.localStorage) {
       all[id] = deck;
       writeAll(all);
       return deck;
+    },
+
+    // Batch reorder: one read, apply every `order` patch in memory, one
+    // `writeAll` — unlike calling update() once per row, a storage-full
+    // failure here leaves the stored order completely unchanged instead of
+    // half-applied (see DeckManager's persistOrder). `orderedIds` is the
+    // desired sequence; each id gets order = its 1-based index in that array.
+    // Ids that no longer exist (deleted in another tab) are ignored rather
+    // than throwing.
+    async reorder(orderedIds) {
+      const all = readAll();
+      const now = new Date().toISOString();
+      orderedIds.forEach((id, i) => {
+        if (all[id]) all[id] = { ...all[id], order: i + 1, updatedAt: now };
+      });
+      writeAll(all);
     },
 
     async remove(id) {

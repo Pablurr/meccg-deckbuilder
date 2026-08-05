@@ -11,10 +11,15 @@ export const LIST_LANGUAGES = [
 // Card-name display languages offered by the language selector. Names in
 // cards.json cover en/fr/es fully, and card images exist for all three.
 // (UI chrome text is only translated fr/en; 'es' maps to 'en' — see App.jsx.)
+//
+// `flag` is a regional-indicator pair, which Windows does not render as a flag
+// — it falls back to the two letters, i.e. the same thing `label` says. That
+// degradation is why the label is kept: the menu always names the language in
+// text, and the flag is decoration on the platforms that draw it.
 export const UI_LANGUAGES = [
-  { code: 'fr', label: 'FR' },
-  { code: 'en', label: 'EN' },
-  { code: 'es', label: 'ES' },
+  { code: 'fr', label: 'FR', flag: '🇫🇷' },
+  { code: 'en', label: 'EN', flag: '🇬🇧' },
+  { code: 'es', label: 'ES', flag: '🇪🇸' },
 ];
 
 // Languages for which card IMAGES exist (imageBaseUrl en/es/fr only).
@@ -29,6 +34,23 @@ export const IMAGE_LANGUAGES = [
 export function cardName(card, lang = 'fr') {
   const n = (card && card.name) || {};
   return (n[lang] && n[lang].trim()) || n.en || n.fr || (card && card.id) || '';
+}
+
+// Full set name in the requested language, falling back exactly like cardName
+// does. Returns the bare code when the set has no name at all, so an unnamed
+// set still shows something addressable rather than an empty menu row.
+export function setName(setNames, code, lang = 'fr') {
+  const n = (setNames && setNames[code]) || {};
+  return (n[lang] && n[lang].trim()) || n.en || n.fr || code || '';
+}
+
+// Menu label for a set: "Contre l'Ombre (AS)". The name is what you scan for,
+// but the code is what card ids and the text deck exports use, so dropping it
+// would cut the link between the filter and everything else that names a set.
+// Degrades to the bare code when that is all we have, rather than "AS (AS)".
+export function setLabel(setNames, code, lang = 'fr') {
+  const full = setName(setNames, code, lang);
+  return full === code ? code : `${full} (${code})`;
 }
 
 // CDN image URL for a card: per-set imageBaseUrl (attached by parseCards)
@@ -56,8 +78,8 @@ export function cardThumbSrc(card, lang = 'en', w = 260) {
 
 // Thumbnail width to request from the proxy for a deck-panel card displayed at
 // `cardW` px. Quantized to 100px steps (floor 200, cap 570 = source width) so
-// the zoom slider yields at most ~5 distinct, cache-friendly URLs while staying
-// >= the on-screen size (crisp at every zoom; pixel-perfect at 100%).
+// the handful of panel widths a player actually drags to yield a handful of
+// distinct, cache-friendly URLs while staying >= the on-screen size.
 export function deckThumbWidth(cardW) {
   return Math.min(570, Math.max(200, Math.ceil(cardW / 100) * 100));
 }

@@ -45,3 +45,17 @@ export function filterCards(cards, filters = {}) {
     return true;
   });
 }
+
+// Facet menus are read, so they sort on what is displayed -- "Périls" belongs
+// under P even though the value behind it is "Hazard". The Type facet is the
+// exception: its sequence is the play order (TYPE_ORDER), which must be the
+// same in all three languages. A value absent from `order` goes last rather
+// than first, so a newly added data value stays visible instead of jumping
+// to the head of the menu.
+export function sortFacetOptions(options, config) {
+  const { order, label = (v) => v } = config || {};
+  const copy = [...options];
+  if (!order) return copy.sort((a, b) => label(a).localeCompare(label(b)));
+  const rank = (v) => { const i = order.indexOf(v); return i === -1 ? Infinity : i; };
+  return copy.sort((a, b) => (rank(a) - rank(b)) || label(a).localeCompare(label(b)));
+}

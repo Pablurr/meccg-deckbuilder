@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import * as api from '../api.js';
 import { buildDeckListText } from '../lib/deckList.js';
+import { deckSections, flattenSections } from '../lib/export/deckSections.js';
+import { emptyZones } from '../lib/deck.js';
 import { LIST_LANGUAGES, IMAGE_LANGUAGES } from '../lib/lang.js';
 import { useT } from '../i18n.jsx';
 
@@ -23,7 +25,7 @@ function downloadText(text, filename) {
   URL.revokeObjectURL(url);
 }
 
-export default function ExportDialog({ deck, cardIds, cardsById, quantities, defaultBacks = {}, uiLang = 'fr', onClose, onBacksChange, proxyMode = false }) {
+export default function ExportDialog({ deck, cardsById, quantities, zones = emptyZones(), defaultBacks = {}, uiLang = 'fr', onClose, onBacksChange, proxyMode = false }) {
   const t = useT();
   const [backs, setBacks] = useState(deck.backAssignments || {});
   const [format, setFormat] = useState('mpc'); // 'mpc' | 'pdf' | 'list'
@@ -42,6 +44,16 @@ export default function ExportDialog({ deck, cardIds, cardsById, quantities, def
   ];
 
   const showBackPickers = format === 'mpc' || format === 'pdf';
+
+  // Single source of print/zip order: Pool → Play deck → Locations →
+  // Sideboard (deckSections.js), expanded to one entry per physical copy so
+  // a card in two zones (e.g. 2 in the play deck, 1 in the sideboard) prints
+  // once per copy, in every section it appears in. Computed here (not just
+  // inside runExport) so the "selected" count and the run-button's disabled
+  // state also reflect zone cards, not just the main deck.
+  const orderedCards = flattenSections(deckSections({ quantities, zones, cardsById, lang: uiLang }))
+    .flatMap((e) => Array(e.count).fill(e.card));
+  const orderedCardIds = orderedCards.map((c) => c.id);
 
   async function pickBack(group, file) {
     if (!file) return;
@@ -64,19 +76,19 @@ export default function ExportDialog({ deck, cardIds, cardsById, quantities, def
     setResult(null);
     try {
       if (format === 'mpc') {
-        const r = await api.exportDeck({ deckName: deck.name, cardIds, backAssignments: backs, lang: imageLang, proxyMode });
+        const r = await api.exportDeck({ deckName: deck.name, cardIds: orderedCardIds, backAssignments: backs, lang: imageLang, proxyMode });
         setResult(
           t('export.result.zip', { playdeck: r.counts.playdeck, locationdeck: r.counts.locationdeck }) +
           (r.failures.length ? t('export.result.failuresManifest', { n: r.failures.length }) : '')
         );
       } else if (format === 'pdf') {
-        const r = await api.exportPdf({ deckName: deck.name, cardIds, backAssignments: backs, includeBacks, format: pageFormat, lang: imageLang, proxyMode });
+        const r = await api.exportPdf({ deckName: deck.name, cardIds: orderedCardIds, backAssignments: backs, includeBacks, format: pageFormat, lang: imageLang, proxyMode });
         setResult(
           t('export.result.pdf', { fmt: pageFormat.toUpperCase(), pages: r.pages }) +
           (r.failures.length ? t('export.result.failures', { n: r.failures.length }) : '')
         );
       } else {
-        const text = buildDeckListText(cardsById, quantities, deck.name, listLang);
+        const text = buildDeckListText(cardsById, quantities, deck.name, listLang, { zones, notes: deck.notes, mode: deck.mode, ruleset: deck.ruleset });
         downloadText(text, `${(deck.name || 'deck').replace(/[^a-zA-Z0-9_-]+/g, '_')}.txt`);
         setResult(t('export.result.list'));
       }
@@ -142,7 +154,7 @@ export default function ExportDialog({ deck, cardIds, cardsById, quantities, def
           </div>
         )}
 
-        <p className="muted">{t('export.selected', { n: cardIds.length })}</p>
+        <p className="muted">{t('export.selected', { n: orderedCardIds.length })}</p>
 
         {showBackPickers && GROUPS.map((g) => (
           <div className="row" key={g.key}>
@@ -180,7 +192,7 @@ export default function ExportDialog({ deck, cardIds, cardsById, quantities, def
 
         <div className="row" style={{ justifyContent: 'flex-end' }}>
           <button className="btn secondary" onClick={onClose}>{t('common.close')}</button>
-          <button className="btn" onClick={runExport} disabled={busy || cardIds.length === 0}>
+          <button className="btn" onClick={runExport} disabled={busy || orderedCardIds.length === 0}>
             {runLabel}
           </button>
         </div>
