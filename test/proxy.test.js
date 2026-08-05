@@ -112,11 +112,17 @@ describe('geometry', () => {
     expect(PROXY_LABEL_DY_CQH).toBeCloseTo(((PROXY_LABEL_POS.cy - boxMid) / PROXY_PATCH_RECT.h) * 100, 6);
   });
 
-  it('gives every key exactly one of the two allowed label colours', () => {
+  it('gives every key its own sampled label colour', () => {
     expect(Object.keys(PROXY_LABEL_COLOR).sort()).toEqual([...SWATCH_KEYS].sort());
     for (const key of SWATCH_KEYS) {
-      expect(['#191919', '#F0F0EA']).toContain(PROXY_LABEL_COLOR[key]);
+      expect(PROXY_LABEL_COLOR[key]).toMatch(/^#[0-9A-F]{6}$/);
     }
+    // The retired generator only ever emitted these two. Seeing them again
+    // means the table was not regenerated from the FR cards.
+    const values = SWATCH_KEYS.map((k) => PROXY_LABEL_COLOR[k]);
+    expect(values.every((v) => v === '#191919' || v === '#F0F0EA')).toBe(false);
+    // 16 frames, 16 tones: a duplicate means two keys were sampled as one.
+    expect(new Set(values).size).toBe(SWATCH_KEYS.length);
   });
 
   it('selects the fr patch variant only for fr', () => {

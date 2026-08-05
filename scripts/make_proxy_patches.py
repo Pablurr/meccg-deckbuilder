@@ -17,6 +17,7 @@ Requires:
 Run from the repo root:  python scripts/make_proxy_patches.py
 Spec: docs/superpowers/specs/2026-07-28-proxy-frame-patches-design.md
 """
+import colorsys
 import json
 import os
 import re
@@ -35,8 +36,8 @@ CORE = (0.150, 0.9320, 0.440, 0.9750)   # x0, y0, x1, y1 — fully opaque
 MARGIN_PX = 7                            # alpha ramp, at REF_W
 LABEL_FONT_FRAC = 0.0155
 LABEL_CX, LABEL_CY = 0.295, 0.9565
-LUM_THRESHOLD = 118
-DARK, LIGHT = '#191919', '#F0F0EA'
+INK_DIFF_MIN = 28      # card-vs-patch luminance delta that counts as printed ink
+MIN_CONTRAST = 80      # label luminance must clear this against BOTH patch variants
 FR_CLAMP = 40
 ARIAL_BOLD = r'C:\Windows\Fonts\arialbd.ttf'
 
@@ -94,14 +95,28 @@ def build_patch(key, w=REF_W, h=REF_H):
     return a, outer, m
 
 
+_FR_PATHS = None
+
+
+def fr_card_paths():
+    """Every FR card image, walked once and cached."""
+    global _FR_PATHS
+    if _FR_PATHS is None:
+        _FR_PATHS = []
+        for dirpath, _, files in os.walk(FR_CARDS):
+            for f in files:
+                if f.lower().endswith(('.jpg', '.png')):
+                    _FR_PATHS.append(os.path.join(dirpath, f))
+    return _FR_PATHS
+
+
+def _lum(c):
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+
+
 def fr_offset(key, patch, m):
     """Mean per-channel delta (FR cards - patch) over the margin ring only."""
-    cards = []
-    for dirpath, _, files in os.walk(FR_CARDS):
-        for f in files:
-            if f.lower().endswith(('.jpg', '.png')):
-                cards.append(os.path.join(dirpath, f))
-    keyed = [p for p in cards if _key_of_fr(p) == key][:12]
+    keyed = [p for p in fr_card_paths() if _key_of_fr(p) == key][:12]
     if not keyed:
         raise SystemExit(
             'No FR cards found for key %r under %s; cannot compute the FR tone '
@@ -174,20 +189,91 @@ def swatch_key(c):
     return BY_TA.get('%s/%s' % (c.get('type'), c.get('alignment')))
 
 
-def label_colour(patch, outer):
-    """Dark or light, from the mean luminance of the opaque pixels the label covers."""
+def fr_tint(key):
+    """Mean RGB of the set-name ink the FR cards actually print, for one key.
+
+    Isolates the glyphs by differencing each card against its own -fr patch --
+    which IS the reconstructed empty frame, so whatever differs from it is the
+    printed text. A luminance-vs-local-background threshold does NOT work here:
+    on the four site frames the bottom-left corner is torn away, and the dark
+    torn edge outvotes the glyphs (it read near-black for minion-site, whose
+    "Contre l'Ombre" is plainly white). Differencing is also polarity-agnostic,
+    which matters because the ink is light on the dark frames and dark on the
+    light ones.
+    """
+    patch = Image.open(os.path.join(OUT, '%s-fr.png' % key)).convert('RGB')
+    pp = list(patch.get_flattened_data())
+    plum = sum(_lum(q) for q in pp) / len(pp)
+    acc, cards = [0.0, 0.0, 0.0], 0
+    for p in [q for q in fr_card_paths() if _key_of_fr(q) == key][:12]:
+        im = Image.open(p).convert('RGB')
+        w, h = im.size
+        _, outer, _ = boxes(w, h, key)
+        band = im.crop(outer).resize(patch.size, Image.LANCZOS)
+        ink = [b for b, q in zip(band.get_flattened_data(), pp)
+               if abs(_lum(b) - _lum(q)) > INK_DIFF_MIN]
+        if len(ink) < 40:
+            continue
+        # Keep the half furthest from the frame tone: the glyph core, not the
+        # anti-aliased edge, which would drag the mean back toward the frame.
+        ink.sort(key=lambda c: -abs(_lum(c) - plum))
+        core = ink[:max(20, len(ink) // 2)]
+        for ci in range(3):
+            acc[ci] += sum(q[ci] for q in core) / len(core)
+        cards += 1
+    if not cards:
+        raise SystemExit('No usable FR cards for key %r; cannot sample the label colour.' % key)
+    return tuple(round(v / cards) for v in acc)
+
+
+def patch_label_lum(key, variant):
+    """Mean luminance of the patch pixels the label sits on, for one variant."""
+    p = Image.open(os.path.join(OUT, '%s%s.png' % (key, variant))).convert('RGBA')
+    _, outer, _ = boxes(REF_W, REF_H, key)
     f = ImageFont.truetype(ARIAL_BOLD, max(6, round(LABEL_FONT_FRAC * REF_W)))
     probe = ImageDraw.Draw(Image.new('RGB', (1, 1)))
     cx, cy = LABEL_CX * REF_W - outer[0], LABEL_CY * REF_H - outer[1]
     l, t, r, b = probe.textbbox((cx, cy), 'Proxy', font=f, anchor='mm')
-    pad = 2
-    crop = patch.crop((int(l - pad), int(t - pad), int(r + pad), int(b + pad)))
+    crop = p.crop((int(l - 2), int(t - 2), int(r + 2), int(b + 2)))
     rgb, alpha = crop.convert('RGB'), crop.getchannel('A')
-    vals = [(p, a) for p, a in zip(rgb.get_flattened_data(), alpha.get_flattened_data()) if a > 200]
-    if len(vals) < (crop.width * crop.height) // 2:
-        return LIGHT, 0.0
-    lum = sum(0.2126 * p[0] + 0.7152 * p[1] + 0.0722 * p[2] for p, _ in vals) / len(vals)
-    return (DARK if lum > LUM_THRESHOLD else LIGHT), lum
+    vals = [q for q, a in zip(rgb.get_flattened_data(), alpha.get_flattened_data()) if a > 200]
+    return sum(_lum(q) for q in vals) / len(vals) if vals else 128.0
+
+
+def label_colour(key):
+    """The FR tint, pushed if needed until it clears MIN_CONTRAST.
+
+    The real FR cards print this text illegibly on the light frames -- measured
+    contrast of 2 for radagast, 7 for gandalf, 13 for hero-character. Copying
+    that faithfully would be fine for the set name (decoration; the mask hides
+    the notice either way) but not for "Proxy", which is functional information
+    when checking a print run and was contrast-guaranteed by construction
+    before. So: keep the sampled hue and saturation, move only the lightness,
+    and only as far as the floor requires. Ten of the sixteen keys clear it
+    untouched and keep their FR tint exactly.
+
+    Returns (final_hex, fr_tint_hex, moved).
+    """
+    tint = fr_tint(key)
+    plums = [patch_label_lum(key, ''), patch_label_lum(key, '-fr')]
+    as_hex = lambda c: '#%02X%02X%02X' % tuple(c)
+    if all(abs(_lum(tint) - p) >= MIN_CONTRAST for p in plums):
+        return as_hex(tint), as_hex(tint), False
+    h, _l, s = colorsys.rgb_to_hls(*[c / 255 for c in tint])
+    at = lambda L: tuple(round(c * 255) for c in colorsys.hls_to_rgb(h, L, s))
+    # Move away from the frame: darker under a light one, lighter under a dark
+    # one. Targeting the worst of the two variants clears both at once.
+    darker = sum(plums) / 2 >= 128
+    want = (min(plums) - MIN_CONTRAST) if darker else (max(plums) + MIN_CONTRAST)
+    want = max(0.0, min(255.0, want))
+    lo, hi = 0.0, 1.0
+    for _ in range(40):                     # bisect: HLS lightness is not luminance
+        mid = (lo + hi) / 2
+        if _lum(at(mid)) < want:
+            lo = mid
+        else:
+            hi = mid
+    return as_hex(at((lo + hi) / 2)), as_hex(tint), True
 
 
 def _require_corpus(path, label):
@@ -238,14 +324,15 @@ def main():
                  for i in range(3)]
         Image.merge('RGBA', chans + [patch.getchannel('A')]).save(os.path.join(OUT, '%s-fr.png' % key))
 
-        col, lum = label_colour(patch, outer)
-        colours.append((key, col, lum))
-        print('%-17s size=%dx%d  fr_offset=%s  label=%s (lum %.0f)'
-              % (key, patch.width, patch.height, tuple(round(v, 1) for v in off), col, lum))
+        col, tint, moved = label_colour(key)
+        colours.append((key, col, tint, moved))
+        print('%-17s size=%dx%d  fr_offset=%s  label=%s (fr tint %s%s)'
+              % (key, patch.width, patch.height, tuple(round(v, 1) for v in off),
+                 col, tint, ', floored' if moved else ''))
 
     with open(COLORS, 'w', encoding='utf-8') as f:
-        for key, col, lum in colours:
-            f.write('%s %s %.1f\n' % (key, col, lum))
+        for key, col, tint, moved in colours:
+            f.write('%s %s %s %s\n' % (key, col, tint, 'floored' if moved else 'sampled'))
     print('\nlabel colours -> %s' % COLORS)
     _qa()
 
@@ -273,7 +360,7 @@ def _qa():
     colours = {}
     with open(COLORS, encoding='utf-8') as f:
         for line in f:
-            k, c, _lum = line.split()
+            k, c, _tint, _origin = line.split()
             colours[k] = c
     panels = []
     for key in TEMPLATE_BY_KEY:
@@ -287,14 +374,19 @@ def _qa():
             p = Image.open(os.path.join(OUT, '%s%s.png' % (key, suffix))).convert('RGBA')
             _, outer, _ = boxes(w, h, key)
             p = p.resize((outer[2] - outer[0], outer[3] - outer[1]), Image.LANCZOS)
-            after = card.copy()
-            after.paste(p, (outer[0], outer[1]), p)
-            d = ImageDraw.Draw(after)
-            lf = ImageFont.truetype(ARIAL_BOLD, max(6, round(LABEL_FONT_FRAC * w)))
-            d.text((LABEL_CX * w, LABEL_CY * h), 'Proxy', font=lf,
-                   fill=colours[key], anchor='mm')
             y0, y1, x1 = int(h * 0.925), int(h * 0.99), int(w * 0.62)
-            panels.append(('%s / %s' % (key, tag), card.crop((0, y0, x1, y1)), after.crop((0, y0, x1, y1))))
+            lf = ImageFont.truetype(ARIAL_BOLD, max(6, round(LABEL_FONT_FRAC * w)))
+            before = card.crop((0, y0, x1, y1))
+            # Both captions: "Proxy" is what the toggle draws, the set name is
+            # what en/es show without it. The contrast floor has to hold for
+            # both, and only the sheet can confirm it did.
+            for state, caption in (('Proxy', 'Proxy'), ('set name', 'Against the Shadow')):
+                after = card.copy()
+                after.paste(p, (outer[0], outer[1]), p)
+                ImageDraw.Draw(after).text((LABEL_CX * w, LABEL_CY * h), caption,
+                                           font=lf, fill=colours[key], anchor='mm')
+                panels.append(('%s / %s / %s' % (key, tag, state), before,
+                               after.crop((0, y0, x1, y1))))
 
     S = 3
     cw, ch = panels[0][1].width * S, panels[0][1].height * S
