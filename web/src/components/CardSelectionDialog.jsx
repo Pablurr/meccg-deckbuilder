@@ -113,6 +113,7 @@ export default function CardSelectionDialog({ sections, slots, initialSelected, 
                     className="select-chevron"
                     onClick={() => toggleCollapse(secKey)}
                     aria-expanded={!isCollapsed(secKey)}
+                    aria-label={t(SECTION_KEY[section.id] || section.id)}
                   >{isCollapsed(secKey) ? '▶' : '▼'}</button>
                   <TriBox
                     state={groupState(working, keysOf(secPred))}
@@ -132,6 +133,7 @@ export default function CardSelectionDialog({ sections, slots, initialSelected, 
                           className="select-chevron"
                           onClick={() => toggleCollapse(grpKey)}
                           aria-expanded={!isCollapsed(grpKey)}
+                          aria-label={t(GROUP_KEY[group.id] || group.id)}
                         >{isCollapsed(grpKey) ? '▶' : '▼'}</button>
                         <TriBox
                           state={groupState(working, keysOf(grpPred))}

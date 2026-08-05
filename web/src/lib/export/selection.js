@@ -99,7 +99,9 @@ export function selectedQuantitiesZones(slots, selected) {
     const target = slot.sectionId === 'play' || slot.sectionId === 'locations'
       ? quantities
       : zones[ZONE_OF_SECTION[slot.sectionId]];
-    if (!target) continue;
+    // No fallback here on purpose: slots only ever come from buildSlots(deckSections(...)),
+    // whose five section ids all resolve. A new section id with no destination
+    // must throw here, not silently drop its cards from the .txt.
     target[slot.cardId] = (target[slot.cardId] || 0) + 1;
   }
   return { quantities, zones };

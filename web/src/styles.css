@@ -830,6 +830,9 @@ body {
   width: min(560px, 92vw);
   max-height: 86vh;
   overflow: auto;
+  /* No transform/filter/will-change/contain/perspective here: any of those makes
+     this a containing block for position:fixed, which would reparent
+     CardSelectionDialog's own .modal-backdrop into this box instead of the viewport. */
 }
 .modal h2 { margin-top: 0; }
 .modal .row { display: flex; gap: 8px; align-items: center; margin: 10px 0; }

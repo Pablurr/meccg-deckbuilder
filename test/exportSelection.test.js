@@ -120,9 +120,13 @@ describe('selection mutations', () => {
 });
 
 describe('projections', () => {
+  // sideboardFw carries a copy of `res` here so the multiset guard below
+  // actually walks the zones['sideboardFw'] route in selectedQuantitiesZones --
+  // every other fixture in this file leaves it empty, which means deckSections
+  // drops the section entirely and that branch never runs.
   const build = () => deckSections({
     quantities: { [res.id]: 2, [hz.id]: 1, [site.id]: 2 },
-    zones: { pool: { [chr.id]: 1 }, sideboard: { [hz.id]: 1 }, sideboardFw: {} },
+    zones: { pool: { [chr.id]: 1 }, sideboard: { [hz.id]: 1 }, sideboardFw: { [res.id]: 1 } },
     cardsById: index, lang: 'en',
   });
 
@@ -130,7 +134,8 @@ describe('projections', () => {
     const slots = buildSlots(build());
     const ids = selectedCardIds(slots, allKeys(slots));
     expect(ids).toEqual(slots.map((s) => s.cardId));
-    expect(ids.filter((id) => id === res.id)).toHaveLength(2);
+    // 2 in the play deck + 1 in sideboardFw.
+    expect(ids.filter((id) => id === res.id)).toHaveLength(3);
   });
 
   it('selectedCardIds drops exactly what was unticked', () => {
@@ -138,7 +143,8 @@ describe('projections', () => {
     const oneResourceOff = setMany(allKeys(slots), [slots.find((s) => s.cardId === res.id).key], false);
     const ids = selectedCardIds(slots, oneResourceOff);
     expect(ids).toHaveLength(slots.length - 1);
-    expect(ids.filter((id) => id === res.id)).toHaveLength(1);
+    // .find() hits the play-deck copy first, leaving 2 of the original 3.
+    expect(ids.filter((id) => id === res.id)).toHaveLength(2);
   });
 
   // The trap this whole module exists for: deckSections() split one
@@ -152,7 +158,7 @@ describe('projections', () => {
     expect(quantities[site.id]).toBe(2);
     expect(zones.pool[chr.id]).toBe(1);
     expect(zones.sideboard[hz.id]).toBe(1);
-    expect(zones.sideboardFw).toEqual({});
+    expect(zones.sideboardFw[res.id]).toBe(1);
   });
 
   // The same card in the play deck and in the sideboard must not have its
@@ -195,8 +201,9 @@ describe('projections', () => {
     expect(fromMaps).toEqual(fromIds);
   });
 
-  // Non-regression on the default path: a full selection must reproduce the
-  // exact list ExportDialog builds today.
+  // Non-regression on the default path: this pins the id list ExportDialog
+  // built before this branch (flattenSections expanded by count), so the new
+  // slot-based path stays checked against the old expression it replaced.
   it('a full selection equals the unfiltered export order', () => {
     const sections = build();
     const slots = buildSlots(sections);
