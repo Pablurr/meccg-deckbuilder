@@ -149,13 +149,14 @@ export default function DeckPanel({
   isMobile = false,
   onPreview,
   proxyMode = false,
+  setNames = {},
   capCtx = null,
   dirty = false,
   onSave,
   saveState = 'idle',
 }) {
   const t = useT();
-  const { previewRef, previewImgRef, stampRef, trackPointer, hidePreview } = useCardPreview(lang, proxyMode);
+  const { previewRef, previewImgRef, stampRef, trackPointer, hidePreview } = useCardPreview(lang, proxyMode, setNames);
 
   const deckbuilding = deck && deck.mode === 'deckbuilding';
   // A freeform deck normally has no reason to show Pool/Sideboard (freeform
@@ -540,6 +541,7 @@ export default function DeckPanel({
                       isMobile={isMobile}
                       onPreview={onPreview}
                       proxyMode={proxyMode}
+                      setNames={setNames}
                       zone={activeZone}
                       room={capCtx
                         ? remainingCopies(card, activeZone, { quantities, zones }, capCtx)

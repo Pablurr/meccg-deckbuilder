@@ -153,15 +153,18 @@ pour les planches PDF, `jszip` pour l'archive), sans passer par aucun serveur.
 
 ### Mode Proxy
 
-L'interrupteur **« Proxy »** (à côté du sélecteur de langues, **activé par défaut**) efface la
-mention « ©19xx Tolkien Enterprises » — ou le nom d'extension sur les cartes FR — en **repeignant
-la zone avec le cadre vierge du type de carte**, puis écrit « Proxy » par-dessus en Arial Bold.
-C'est une exigence de MPC pour les cartes proxy. Les 16 cadres sources sont dans
-`assets/card-templates/` ; les 32 patchs de `web/public/proxy-patches/` s'en régénèrent avec
-`python scripts/make_proxy_patches.py`. Les cartes FR utilisent la variante `-fr` (leurs images
-viennent d'une autre source, à la colorimétrie différente). Le tampon apparaît **à l'écran et dans
-les exports ZIP/PDF** ; désactive l'interrupteur pour retrouver les images d'origine. Les cartes
-**Région** et les **dos** ne sont jamais tamponnés.
+Pour les images **anglaises et espagnoles**, la zone du copyright (« ©19xx Tolkien Enterprises »)
+est **toujours repeinte** avec le cadre vierge du type de carte — c'est une exigence de MPC, et
+elle ne doit jamais atteindre un envoi d'impression, que le mode Proxy soit actif ou non.
+L'interrupteur **« Proxy »** (à côté du sélecteur de langues, **activé par défaut**) ne choisit
+donc que ce qui s'affiche par-dessus, en Arial Bold : « Proxy » en mode proxy, sinon le nom
+(traduit) du set — ce que les cartes **françaises** impriment déjà à cet emplacement, sans qu'il y
+ait rien à masquer. En fr, l'ancien comportement reste inchangé : rien tant que le mode Proxy est
+éteint. Les 16 cadres sources sont dans `assets/card-templates/` ; les 32 patchs de
+`web/public/proxy-patches/` s'en régénèrent avec `python scripts/make_proxy_patches.py`. Les
+cartes FR utilisent la variante `-fr` (leurs images viennent d'une autre source, à la colorimétrie
+différente). Le tampon apparaît **à l'écran et dans les exports ZIP/PDF**. Les cartes **Région**
+et les **dos** ne sont jamais tamponnés.
 
 Régénérer les patchs demande le corpus de cartes local sous `cards/` (gitignoré, absent d'un clone
 frais), Pillow et une police Windows Arial Bold. Avant de committer des patchs régénérés, relire

@@ -54,7 +54,7 @@ export const translations = {
 
     // Proxy mode
     'proxy.label': 'Proxy',
-    'proxy.tooltip': 'Mode Proxy : recouvre le copyright par « Proxy » (requis pour MPC)',
+    'proxy.tooltip': 'Mode Proxy : « Proxy » au lieu du nom du set sur en/es (requis pour MPC)',
     'lang.pick': 'Langue des cartes',
 
     // Card browser
@@ -309,7 +309,7 @@ export const translations = {
     'docs.feat.exportTitle': 'Exporter',
     'docs.feat.export': "Trois formats : une archive ZIP prête pour MakePlayingCards, des planches PDF en US Letter, A4 ou A3, et une liste texte. La liste texte se recolle telle quelle dans l'import, ce qui en fait aussi une sauvegarde. Un dos personnalisé peut être fourni pour la pioche et pour le deck de sites. Depuis « Mes decks », plusieurs decks cochés s'exportent d'un coup en listes texte, réunies dans une seule archive.",
     'docs.feat.proxyTitle': 'Mode proxy',
-    'docs.feat.proxy': "Le mode proxy recouvre la mention de copyright d'un tampon « Proxy », à l'écran comme à l'export. Il est actif par défaut et ton choix est retenu d'une visite à l'autre.",
+    'docs.feat.proxy': "Sur les cartes en anglais et en espagnol, la mention de copyright est toujours recouverte, à l'écran comme à l'export : par « Proxy » si le mode proxy est actif, sinon par le nom (traduit) du set. Les cartes françaises n'ont rien à recouvrir à cet endroit. Le mode proxy est actif par défaut et ton choix est retenu d'une visite à l'autre.",
     'docs.feat.langTitle': 'Langues',
     'docs.feat.lang': "L'interface et les noms de cartes existent en français, en anglais et en espagnol. Les images de cartes sont disponibles dans ces trois langues ; à l'export, une image absente dans la langue choisie retombe sur l'anglais.",
 
@@ -446,7 +446,7 @@ export const translations = {
 
     // Proxy mode
     'proxy.label': 'Proxy',
-    'proxy.tooltip': 'Proxy mode: covers the copyright with "Proxy" (required by MPC)',
+    'proxy.tooltip': 'Proxy mode: "Proxy" instead of the set name on en/es (required by MPC)',
     'lang.pick': 'Card language',
 
     'browser.count': '{n} card(s)',
@@ -686,7 +686,7 @@ export const translations = {
     'docs.feat.exportTitle': 'Exporting',
     'docs.feat.export': 'Three formats: a ZIP ready for MakePlayingCards, PDF sheets in US Letter, A4 or A3, and a text list. The text list pastes straight back into the importer, which makes it a backup too. A custom back can be supplied for the play deck and for the location deck. From "My decks", several ticked decks export at once as text lists, gathered in a single archive.',
     'docs.feat.proxyTitle': 'Proxy mode',
-    'docs.feat.proxy': 'Proxy mode covers the copyright line with a "Proxy" stamp, on screen and in exports alike. It is on by default and your choice is remembered between visits.',
+    'docs.feat.proxy': 'On English and Spanish cards, the copyright line is always covered, on screen and in exports alike: with "Proxy" if proxy mode is on, otherwise with the (translated) set name. French cards have nothing to cover there. Proxy mode is on by default and your choice is remembered between visits.',
     'docs.feat.langTitle': 'Languages',
     'docs.feat.lang': 'The interface and the card names exist in French, English and Spanish. Card images are available in those three languages; on export, an image missing in the chosen language falls back to English.',
 
@@ -827,7 +827,7 @@ export const translations = {
 
     // Proxy mode
     'proxy.label': 'Proxy',
-    'proxy.tooltip': 'Modo Proxy: cubre el copyright con «Proxy» (requerido por MPC)',
+    'proxy.tooltip': 'Modo Proxy: «Proxy» en vez del nombre del set en en/es (requerido por MPC)',
     'lang.pick': 'Idioma de las cartas',
 
     // Card browser
@@ -1071,7 +1071,7 @@ export const translations = {
     'docs.feat.exportTitle': 'Exportar',
     'docs.feat.export': 'Tres formatos: un ZIP listo para MakePlayingCards, planchas PDF en US Letter, A4 o A3, y una lista de texto. La lista de texto se vuelve a pegar tal cual en la importación, lo que la convierte también en una copia de seguridad. Se puede aportar un dorso propio para el mazo de juego y para el de localizaciones. Desde «Mis mazos», varios mazos marcados se exportan de una vez como listas de texto, reunidas en un solo archivo.',
     'docs.feat.proxyTitle': 'Modo proxy',
-    'docs.feat.proxy': 'El modo proxy cubre la línea de copyright con un sello «Proxy», tanto en pantalla como en la exportación. Está activo por defecto y tu elección se recuerda entre visitas.',
+    'docs.feat.proxy': 'En las cartas en inglés y español, la línea de copyright siempre queda cubierta, tanto en pantalla como en la exportación: con «Proxy» si el modo proxy está activo, o si no con el nombre (traducido) del set. Las cartas en francés no tienen nada que cubrir ahí. El modo proxy está activo por defecto y tu elección se recuerda entre visitas.',
     'docs.feat.langTitle': 'Idiomas',
     'docs.feat.lang': 'La interfaz y los nombres de carta existen en francés, inglés y español. Las imágenes de carta están disponibles en esos tres idiomas; al exportar, una imagen que falte en el idioma elegido recurre al inglés.',
 

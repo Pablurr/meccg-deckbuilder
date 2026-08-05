@@ -1,16 +1,16 @@
-hero-character #191919 173.4
-minion-character #F0F0EA 40.2
-hero-site #191919 215.1
-minion-site #F0F0EA 42.3
-balrog-site #F0F0EA 69.4
-fw-site #191919 176.0
-hero-resource #F0F0EA 77.6
-minion-resource #F0F0EA 54.3
-stage-resource #191919 133.4
-hazard #F0F0EA 35.1
-red #F0F0EA 61.2
-alatar #191919 171.9
-gandalf #191919 163.4
-pallando #F0F0EA 107.2
-radagast #191919 155.9
-saruman #191919 212.6
+hero-character #4C5A62 #96A5AE floored
+minion-character #BCB8BC #BCB8BC sampled
+hero-site #68665D #68665D sampled
+minion-site #A9A7A6 #A9A7A6 sampled
+balrog-site #CAC0BB #CAC0BB sampled
+fw-site #5C5956 #7E7A75 floored
+hero-resource #BEBDBA #BEBDBA sampled
+minion-resource #B9BABC #B9BABC sampled
+stage-resource #DCE1E0 #DCE1E0 sampled
+hazard #B7B6B4 #B7B6B4 sampled
+red #BEBBB9 #BEBBB9 sampled
+alatar #50585B #98A1A5 floored
+gandalf #4F4C4A #A09D9A floored
+pallando #BEBED2 #9C9CBA floored
+radagast #51433E #AE9C95 floored
+saruman #7F7B78 #B4B1AF floored

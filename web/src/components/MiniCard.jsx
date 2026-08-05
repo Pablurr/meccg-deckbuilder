@@ -16,7 +16,7 @@ import { ZONE_LABEL_KEY } from '../lib/rules/zones.js';
 // had to remove the copy and re-add it from the browser just to reshuffle
 // zones. An empty list (a Site, which only ever has the deck) renders no
 // trigger, rather than a menu with nothing to choose.
-export default function MiniCard({ card, qty, lang, thumbW, onChangeQty, onToggle, trackPointer, hidePreview, isMobile, onPreview, proxyMode, zone = 'deck', room = { remaining: Infinity, ruleId: null }, moveTargets = [], onMove }) {
+export default function MiniCard({ card, qty, lang, thumbW, onChangeQty, onToggle, trackPointer, hidePreview, isMobile, onPreview, proxyMode, setNames, zone = 'deck', room = { remaining: Infinity, ruleId: null }, moveTargets = [], onMove }) {
   const t = useT();
   const [confirming, setConfirming] = useState(false);
   const [moving, setMoving] = useState(false);
@@ -45,7 +45,7 @@ export default function MiniCard({ card, qty, lang, thumbW, onChangeQty, onToggl
           if (next) el.src = next;
         }}
       />
-      <ProxyStamp card={card} lang={lang} on={proxyMode} />
+      <ProxyStamp card={card} lang={lang} on={proxyMode} setNames={setNames} />
       {confirming ? (
         <div className="deck-mini-confirm">
           <button
