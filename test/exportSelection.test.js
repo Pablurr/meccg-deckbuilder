@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import raw from '../web/public/cards.json';
 import { parseCards } from '../web/src/lib/parseCards.js';
 import { deckSections, flattenSections } from '../web/src/lib/export/deckSections.js';
-import { buildSlots, allKeys } from '../web/src/lib/export/selection.js';
+import { buildSlots, allKeys, toggle, setMany, selectRange, groupState } from '../web/src/lib/export/selection.js';
 
 const { cards, index } = parseCards(raw);
 const find = (p) => { const c = cards.find(p); expect(c).toBeTruthy(); return c; };
@@ -69,5 +69,52 @@ describe('allKeys', () => {
     const keys = allKeys(slots);
     expect(keys.size).toBe(slots.length);
     for (const s of slots) expect(keys.has(s.key)).toBe(true);
+  });
+});
+
+describe('selection mutations', () => {
+  const keys = ['a', 'b', 'c', 'd'];
+  const slots = keys.map((key) => ({ key }));
+
+  it('toggle flips one key and never mutates its input', () => {
+    const before = new Set(['a']);
+    const on = toggle(before, 'b');
+    expect([...on].sort()).toEqual(['a', 'b']);
+    expect(toggle(on, 'a').has('a')).toBe(false);
+    expect([...before]).toEqual(['a']);
+  });
+
+  it('setMany adds or removes a batch without mutating its input', () => {
+    const before = new Set(['a']);
+    expect([...setMany(before, ['b', 'c'], true)].sort()).toEqual(['a', 'b', 'c']);
+    expect([...setMany(new Set(keys), ['a', 'b'], false)].sort()).toEqual(['c', 'd']);
+    expect([...before]).toEqual(['a']);
+  });
+
+  it('selectRange applies one value across the span, in either direction', () => {
+    expect([...selectRange(new Set(), slots, 'b', 'd', true)].sort()).toEqual(['b', 'c', 'd']);
+    expect([...selectRange(new Set(), slots, 'd', 'b', true)].sort()).toEqual(['b', 'c', 'd']);
+    expect([...selectRange(new Set(keys), slots, 'a', 'c', false)].sort()).toEqual(['d']);
+  });
+
+  // The collapse case: the anchor was clicked, then its section was folded
+  // away. Ranging to an anchor that is no longer on screen would either throw
+  // or silently span the wrong slots, so it degrades to a plain single click.
+  it('falls back to the clicked slot when the anchor is no longer visible', () => {
+    const visible = [{ key: 'c' }, { key: 'd' }];
+    expect([...selectRange(new Set(), visible, 'a', 'd', true)]).toEqual(['d']);
+  });
+
+  it('groupState reports all, none or partial', () => {
+    expect(groupState(new Set(keys), keys)).toBe('all');
+    expect(groupState(new Set(), keys)).toBe('none');
+    expect(groupState(new Set(['a']), keys)).toBe('partial');
+  });
+
+  // deckSections() drops empty groups, so this cannot arise from a real deck --
+  // it is pinned only so the ambiguous "0 of 0" case has one defined answer
+  // instead of depending on which check runs first.
+  it('calls an empty group none, not all', () => {
+    expect(groupState(new Set(), [])).toBe('none');
   });
 });

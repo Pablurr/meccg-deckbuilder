@@ -36,3 +36,42 @@ export function buildSlots(sections) {
 export function allKeys(slots) {
   return new Set(slots.map((s) => s.key));
 }
+
+export function toggle(selected, key) {
+  const next = new Set(selected);
+  if (next.has(key)) next.delete(key);
+  else next.add(key);
+  return next;
+}
+
+export function setMany(selected, keys, value) {
+  const next = new Set(selected);
+  for (const key of keys) {
+    if (value) next.add(key);
+    else next.delete(key);
+  }
+  return next;
+}
+
+// `orderedSlots` is whatever the caller considers rangeable -- the dialog passes
+// only the slots currently on screen, so a collapsed section is skipped the way
+// a spreadsheet skips hidden rows. Keeping that filtering in the caller is what
+// lets this module stay ignorant of collapsing.
+export function selectRange(selected, orderedSlots, anchorKey, targetKey, value) {
+  const from = orderedSlots.findIndex((s) => s.key === anchorKey);
+  const to = orderedSlots.findIndex((s) => s.key === targetKey);
+  // The anchor can have been collapsed away since it was clicked. Spanning to a
+  // slot that is no longer on screen would touch cards the user cannot see.
+  if (from === -1 || to === -1) return setMany(selected, [targetKey], value);
+  const [lo, hi] = from <= to ? [from, to] : [to, from];
+  return setMany(selected, orderedSlots.slice(lo, hi + 1).map((s) => s.key), value);
+}
+
+export function groupState(selected, keys) {
+  let on = 0;
+  for (const key of keys) if (selected.has(key)) on += 1;
+  // Order matters: an empty group satisfies both `on === 0` and
+  // `on === keys.length`, and 'none' is the answer that renders an empty box.
+  if (on === 0) return 'none';
+  return on === keys.length ? 'all' : 'partial';
+}
