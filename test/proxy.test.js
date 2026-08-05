@@ -2,11 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { flattenCards } from '../web/src/lib/parseCards.js';
+import { flattenCards, collectSetNames } from '../web/src/lib/parseCards.js';
 import {
   swatchKeyForCard, PROXY_PATCH_RECT, PROXY_LABEL, SWATCH_KEYS,
   PROXY_LABEL_COLOR, PROXY_LABEL_FONT_FRAC, PROXY_LABEL_POS,
-  PROXY_LABEL_FONT_CQW, PROXY_LABEL_DY_CQH, patchUrl,
+  PROXY_LABEL_FONT_CQW, PROXY_LABEL_DY_CQH, patchUrl, proxyStampFor,
 } from '../web/src/lib/proxy.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -124,5 +124,69 @@ describe('geometry', () => {
     expect(patchUrl('hazard', 'en')).toBe('/proxy-patches/hazard.png');
     expect(patchUrl('hazard', 'es')).toBe('/proxy-patches/hazard.png');
     expect(patchUrl('hazard', undefined)).toBe('/proxy-patches/hazard.png');
+  });
+});
+
+describe('proxyStampFor', () => {
+  const SET_NAMES = {
+    AS: { en: 'Against the Shadow', es: 'Contra la Sombra', fr: "Contre l'Ombre" },
+  };
+  const card = {
+    id: 'AS-1', setCode: 'AS', type: 'Character', alignment: 'Minion',
+    attributes: {}, name: { en: 'Bûrat' },
+  };
+  const region = {
+    id: 'AS-R', setCode: 'AS', type: 'Region', alignment: '',
+    attributes: {}, name: { en: 'Anywhere' },
+  };
+
+  it('leaves fr untouched: a stamp only when proxy mode is on', () => {
+    expect(proxyStampFor(card, 'fr', false, SET_NAMES)).toBeNull();
+    expect(proxyStampFor(card, 'fr', true, SET_NAMES)).toEqual({
+      key: 'minion-character', text: 'Proxy',
+      color: PROXY_LABEL_COLOR['minion-character'],
+    });
+  });
+
+  it('always masks en/es, whatever the proxy mode', () => {
+    for (const lang of ['en', 'es']) {
+      expect(proxyStampFor(card, lang, true, SET_NAMES).text).toBe('Proxy');
+      expect(proxyStampFor(card, lang, false, SET_NAMES)).not.toBeNull();
+    }
+  });
+
+  it('labels the unchecked en/es mask with the official translated set name', () => {
+    expect(proxyStampFor(card, 'en', false, SET_NAMES).text).toBe('Against the Shadow');
+    expect(proxyStampFor(card, 'es', false, SET_NAMES).text).toBe('Contra la Sombra');
+  });
+
+  it('uses one colour table for both label kinds', () => {
+    const proxy = proxyStampFor(card, 'en', true, SET_NAMES);
+    const named = proxyStampFor(card, 'en', false, SET_NAMES);
+    expect(named.color).toBe(proxy.color);
+    expect(named.key).toBe(proxy.key);
+  });
+
+  it('never stamps a Region, in any language or mode', () => {
+    for (const lang of ['en', 'es', 'fr']) {
+      for (const mode of [true, false]) {
+        expect(proxyStampFor(region, lang, mode, SET_NAMES)).toBeNull();
+      }
+    }
+  });
+
+  it('falls back to the bare set code when a set has no translated name', () => {
+    expect(proxyStampFor(card, 'en', false, {}).text).toBe('AS');
+  });
+
+  it('resolves every real card to a drawable label with no proxy mode', async () => {
+    const cards = await loadCards();
+    const raw = JSON.parse(await readFile(CARDS_JSON, 'utf-8'));
+    const setNames = collectSetNames(raw);
+    for (const c of cards) {
+      const stamp = proxyStampFor(c, 'en', false, setNames);
+      if (c.type === 'Region') expect(stamp).toBeNull();
+      else expect(typeof stamp.text === 'string' && stamp.text.length > 0).toBe(true);
+    }
   });
 });

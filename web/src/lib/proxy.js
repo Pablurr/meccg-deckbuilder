@@ -3,6 +3,8 @@
 // spec shared by the CSS overlay and the canvas export.
 // Spec: docs/superpowers/specs/2026-07-28-proxy-frame-patches-design.md
 
+import { setName } from './lang.js';
+
 export const PROXY_LABEL = 'Proxy';
 
 export const SWATCH_KEYS = [
@@ -110,4 +112,23 @@ export function swatchKeyForCard(card) {
   }
   if (card.type === 'Hazard') return 'hazard';
   return BY_TYPE_ALIGNMENT[`${card.type}/${card.alignment}`] || null;
+}
+
+// What a card's stamp shows, or null when it takes no stamp at all.
+//
+// en/es always mask the copyright notice: it must never reach a print run,
+// whatever the user intended, so the checkbox no longer decides WHETHER there
+// is a mask for those two languages -- only what caption sits on it. "Proxy"
+// for an actual proxy print; otherwise the set's own translated name, which is
+// what the FR cards print in that exact spot anyway.
+//
+// fr keeps the original behaviour untouched (no stamp unless proxy mode is on)
+// because the FR images carry the set name there instead of a copyright line,
+// so there is nothing that has to be hidden.
+export function proxyStampFor(card, lang, proxyMode, setNames) {
+  const key = swatchKeyForCard(card);
+  if (!key) return null;
+  if (lang === 'fr' && !proxyMode) return null;
+  const text = proxyMode ? PROXY_LABEL : setName(setNames, card.setCode, lang);
+  return { key, text, color: PROXY_LABEL_COLOR[key] };
 }
