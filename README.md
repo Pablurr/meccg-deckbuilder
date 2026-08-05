@@ -151,6 +151,11 @@ Tous les exports (ZIP, PDF) tournent **entièrement dans le navigateur** : les i
 sont récupérées depuis le CDN puis composées côté client (canvas pour le bleed MPC, `pdf-lib`
 pour les planches PDF, `jszip` pour l'archive), sans passer par aucun serveur.
 
+Chaque format s'exporte au choix en entier ou partiellement : cocher « Export partiel »
+ouvre une grille où l'on choisit les cartes, exemplaire par exemplaire (Maj+clic pour une
+plage, Ctrl/Cmd+A pour tout). Une liste texte partielle ne se réimporte évidemment que
+partielle.
+
 ### Mode Proxy
 
 Pour les images **anglaises et espagnoles**, la zone du copyright (« ©19xx Tolkien Enterprises »)

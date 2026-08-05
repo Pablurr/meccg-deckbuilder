@@ -7,23 +7,13 @@
 > Public : LLM. Style : dense, factuel, pas de prose d'introduction.
 > Doc utilisateur : [`README.md`](../README.md). Ce fichier-ci décrit le *comment* et le *pourquoi*.
 
-**Dernière mise à jour : 2026-08-05** — branche `proxy-setname-mask` (`c0b7f67..HEAD`) :
-le masque du copyright en/es devient **inconditionnel** — `proxyStampFor(card, lang,
-proxyMode, setNames)` (§8) est désormais le point de décision unique appelé par les trois
-chemins de rendu (grille/modale, survol, export) ; l'interrupteur Mode Proxy ne choisit plus
-*si* la zone est repeinte pour en/es, seulement *quel texte* y est écrit : « Proxy » activé,
-sinon le nom (traduit) du set. Le fr est inchangé. La table `PROXY_LABEL_COLOR` (16 clés) est
-**régénérée à partir de pixels FR réels** (`scripts/make_proxy_patches.py` : `fr_tint`
-différencie chaque carte contre son propre patch `-fr` pour isoler l'encre du nom de set,
-insensible à la polarité clair/sombre) avec un plancher de lisibilité (`MIN_CONTRAST = 80`)
-qui pousse en luminosité HLS les 7 clés dont la teinte FR mesurée est illisible.
-**`PROXY_LABEL_FONT_FRAC` recalibré** de `0.0155` à `0.021` (§8) : la valeur de juillet
-dérivait la taille de police de la **hauteur de capitale** de « Remastérisé… », ce qui
-sous-dimensionnait le rendu par rapport à l'étendue réelle du glyphe (empattements, accents)
-que l'œil compare effectivement. Ce recalibrage a exposé un bug latent dans le bisecteur de
-`label_colour` : l'arrondi en RVB 8 bits peut repousser la luminance finale sous le plancher
-de ~1 unité — `fw-site` échouait l'assertion de plancher ajoutée en revue finale. Corrigé par
-`BISECT_MARGIN = 2`, une marge de sécurité sur la cible de recherche (pas sur l'assertion).
+**Dernière mise à jour : 2026-08-05** — branche `export-card-selection` (`37d9d15..HEAD`) :
+export d'un sous-ensemble choisi du deck, sur les trois formats (ZIP MPC, planches PDF, liste
+texte). Nouvelle case « Export partiel » dans `ExportDialog`, qui ouvre `CardSelectionDialog`,
+une grille de choix des cartes par exemplaire (`selection.js`, §7). La découverte qui a
+façonné le design : ZIP/PDF et liste texte ne consomment pas la même donnée — d'où deux
+projections, `selectedCardIds` et `selectedQuantitiesZones`, plutôt qu'une liste d'ids unique.
+L'export complet reste le défaut et son chemin est inchangé.
 
 ---
 
@@ -673,6 +663,7 @@ Modules purs, sans React. `api.js` est le seul orchestrateur.
 | `sheetLayout.js` | `PAGE_SIZES`, `sheetLayout`, `backColumnIndex`, `chunk` |
 | `backGroups.js` | `backGroupForType`, `slug` |
 | `proxyDraw.js` | `drawProxyOnFace`, `loadPatchBitmaps`, `closePatchBitmaps` |
+| `selection.js` | Sélection à l'export : slots par exemplaire, et **les deux projections** |
 
 ### Ordre d'export — invariant
 
@@ -771,6 +762,37 @@ promettre que ce qu'il tient vraiment. **Le titre est « Metadata » et non « D
 vocabulaire de l'import (`lib/import/vocabulary.js`) lit déjà le mot nu « deck » comme visant
 le play deck (voir §4), et une seule lecture par mot est ce qui garde ce vocabulaire une table
 plate plutôt qu'une résolution contextuelle.
+
+### Sélection partielle à l'export (`selection.js`, 2026-08-05)
+
+`buildSlots(deckSections(…))` aplatit l'arbre en **un slot par exemplaire physique**, dans
+l'ordre canonique. La clé d'un slot est `section:groupe:carte:index` et **la section en fait
+partie** : une même carte peut occuper plusieurs sections à la fois, et une clé réduite à
+l'id de carte fusionnerait ces piles — décocher l'exemplaire du talon décocherait aussi ceux
+de la pioche, sans un mot. `index` ne sert qu'à distinguer les clés : quel exemplaire est
+coché n'a aucun sens, deux copies sont interchangeables à l'impression.
+
+**Le piège qui justifie ce module : les trois formats ne consomment pas la même chose.** Le
+ZIP et le PDF reçoivent `cardIds` ; la liste texte reçoit `quantities` et `zones` bruts, et
+`buildDeckListText` refait son propre `deckSections()` par-dessus. Filtrer la seule liste
+d'ids donnerait donc un ZIP et un PDF partiels et **une liste texte toujours complète**,
+sans erreur ni avertissement. D'où deux projections, `selectedCardIds` et
+`selectedQuantitiesZones`, et un test qui vérifie qu'à sélection égale elles décrivent le
+même multi-ensemble de cartes.
+
+`selectedQuantitiesZones` **refusionne `play` et `locations` dans `quantities`** :
+`deckSections()` les avait séparés en lisant `backGroupForType`, et les rendre comme deux
+dictionnaires distincts ferait perdre le deck de sites à la liste texte.
+
+**Conséquence assumée : une liste texte partielle ne fait plus l'aller-retour.** Elle se
+réimporte en un deck amputé. Aucun marqueur « partiel » n'est écrit dans le fichier — ce
+serait un jeton de plus à faire lire à l'import pour une asymétrie que `## Metadata` ne peut
+pas restaurer de toute façon. Les noms de fichiers ne changent pas non plus : la parité
+`safeFileName` est épinglée par un test, et un suffixe la mettrait en jeu pour un confort
+mineur.
+
+**L'export massif de deck lists reste toujours complet** (`deckListZip.js`) : c'est une
+sauvegarde, et une sauvegarde partielle qui n'en a pas l'air est un piège.
 
 ### Export massif de deck lists (`deckListZip.js`, 2026-08-04)
 
@@ -1148,6 +1170,21 @@ App
 └── modales : DeckManager · DeckSetupDialog · ImportDialog · ExportDialog
              · RulesDoc → FeaturesDoc · CardPreviewModal
 ```
+
+`CardSelectionDialog.jsx` — la grille de choix des cartes à exporter, ouverte depuis
+`ExportDialog`. **Elle ne décide rien** : toute la logique est dans `lib/export/selection.js`,
+parce que le dépôt ne rend aucun composant React en test (ni `jsdom` ni
+`@testing-library/react`) et que ce qui vit dans le JSX n'est donc pas couvert.
+
+Trois points qui ne se déduisent pas du code :
+- **`indeterminate` est une propriété DOM, pas un attribut.** Écrite en JSX elle est ignorée
+  en silence, et l'état partiel des cases de section ne s'affiche jamais. D'où la `ref` et le
+  `useEffect` de `TriBox`.
+- **Le repli ne restreint que le shift-clic.** Une plage est spatiale, donc elle s'arrête à
+  ce qui est à l'écran ; Ctrl/Cmd+A porte sur tout le deck, sections repliées comprises. Le
+  filtrage du visible se fait dans le composant, `selection.js` ignore la notion de repli.
+- **`preventDefault()` sur Ctrl+A n'est sûr que tant que la modale n'a pas de champ texte.**
+  Ajouter une recherche obligerait à ignorer les frappes venues d'un champ.
 
 ### Mobile
 
@@ -1656,3 +1693,4 @@ transformation*, donc lis le compte de **fichiers**, pas seulement celui des tes
 | 2026-08-04 | Couleurs de `PROXY_LABEL_COLOR` régénérées à partir des cartes FR réelles, branche `proxy-setname-mask`, tâche 4/4 (dernière). §8 : `scripts/make_proxy_patches.py` — `label_colour` ne choisit plus entre deux aplats noir/blanc synthétiques ; `fr_tint(key)` isole l'encre du nom de set en différenciant jusqu'à 12 cartes FR par clé contre leur propre patch `-fr` (le cadre vide reconstruit), garde la moitié des pixels différents la plus éloignée du ton du cadre (le cœur du glyphe, pas son anti-crénelage), puis moyenne. Piège qui a fait écarter un seuil luminance-vs-fond local plus simple : les 4 cadres Site ont un coin bas-gauche déchiré dont le bord sombre l'emportait sur les glyphes (lu quasi noir pour `minion-site`, dont « Contre l'Ombre » est pourtant blanc) — la différenciation contre le patch est insensible à la polarité, ce qui compte aussi parce que l'encre est claire sur les cadres sombres et sombre sur les clairs. `label_colour(key)` garde ensuite cette teinte telle quelle si elle passe un plancher de contraste (`MIN_CONTRAST = 80`) face aux **deux** variantes du patch (en/es et fr), sinon la pousse en luminosité HLS (teinte/saturation inchangées) par bissection jusqu'au plancher — nécessaire parce que « Proxy » reste une information fonctionnelle à la lecture d'une planche d'impression, contrairement au nom de set que le masque cache de toute façon. **7 des 16 clés sont poussées** (`hero-character`, `fw-site`, `alatar`, `gandalf`, `pallando`, `radagast`, `saruman` — teinte FR mesurée illisible une fois isolée, jusqu'à un contraste de 2 pour `radagast`) ; les 9 autres gardent leur teinte FR exacte. `scripts/proxy-patch-colors.txt` gagne deux colonnes (teinte FR non poussée, `sampled`/`floored`) ; `_qa()` peint désormais les deux légendes possibles (« Proxy » et un nom de set) pour chaque clé × langue, doublant la planche à 64 panneaux. Les 32 patchs PNG sont régénérés à l'identique (aucun octet ne change) — seule la table de couleurs bouge. Planche `proxy-patch-qa.png` relue : les 16 clés sont lisibles dans les deux langues et les deux légendes, aucune couture visible ; `hero-site`, `fw-site` et `saruman` ont un contraste plus doux que les 13 autres clés (fond texturé/clair) mais restent lisibles au-dessus du plancher. §11 : `test/proxy.test.js` réécrit (le test vérifiait auparavant que chaque clé valait l'un des deux aplats fixes ; il vérifie maintenant 16 teintes distinctes, aucune retombée sur les deux anciens aplats) — 35 fichiers, 644 tests, 0 échec. |
 | 2026-08-04 | Revue finale de branche `proxy-setname-mask` avant merge, un tour de correctifs (`b3280a4..28bb2c6`). §7 : les deux puces sur le rééchantillonnage PDF affirmaient encore un invariant faux (« Proxy éteint = octets bruts, la seule différence entre les deux chemins ») — le chemin dépend en réalité de `stampFor(card)`, pas de `proxyMode` directement, donc en/es sont **toujours** rééchantillonnés en JPEG même mode Proxy éteint (perte de fidélité réelle et jusque-là non documentée, sauf pour les Régions — jamais tamponnées, seul cas restant sur octets bruts en en/es). Commentaire équivalent dans `api.js` corrigé. `web/src/lib/i18n.js` : six chaînes (`proxy.tooltip` + `docs.feat.proxy`, ×3 langues) décrivaient encore l'ancien comportement (« recouvre le copyright par Proxy ») alors que pour en/es le copyright est maintenant toujours couvert et la case ne choisit que la légende — réécrites, gardent la garde de terminologie FR. §8 : la formule absolue « ne doit jamais atteindre un envoi d'impression » gagne l'exception Régions. `scripts/make_proxy_patches.py` : `fr_tint` ouvrait le patch `-fr` en RGB, perdant son canal alpha — sur les cadres Site déchirés, ça laissait le résidu du template (pas de l'encre) participer à l'échantillonnage, exactement le piège que la différenciation est censée éviter ; corrigé avec le même garde `a > 200` que `patch_label_lum`. Assertion de plancher ajoutée en fin de `label_colour` (l'invariant n'était vérifié qu'à l'œil sur la planche QA). `docs/superpowers/specs/2026-08-04-proxy-setname-mask-design.md` : comptage des clés poussées corrigé (10/6 → 9/7, cohérent avec `proxy-patch-colors.txt`), et la fausse mention d'un test JS pour le plancher redirigée vers cette nouvelle assertion. `proxyDraw.js` : fallback défensif `color \|\| '#F0F0EA'` restauré. En-tête de ce document réécrit (résumait encore la branche `qol-minor-features`). §11 : 35 fichiers, 644 tests, 0 échec. |
 | 2026-08-05 | `PROXY_LABEL_FONT_FRAC` recalibré (`0.0155` → `0.021`) sur signalement du propriétaire : le rendu en/es hors mode Proxy paraissait nettement plus petit que le vrai nom de set imprimé sur les cartes FR. Diagnostic : le calibrage de juillet dérivait la taille de police de la hauteur de capitale (juste les majuscules) de « Remastérisé… », mais l'œil compare l'étendue pleine du glyphe (accents, apostrophe), plus grande — vérifié en mesurant les lignes de pixels actives de « Contre l'Ombre » et « Remastérisé… » sur `cards/fr/as/Burat.jpg` (9-11 px de haut à 570 px de large, contre 6.2 px de hauteur de capitale utilisés jusque-là), puis confirmé à l'écran (`getBoundingClientRect`/`getComputedStyle` sur `.proxy-stamp span` : la taille de police calculée correspondait exactement à `PROXY_LABEL_FONT_FRAC × largeur affichée` — la formule était juste, la constante trop petite). Le nom traduit le plus long garde 24 px de marge dans `PROXY_PATCH_RECT` à la nouvelle taille (vérifié comme pour la taille d'origine). Ce recalibrage a exposé un bug latent dans le bisecteur de `label_colour` : `fw-site` échouait la nouvelle assertion de plancher, l'arrondi RVB 8 bits repoussant la luminance finale ~0.8 sous le plancher — corrigé par `BISECT_MARGIN = 2`, une marge de sécurité sur la cible de recherche du bisecteur (pas sur l'assertion elle-même, qui reste stricte). Couleurs régénérées (la taille de police change l'empreinte que `patch_label_lum` échantillonne) ; les 32 patchs PNG restent identiques. §11 : 35 fichiers, 644 tests, 0 échec. |
+| 2026-08-05 | Export d'un sous-ensemble du deck. Nouvelle case « Export partiel » dans `ExportDialog`, qui ouvre une grille de choix des cartes, par exemplaire. L'export complet reste le défaut et son chemin est inchangé. La découverte qui a façonné le design : ZIP/PDF et liste texte ne consomment pas la même donnée, donc la sélection est projetée dans deux formes plutôt qu'une (§7). |
