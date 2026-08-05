@@ -3,7 +3,8 @@
 Date: 2026-08-04
 Status: Draft
 Builds on: [2026-07-28-proxy-frame-patches-design.md](2026-07-28-proxy-frame-patches-design.md)
-(frame patches, geometry, `PROXY_LABEL_COLOR` methodology — all still in force)
+(frame patches, geometry — still in force; **`PROXY_LABEL_COLOR`'s generation
+method is replaced by this design, see Data below**)
 
 ## Goal
 
@@ -23,9 +24,17 @@ intent.
     translated name**, read straight from `cards.json` (`setNames[card.setCode][lang]`,
     via the existing `setName()` in [lang.js](../../../web/src/lib/lang.js)) —
     e.g. "Against the Shadow" / "Contra la Sombra" for `AS`.
-  - checkbox **on** → unchanged, `"Proxy"`, same colour table as today.
+  - checkbox **on** → unchanged, `"Proxy"`.
 - Regions still take no swatch key → never stamped. No change to that
   fail-safe.
+- **One shared table for both label kinds.** `"Proxy"` and the translated set
+  name are the same visual object — a small caption over the frame — so they
+  use exactly the same font, size and per-key colour. Concretely, the real
+  FR-sampled colour this design introduces for the set name (see Background)
+  becomes the *only* `PROXY_LABEL_COLOR` table; the old synthetic
+  contrast-pick method is retired, not kept as a second table. There is one
+  set of label variables, and `"Proxy"` vs. the set name is just which string
+  gets drawn into it.
 
 Geometry, the 32 patch PNGs, and the `-fr` tone offset are **all unchanged**
 — see Background below for why.
@@ -45,15 +54,16 @@ Geometry, the 32 patch PNGs, and the `-fr` tone offset are **all unchanged**
   exactly the size `PROXY_LABEL_FONT_FRAC` (0.0155 × card width) was
   calibrated against in the July design, so it applies unchanged to the new
   set-name label too. No new font-size constant.
-- **The FR set-name text colour is not the same as `PROXY_LABEL_COLOR`.**
-  `PROXY_LABEL_COLOR` is a synthetic high-contrast black/white pick (mean
+- **The FR set-name text colour is not the same as today's `PROXY_LABEL_COLOR`.**
+  The existing table is a synthetic high-contrast black/white pick (mean
   luminance of the *patch* under the label footprint, threshold 118) — it was
   never meant to reproduce a real printed colour. Sampling the actual glyph
   pixels of `Contre l'Ombre` on that same card (threshold on luminance vs.
   local background, real photographed text) gives `#B3ACB5` — a muted light
-  lavender-grey, visibly different from the synthetic `#F0F0EA`. The per-key
-  table for the new label needs its own measurement pass, not a reuse of the
-  existing table.
+  lavender-grey, visibly different from the synthetic `#F0F0EA`. Per the
+  unification above, this real-sampled value **replaces** the synthetic one
+  in `PROXY_LABEL_COLOR` for that key, for both label kinds — it is not a
+  second table alongside the old one.
 - **Official translated set names already exist in `cards.json`**, one row
   per set (`AS`, `BA`, `DM`, `LE`, `TD`, `TW`, `WH`), each with `en`/`es`/`fr`
   filled. The app already parses and threads this data
@@ -67,9 +77,9 @@ Geometry, the 32 patch PNGs, and the `-fr` tone offset are **all unchanged**
 
 ### Data — `proxy.js`
 
-- New literal table `PROXY_SETNAME_COLOR` (16 keys → hex), sourced from real
-  FR card pixels (see *Tooling* below), committed the same way
-  `PROXY_LABEL_COLOR` is today.
+- `PROXY_LABEL_COLOR` (16 keys → hex) is **regenerated** in place — same
+  name, same shape, new values and a new source (real FR pixels instead of
+  patch-luminance contrast; see *Tooling*). No second table.
 - New pure helper, replacing the three call sites that currently hardcode
   `PROXY_LABEL` / `PROXY_LABEL_COLOR[key]`:
 
@@ -78,18 +88,16 @@ Geometry, the 32 patch PNGs, and the `-fr` tone offset are **all unchanged**
   export function proxyStampFor(card, lang, proxyMode, setNames) {
     const key = swatchKeyForCard(card);
     if (!key) return null;
-    if (lang === 'fr') {
-      if (!proxyMode) return null;
-      return { key, text: PROXY_LABEL, color: PROXY_LABEL_COLOR[key] };
-    }
-    if (proxyMode) return { key, text: PROXY_LABEL, color: PROXY_LABEL_COLOR[key] };
-    return { key, text: setName(setNames, card.setCode, lang), color: PROXY_SETNAME_COLOR[key] };
+    if (lang === 'fr' && !proxyMode) return null;
+    const text = proxyMode ? PROXY_LABEL : setName(setNames, card.setCode, lang);
+    return { key, text, color: PROXY_LABEL_COLOR[key] };
   }
   ```
 
   (`setName` imported from `lib/lang.js`; falls back to the bare set code if
   a set is ever missing a name, same fallback the set filter already relies
-  on.)
+  on. `PROXY_LABEL_FONT_FRAC` and `PROXY_LABEL_POS` are untouched and apply
+  to both label kinds, as already established in Background.)
 
 - `patchUrl(key, lang)` unchanged — the background patch image (en/es plain,
   fr tone-shifted) doesn't depend on checkbox state.
@@ -136,21 +144,22 @@ All three need `lang`, `proxyMode`, and `setNames` in scope, and just call
 
 ### Tooling — `scripts/make_proxy_patches.py`
 
-New pass, alongside the existing `label_colour()`:
+`label_colour()`'s patch-luminance contrast pick is **removed** and replaced
+by real-pixel sampling, under the same function name:
 
-- `setname_colour(key)`: for each of the up to 12 sampled FR cards per key
-  (same corpus walk and cap `fr_offset` already uses), crop the known
-  set-name text region, isolate glyph pixels from the parchment/frame
-  background by luminance deviation against the local per-card background,
-  and average the surviving pixels' RGB across all sampled cards for that
-  key. Written to a new committed file `scripts/proxy-setname-colors.txt`
-  (mirrors `proxy-patch-colors.txt`), and the reviewed values pasted as
-  literals into `PROXY_SETNAME_COLOR` in `proxy.js` — same "generate once,
-  freeze as literals" discipline as the existing colour table, for the same
-  reason: CSS and canvas must never be able to diverge at runtime.
-- `_qa()` sheet extended to also render, per key, the en/es unchecked-box
-  appearance with a representative real set name, so the sign-off artefact
-  covers all four label states (fr/en/es × Proxy, en/es × set name).
+- For each of the up to 12 sampled FR cards per key (same corpus walk and cap
+  `fr_offset` already uses), crop the known set-name text region, isolate
+  glyph pixels from the parchment/frame background by luminance deviation
+  against the local per-card background, and average the surviving pixels'
+  RGB across all sampled cards for that key.
+- Written to `scripts/proxy-patch-colors.txt` (same file, new content —
+  contrast source replaced, format unchanged: `key #RRGGBB`), and the
+  reviewed values pasted as literals into `PROXY_LABEL_COLOR` in `proxy.js`
+  — same "generate once, freeze as literals" discipline as before, for the
+  same reason: CSS and canvas must never be able to diverge at runtime.
+- `_qa()` sheet extended to render, per key, both label states side by side —
+  `"Proxy"` and a representative real set name, both in the new colour — so
+  the sign-off artefact is also where the legibility risk below gets caught.
 
 ### Non-goals
 
@@ -165,10 +174,11 @@ New pass, alongside the existing `label_colour()`:
 
 ## Verification
 
-1. `scripts/make_proxy_patches.py` runs clean, emits the new
-   `proxy-setname-colors.txt`, and the regenerated QA sheet shows all 16 keys
-   × the new en/es unchecked state with no visible patch seam and legible
-   text.
+1. `scripts/make_proxy_patches.py` runs clean, regenerates
+   `proxy-patch-colors.txt` with the new real-sampled values, and the
+   regenerated QA sheet shows all 16 keys in both label states (`"Proxy"`
+   and a real set name) with no visible patch seam and legible text at the
+   new colour.
 2. `npm test` passes, including new `proxy.test.js` cases: `fr` requires
    `proxyMode`; `en`/`es` are stamped regardless of `proxyMode`; the label
    text switches between `PROXY_LABEL` and the official translated set name;
@@ -183,11 +193,23 @@ New pass, alongside the existing `label_colour()`:
 
 ## Risks
 
-- **Text-colour sampling is noisier than the existing patch-luminance
-  method** — it's reading real photographed glyphs, not a synthetic fill.
-  Mitigated the same way the July design mitigated the FR tone offset:
-  average over up to 12 cards per key, cap the outlier influence, and gate
-  the final numbers on the QA sheet before committing them as literals.
+- **A real-sampled colour is not contrast-guaranteed the way the retired
+  synthetic pick was.** The old `label_colour()` deliberately chose whichever
+  of two fixed values (near-black / near-white) maximised contrast against
+  each patch, precisely to guarantee "Proxy" stays legible on all 16
+  backgrounds. The new colour is instead whatever the real FR print happened
+  to use at that spot — legible there because FR cards carry their own
+  distinct tone grade, but not derived from, or guaranteed against, the
+  en/es patch backgrounds it will now also sit on for both label kinds. If
+  the QA sheet shows a low-contrast key, that key gets a manual override in
+  the colours file (same escape hatch the July design already uses for
+  frame-mismatch keys like `hero-site`/`pallando`) rather than a fallback to
+  the old synthetic method.
+- **Text-colour sampling is noisier than a synthetic pick** — it's reading
+  real photographed glyphs, not a computed fill. Mitigated the same way the
+  July design mitigated the FR tone offset: average over up to 12 cards per
+  key, cap the outlier influence, and gate the final numbers on the QA sheet
+  before committing them as literals.
 - **A set added later without translated names** would fall back to the
   bare set code as the label (same fallback `setLabel`/`setName` already use
   for the set filter) — acceptable, matches existing behaviour elsewhere in
