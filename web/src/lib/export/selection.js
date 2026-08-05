@@ -1,3 +1,5 @@
+import { emptyZones } from '../deck.js';
+
 // Turns the section -> group -> card tree from deckSections() into a flat,
 // ordered list of "slots": one slot per physical copy. Built on top of that
 // tree rather than recomputing it, so the canonical export order stays owned
@@ -74,4 +76,31 @@ export function groupState(selected, keys) {
   // `on === keys.length`, and 'none' is the answer that renders an empty box.
   if (on === 0) return 'none';
   return on === keys.length ? 'all' : 'partial';
+}
+
+// The ZIP and the PDF take a flat id list; slots are already in canonical
+// order, so filtering preserves it for free.
+export function selectedCardIds(slots, selected) {
+  return slots.filter((s) => selected.has(s.key)).map((s) => s.cardId);
+}
+
+const ZONE_OF_SECTION = { pool: 'pool', sideboard: 'sideboard', sideboardFw: 'sideboardFw' };
+
+// The text list does NOT take an id list: buildDeckListText re-derives its own
+// sections from raw `quantities` and `zones`. Filtering only the id list would
+// leave the .txt showing the whole deck, with nothing to signal it.
+export function selectedQuantitiesZones(slots, selected) {
+  const quantities = {};
+  const zones = emptyZones();
+  for (const slot of slots) {
+    if (!selected.has(slot.key)) continue;
+    // `play` and `locations` are one map that deckSections() split by card
+    // type; the projection has to put them back, or the .txt loses the sites.
+    const target = slot.sectionId === 'play' || slot.sectionId === 'locations'
+      ? quantities
+      : zones[ZONE_OF_SECTION[slot.sectionId]];
+    if (!target) continue;
+    target[slot.cardId] = (target[slot.cardId] || 0) + 1;
+  }
+  return { quantities, zones };
 }
