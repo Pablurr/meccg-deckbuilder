@@ -57,13 +57,37 @@ Geometry, the 32 patch PNGs, and the `-fr` tone offset are **all unchanged**
 - **The FR set-name text colour is not the same as today's `PROXY_LABEL_COLOR`.**
   The existing table is a synthetic high-contrast black/white pick (mean
   luminance of the *patch* under the label footprint, threshold 118) — it was
-  never meant to reproduce a real printed colour. Sampling the actual glyph
-  pixels of `Contre l'Ombre` on that same card (threshold on luminance vs.
-  local background, real photographed text) gives `#B3ACB5` — a muted light
-  lavender-grey, visibly different from the synthetic `#F0F0EA`. Per the
-  unification above, this real-sampled value **replaces** the synthetic one
-  in `PROXY_LABEL_COLOR` for that key, for both label kinds — it is not a
-  second table alongside the old one.
+  never meant to reproduce a real printed colour. The real FR tints are muted
+  mid-tones, visibly different from the synthetic `#191919`/`#F0F0EA` pair.
+  Per the unification above, the real-sampled values **replace** the synthetic
+  ones in `PROXY_LABEL_COLOR`, for both label kinds — not a second table.
+- **Glyph isolation must difference the card against its empty-frame patch.**
+  A luminance-threshold-vs-local-background sampler (the obvious first
+  approach) is wrong: on the four site frames the bottom-left corner is torn
+  away, so the deviating-pixel majority is the dark torn edge, not the text —
+  it reported near-black for `minion-site`, whose `Contre l'Ombre` is plainly
+  white. Differencing each FR card against its own `<key>-fr.png` (which *is*
+  the reconstructed empty frame) isolates exactly the printed ink, is
+  polarity-agnostic, and is immune to that artefact. Taking the half of the
+  ink furthest from the patch tone recovers the glyph core rather than an
+  edge-blended average.
+- **The real FR tints are illegible on the light frames, so a contrast floor
+  is required.** Measured contrast (|Δ luminance| between the sampled tint and
+  the patch under the label footprint) across the 16 keys: ten keys land at
+  68–103, but `radagast` 2, `gandalf` 7, `hero-character` 13, `alatar` 14,
+  `pallando` 25, `saruman` 34, `stage-resource` 39, `fw-site` 46. This is not
+  a sampling error — it is faithful: verified visually, Radagast's
+  `Les Sorciers` and Saruman's set name really are near-invisible on the real
+  FR card. Reproducing that is acceptable for the set name (decoration; the
+  mask hides the notice either way) but is a regression for `"Proxy"`, which
+  is functional information when checking a print run and is contrast-
+  guaranteed by construction today. **Decision: keep the sampled hue and
+  saturation, push luminance until it clears a floor of 80 against the label
+  footprint of *both* patch variants** (`<key>.png` and `<key>-fr.png` — they
+  differ by up to ±40 per channel, and one colour serves all three
+  languages). Verified: 10 of the 16 keys clear the floor untouched and keep
+  their FR tint exactly; 6 are pushed away from the frame tone with hue
+  preserved.
 - **Official translated set names already exist in `cards.json`**, one row
   per set (`AS`, `BA`, `DM`, `LE`, `TD`, `TW`, `WH`), each with `en`/`es`/`fr`
   filled. The app already parses and threads this data
@@ -129,15 +153,16 @@ All three need `lang`, `proxyMode`, and `setNames` in scope, and just call
 
 ### Prop threading — `setNames`
 
-`setNames` is loaded once in `App.jsx` and already reaches `FilterBar` and
-`DeckPanel`. It does **not** yet reach `CardBrowser` → `MiniCard`, or
-`CardPreviewModal`, both of which render `ProxyStamp`. Threading needed:
+`setNames` is loaded once in `App.jsx` and today reaches only `FilterBar`
+(line 278) and `ImportDialog` (line 391). It reaches **none** of the four
+components that render a stamp. Threading needed:
 
-- `App.jsx` → `CardBrowser` → `MiniCard` (and `CardBrowser`'s own
-  `useCardPreview` call) → `ProxyStamp`
-- `App.jsx` → `CardPreviewModal` → `ProxyStamp`
-- `DeckPanel` already receives `setNames`; thread it into its own
-  `useCardPreview` call and its `MiniCard`s.
+- `App.jsx` → `CardBrowser` (line 280) → `MiniCard` → `ProxyStamp`, plus
+  `CardBrowser`'s own `useCardPreview` call
+- `App.jsx` → `DeckPanel` — **two call sites**, desktop (line 282) and the
+  mobile sheet (line 310); neither passes `setNames` today. Then on into
+  `DeckPanel`'s own `useCardPreview` call and its `MiniCard`s.
+- `App.jsx` → `CardPreviewModal` (line 417) → `ProxyStamp`
 
 `ExportDialog.jsx` does not need `setNames` — the export functions in
 `api.js` resolve it internally.
@@ -145,21 +170,27 @@ All three need `lang`, `proxyMode`, and `setNames` in scope, and just call
 ### Tooling — `scripts/make_proxy_patches.py`
 
 `label_colour()`'s patch-luminance contrast pick is **removed** and replaced
-by real-pixel sampling, under the same function name:
+by a two-stage sample-then-floor pass:
 
-- For each of the up to 12 sampled FR cards per key (same corpus walk and cap
-  `fr_offset` already uses), crop the known set-name text region, isolate
-  glyph pixels from the parchment/frame background by luminance deviation
-  against the local per-card background, and average the surviving pixels'
-  RGB across all sampled cards for that key.
-- Written to `scripts/proxy-patch-colors.txt` (same file, new content —
-  contrast source replaced, format unchanged: `key #RRGGBB`), and the
-  reviewed values pasted as literals into `PROXY_LABEL_COLOR` in `proxy.js`
-  — same "generate once, freeze as literals" discipline as before, for the
-  same reason: CSS and canvas must never be able to diverge at runtime.
+1. **Sample the FR tint.** For each of the up to 12 FR cards per key (same
+   corpus walk and cap `fr_offset` already uses), crop the card to the key's
+   own outer box, resize `<key>-fr.png` to match, and keep the pixels whose
+   luminance differs from the patch by more than 28 — that difference *is*
+   the printed ink. Of those, keep the half furthest from the patch tone (the
+   glyph core, not the anti-aliased edge) and average. Average across cards.
+2. **Enforce the contrast floor.** If the tint is within 80 luminance of the
+   label footprint of either patch variant, convert to HLS, bisect on
+   lightness (hue and saturation held) until it clears 80 against **both**
+   variants. `colorsys` is stdlib — no new dependency.
+
+- Written to `scripts/proxy-patch-colors.txt` (same file, format extended to
+  `key #RRGGBB <frTint> <moved>` so a reviewer can see which keys were
+  pushed), and the reviewed values pasted as literals into
+  `PROXY_LABEL_COLOR` in `proxy.js` — same "generate once, freeze as
+  literals" discipline as before, for the same reason: CSS and canvas must
+  never be able to diverge at runtime.
 - `_qa()` sheet extended to render, per key, both label states side by side —
-  `"Proxy"` and a representative real set name, both in the new colour — so
-  the sign-off artefact is also where the legibility risk below gets caught.
+  `"Proxy"` and a representative real set name, both in the final colour.
 
 ### Non-goals
 
@@ -193,23 +224,22 @@ by real-pixel sampling, under the same function name:
 
 ## Risks
 
-- **A real-sampled colour is not contrast-guaranteed the way the retired
-  synthetic pick was.** The old `label_colour()` deliberately chose whichever
-  of two fixed values (near-black / near-white) maximised contrast against
-  each patch, precisely to guarantee "Proxy" stays legible on all 16
-  backgrounds. The new colour is instead whatever the real FR print happened
-  to use at that spot — legible there because FR cards carry their own
-  distinct tone grade, but not derived from, or guaranteed against, the
-  en/es patch backgrounds it will now also sit on for both label kinds. If
-  the QA sheet shows a low-contrast key, that key gets a manual override in
-  the colours file (same escape hatch the July design already uses for
-  frame-mismatch keys like `hero-site`/`pallando`) rather than a fallback to
-  the old synthetic method.
-- **Text-colour sampling is noisier than a synthetic pick** — it's reading
-  real photographed glyphs, not a computed fill. Mitigated the same way the
-  July design mitigated the FR tone offset: average over up to 12 cards per
-  key, cap the outlier influence, and gate the final numbers on the QA sheet
-  before committing them as literals.
+- **The contrast floor is what keeps `"Proxy"` legible**, replacing the
+  guarantee the retired synthetic pick gave by construction. It is therefore
+  an invariant, not a nicety: a test asserts every key clears 80 against both
+  patch variants, so a future resample cannot quietly reintroduce an
+  invisible label. The floor value itself is calibrated by eye on the QA
+  sheet.
+- **Six keys do not show their true FR tint.** `hero-character`, `fw-site`,
+  `alatar`, `gandalf`, `pallando`, `radagast` and `saruman` are pushed by the
+  floor, so they are "FR hue, corrected luminance" rather than a faithful
+  copy. This is the accepted trade from the legibility decision above; the
+  generator records the pre-floor tint alongside the final value so the
+  divergence stays visible to a reviewer.
+- **Five keys are sampled from very few cards** — `alatar`, `gandalf`,
+  `pallando`, `radagast`, `saruman` have only 2 FR cards each, `fw-site` 4.
+  Small samples, but these are also the keys the floor overrides most, so the
+  sampled tint matters least exactly where it is least reliable.
 - **A set added later without translated names** would fall back to the
   bare set code as the label (same fallback `setLabel`/`setName` already use
   for the set filter) — acceptable, matches existing behaviour elsewhere in
