@@ -234,6 +234,11 @@ body {
   font-family: Arial, Helvetica, sans-serif;
   font-weight: 700;
   line-height: 1;
+  /* "Servidores de la Oscuridad" is 124px of the 179px box in Arial Bold, so
+     it fits -- but the canvas path never wraps, and a fallback font on a
+     machine without Arial could push it over. Wrapping is the one way these
+     two paths could visibly disagree. */
+  white-space: nowrap;
 }
 /* Shrink-wrapped positioned wrapper for the modal image (img keeps its own
    max constraints, so the wrapper box == the visible card bounds). */

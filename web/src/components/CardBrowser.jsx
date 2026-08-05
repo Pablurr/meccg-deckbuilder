@@ -116,7 +116,7 @@ function ZoneCtrls({ card, zones, quantities, changeZoneQty, t, capCtx, isMobile
   );
 }
 
-export default function CardBrowser({ cards, filters, quantities, lang, onChangeQty, onToggle, onSelectAll, isMobile, onPreview, proxyMode, deckMode, side, zones, changeZoneQty, capCtx }) {
+export default function CardBrowser({ cards, filters, quantities, lang, onChangeQty, onToggle, onSelectAll, isMobile, onPreview, proxyMode, setNames, deckMode, side, zones, changeZoneQty, capCtx }) {
   const t = useT();
   const [showAll, setShowAll] = useState(false);
   const filtered = useMemo(() => filterCards(cards, filters), [cards, filters]);
@@ -147,7 +147,7 @@ export default function CardBrowser({ cards, filters, quantities, lang, onChange
   const legal = (c) => isLegalForSide(c, side, openBalrog, bannedIds);
   const visible = side && !showAll ? filtered.filter(legal) : filtered;
   const shown = visible.slice(0, CAP);
-  const { previewRef, previewImgRef, stampRef, trackPointer, hidePreview } = useCardPreview(lang, proxyMode);
+  const { previewRef, previewImgRef, stampRef, trackPointer, hidePreview } = useCardPreview(lang, proxyMode, setNames);
 
   return (
     <div className="browser">
@@ -210,7 +210,7 @@ export default function CardBrowser({ cards, filters, quantities, lang, onChange
                   if (next) el.src = next;
                 }}
               />
-              <ProxyStamp card={c} lang={lang} on={proxyMode} />
+              <ProxyStamp card={c} lang={lang} on={proxyMode} setNames={setNames} />
               {deckbuilding ? (
                 <ZoneCtrls card={c} zones={zones} quantities={quantities} changeZoneQty={changeZoneQty} t={t} capCtx={capCtx} isMobile={isMobile} />
               ) : (

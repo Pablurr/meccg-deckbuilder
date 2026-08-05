@@ -7,7 +7,7 @@
 > Public : LLM. Style : dense, factuel, pas de prose d'introduction.
 > Doc utilisateur : [`README.md`](../README.md). Ce fichier-ci décrit le *comment* et le *pourquoi*.
 
-**Dernière mise à jour : 2026-08-04** — six changements de confort
+**Dernière mise à jour : 2026-08-04** — masque en/es inconditionnel du copyright (tâche 2/4)
 (branche `qol-minor-features`, `8cf904e..2e4ab4a`) : `deckSignature`/`deckPayload`
 (`deck.js`) donnent au deck ouvert la capacité de dire s'il diffère de ce qui est enregistré,
 d'où un **bouton Enregistrer dans l'en-tête du panneau** piloté par `savedSignature` (§4, §5) ;
@@ -823,9 +823,32 @@ correct pour des proxies, pas parfaitement net. C'est inhérent aux fichiers sou
 ## §8 — Le tampon Proxy
 
 **Pourquoi :** MPC exige que les cartes proxy ne portent pas la mention de copyright.
-L'app **repeint** la zone avec le cadre vierge du type de carte, puis écrit « Proxy » par-dessus.
+L'app **repeint** la zone avec le cadre vierge du type de carte, puis écrit un libellé par-dessus.
+
+**En/es : le masque est inconditionnel.** Le `©19xx Tolkien Enterprises` de ces deux langues
+ne doit **jamais** atteindre un envoi d'impression, que l'utilisateur ait pensé ou non à
+activer le mode Proxy — l'interrupteur ne décide donc plus *si* la zone est repeinte pour
+en/es, seulement *quel texte* y est écrit : « Proxy » en mode proxy, sinon le nom (traduit)
+du set, qui est de toute façon ce que les cartes FR impriment déjà à cet endroit-là.
+**Fr garde son ancien comportement** (rien tant que le mode Proxy est éteint) : les images FR
+portent le nom du set à cet emplacement au lieu d'une mention de copyright, donc il n'y a
+rien à masquer.
 
 **Interrupteur activé par défaut** (`meccg.proxyMode`, §4).
+
+### Point de décision unique — `proxyStampFor`
+
+`proxyStampFor(card, lang, proxyMode, setNames)` (dans `proxy.js`) est le **seul** endroit
+qui décide ce qu'affiche le tampon d'une carte — clé de cadre, texte, couleur — ou `null`
+pour ne rien afficher. **Invariant : aucun chemin de rendu ne doit réimplémenter cette
+décision**, seulement appeler `proxyStampFor` et peindre le résultat — c'est ce qui garantit
+que tous s'accordent, y compris après un futur changement de règle qui ne touchera que
+cette fonction. `ProxyStamp.jsx` (overlay CSS des grilles/modales) et l'aperçu au survol
+(`CardPreview.jsx`, chemin DOM impératif) l'appellent déjà. **Le canvas d'export
+(`proxyDraw.js`) ne l'appelle pas encore** — il retombe sur l'ancienne logique
+(`swatchKeyForCard` + `PROXY_LABEL` fixe) le temps que la migration de ce troisième chemin
+soit faite ; jusque-là, l'export continue d'afficher « Proxy » inconditionnellement et
+n'a pas encore le nom de set en/es décrit ci-dessus.
 
 ### Classification — [`web/src/lib/proxy.js`](../web/src/lib/proxy.js)
 
@@ -862,6 +885,12 @@ ne puissent pas diverger. **Ne les règle jamais à la main.**
 
 `PROXY_LABEL_COLOR` est généré par le script (voir `scripts/proxy-patch-colors.txt`) et
 committé en littéraux pour que CSS et canvas rendent identiquement.
+
+Avec les noms de sets, le libellé peut être bien plus long que « Proxy » (ex. « Servidores
+de la Oscuridad »). `.proxy-stamp span` porte donc `white-space: nowrap` dans `styles.css` :
+le chemin canvas ne peut **jamais** faire retour à la ligne (une seule ligne de texte,
+position fixe), donc si le CSS le pouvait, ce serait la seule façon dont les deux chemins
+pourraient visuellement diverger.
 
 ### Patchs
 
@@ -1566,3 +1595,4 @@ transformation*, donc lis le compte de **fichiers**, pas seulement celui des tes
 | 2026-08-04 | Revue finale de branche avant merge, cinq trouvailles Critical (une seule cause) + quatre Important + cinq Minor. **§4 : `emptyZones()`** — huit endroits construisaient un `zones` en mémoire sans passer par `normalizeDeck`, quatre sur un chemin de production réel, tous ne nommant que `sideboard`/`pool` ; `bucketFor(card, 'sideboardFw', …)` y rendait `undefined`, et l'écriture suivante plantait — pendant un rendu React côté fenêtre d'import (`ImportDialog.jsx`, dans un `useMemo`, sans error boundary dans `web/src`) et dans `changeZoneQty`/`bumpCount` (`App.jsx`) au premier glisser-déposer sur un deck neuf. `normalizeDeck` construit désormais son `zones` à partir des clés d'`emptyZones()` au lieu de les re-lister. `App.importDeckData` reconstruit tout l'objet `zones` importé via `normalizeDeck({ zones: importedZones }).zones` plutôt que de lister `sideboard`/`pool` à la main — c'est ce qui avait fait disparaître silencieusement, sans avertissement, les cartes qu'un import routait vers `sideboardFw`. `ImportDialog.jsx` : `importCount` (bouton d'envoi) utilise désormais `totalCopies`, pas un trio de maps codé en dur — une importation résolue entièrement dans `sideboardFw` affichait `0` et bloquait le bouton. **§9/§10 : `ZoneTabs.jsx`** — l'`aria-label` composé de l'onglet `sideboardFw` (WCAG 2.5.3, ajouté le 2026-08-03) remplaçait tout le nom accessible, y compris le compteur porté par le texte des autres onglets ; le compteur est maintenant réinjecté dans le label composé. **§6 : `formats.js`** — la note au-dessus de `LENGTHS` qui disait l'allocation « +10 » délibérément non modélisée est réécrite : elle l'est, comme zone dédiée, et la note explique maintenant pourquoi une constante à plat plutôt qu'une cinquième colonne. **Documentation :** cette table de `localStorage` et la liste des états d'`App.jsx` (ci-dessus) créditaient encore `meccg.cardZoom` d'être vivante ; le spec `2026-08-03-deck-panel-fw-sideboard-design.md` (§3, §5) affirmait que la compatibilité ascendante ne dépendait que de `normalizeDeck` et que `target.js` n'avait pas été touché — les deux corrigés pour que la prochaine zone ajoutée ne reproduise pas cette lacune. `README.md` : conjonction manquante restaurant le rattachement de « pour les camps qui en utilisent un » à la réserve, pas au talon. **Tests :** `test/deckModel.test.js` gagne un test qui dérive l'ensemble des zones attendues de `zoneTargets()` plutôt que de le re-lister, et `test/importDeck.test.js` gagne le round-trip export → import de `sideboardFw` plus un test direct « n'explose pas » — les deux échouaient contre le code d'avant cette entrée, preuve que C1-C4 étaient réels. §11 : 33 fichiers, 619 tests (33 fichiers / 594 tests, cité en deux endroits de ce document depuis le 2026-08-03, était déjà périmé par rapport aux 616 tests d'avant cette tâche — corrigé en marge). |
 | 2026-08-04 | Six améliorations de confort demandées par le propriétaire, branche `qol-minor-features` (`8cf904e..2e4ab4a`). **§4 :** `deckPayload` comme définition unique d'un enregistrement, et `deckSignature` — clés triées **à tous les niveaux** (l'ordre d'insertion ferait lire comme modifié un deck qu'on n'a pas touché), `id`/`order`/`updatedAt` exclus pour qu'une sauvegarde réussie n'allume pas le bouton qu'elle vient d'éteindre. **§5 :** `savedSignature` et `saveState` ; la **liste fermée des quatre moments** où la ligne de base est réécrite, et le fait qu'un import n'en est délibérément pas un — un cinquième site désarme silencieusement le bouton. Plus le piège trouvé en revue : renommer le deck ouvert depuis « Mes decks » écrivait sur le disque sans rien déplacer dans `App`, laissant le bouton **grisé sur un désaccord disque/mémoire**, et la sauvegarde suivante écrasait le renommage ; le correctif (`onRenamed`) reconstruit la ligne de base **depuis l'enregistrement rendu par le stockage, jamais depuis l'état vivant** — repartir du vivant aurait certifié des modifications de cartes non sauvegardées, un bug pire que celui corrigé. **§7 :** `deckListZip.js` — `zip.file()` écrase silencieusement un chemin dupliqué, d'où la déduplication, faite **après** l'assainissement parce que c'est l'assainissement qui crée les collisions ; parité caractère pour caractère avec l'export d'un deck seul, brièvement cassée par un défaut du plan puis annulée, désormais épinglée par `safeFileName('Deck (1)') === 'Deck_1_'` ; un deck disparu en cours de lot est sauté, `api.getDeck` levant au lieu de rendre `undefined`. **§9 :** « Ruines & Antres » ; la section « Vocabulaire » quitte la page d'aide et **le garde de terminologie perd sa dernière exemption** — `GLOSSARY_KEYS` supprimé et non vidé, toute chaîne FR y est soumise, et le tableau des trois « vocabulaires » du dépôt dit lequel n'a pas bougé (`lib/import/vocabulary.js`). **§10 :** bouton Enregistrer dans les deux variantes du panneau, et la note que le panneau ne se monte pas sur un deck vide — le bouton n'y est pas grisé, il est inatteignable ; `OPTIONAL_TABS` (les deux talons) et `tabPresentation`, dont le `count === 0` strict distingue une zone vide d'un onglet sans compteur ; page d'aide en deux parties (`FeaturesDoc.jsx`) ; lien de suggestion ; sélection multiple de `DeckManager` et pourquoi son test d'identité sur la taille est sûr. **§13/§14 :** quatre lignes livrées, une retirée, cinq dettes consignées (n°11-15). **§11 :** 35 fichiers, 637 tests. |
 | 2026-08-04 | Favicon d'onglet ajouté (même branche `qol-minor-features`), fourni par le propriétaire (pas d'entrée §12 dédiée — pas de décision technique, juste un fichier statique et un `<link>`). `web/public/favicon.png` + `<link rel="icon" type="image/png" href="/favicon.png">` dans `web/index.html`, qui n'avait jusqu'ici aucune balise favicon. `web/public/meccg-logo.png` reste orphelin, toujours référencé nulle part (§14). |
+| 2026-08-04 | Masque en/es inconditionnel du copyright, branche `proxy-setname-mask`, tâche 2/4 (`c0b7f67..HEAD`, la tâche 1 avait ajouté `proxyStampFor`). §8 : le « Pourquoi » distingue désormais en/es (masque toujours peint, l'interrupteur ne choisit que le texte : « Proxy » ou le nom du set traduit) de fr (comportement inchangé, rien tant que le mode Proxy est éteint, puisque les images FR portent déjà le nom du set à cet endroit). Nouvelle sous-section « Point de décision unique » : `proxyStampFor` est le seul endroit qui décide quoi peindre ; `ProxyStamp.jsx` et l'aperçu au survol (`CardPreview.jsx`) l'appellent déjà, le canvas d'export (`proxyDraw.js`) pas encore — migration prévue à la tâche 3, l'export affiche pour l'instant toujours « Proxy » sans condition. `white-space: nowrap` ajouté sur `.proxy-stamp span` (des libellés comme « Servidores de la Oscuridad » sont bien plus longs que « Proxy », et le chemin canvas ne peut jamais retourner à la ligne). `setNames` enfilé de `App.jsx` jusqu'aux quatre points d'affichage (`CardBrowser`, les deux `DeckPanel`, `CardPreviewModal`) et jusqu'à `useCardPreview`/`MiniCard`, sans changer `on` (toujours le flag proxy). Vérifié dans un navigateur réel (pas seulement en test) : en/es hors mode Proxy affichent le nom du set sur les quatre chemins de rendu (grille, survol, modale, panneau de deck) ; fr hors mode Proxy n'affiche rien ; les Régions n'affichent jamais rien, même en mode Proxy. §11 : 35 fichiers, 644 tests (7 de plus qu'à la tâche 1, ajoutés par `proxy.test.js`). |

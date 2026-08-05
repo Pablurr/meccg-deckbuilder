@@ -16,7 +16,7 @@ import { ZONE_LABEL_KEY } from '../lib/rules/zones.js';
 // card tile opens this modal instead of toggling the card, so these counters
 // are the primary way to add a copy anywhere; a single deck-only counter left
 // the sideboard and the pool unreachable by touch.
-export default function CardPreviewModal({ card, lang, rows = [], onChangeZoneQty, onClose, proxyMode }) {
+export default function CardPreviewModal({ card, lang, rows = [], onChangeZoneQty, onClose, proxyMode, setNames }) {
   const t = useT();
   if (!card) return null;
   const name = cardName(card, lang);
@@ -36,7 +36,7 @@ export default function CardPreviewModal({ card, lang, rows = [], onChangeZoneQt
                 if (en && el.getAttribute('src') !== en) el.src = en;
               }}
             />
-            <ProxyStamp card={card} lang={lang} on={proxyMode} />
+            <ProxyStamp card={card} lang={lang} on={proxyMode} setNames={setNames} />
           </div>
         </div>
         <div className="card-modal-bar" onClick={(e) => e.stopPropagation()}>
