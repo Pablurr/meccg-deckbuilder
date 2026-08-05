@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import * as api from '../api.js';
 import { buildDeckListText } from '../lib/deckList.js';
-import { deckSections, flattenSections } from '../lib/export/deckSections.js';
+import { deckSections } from '../lib/export/deckSections.js';
 import { emptyZones } from '../lib/deck.js';
 import { LIST_LANGUAGES, IMAGE_LANGUAGES } from '../lib/lang.js';
 import { useT } from '../i18n.jsx';
+import CardSelectionDialog from './CardSelectionDialog.jsx';
+import { buildSlots, allKeys, selectedCardIds, selectedQuantitiesZones } from '../lib/export/selection.js';
 
 // cards per page at true poker size, per format. Labels are proper nouns (kept).
 const PAGE_FORMATS = [
@@ -37,6 +39,9 @@ export default function ExportDialog({ deck, cardsById, quantities, zones = empt
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [partial, setPartial] = useState(false);
+  const [selected, setSelected] = useState(null); // null = never confirmed
+  const [picking, setPicking] = useState(false);
 
   const GROUPS = [
     { key: 'playdeck', label: t('export.group.playdeck') },
@@ -51,9 +56,16 @@ export default function ExportDialog({ deck, cardsById, quantities, zones = empt
   // once per copy, in every section it appears in. Computed here (not just
   // inside runExport) so the "selected" count and the run-button's disabled
   // state also reflect zone cards, not just the main deck.
-  const orderedCards = flattenSections(deckSections({ quantities, zones, cardsById, lang: uiLang }))
-    .flatMap((e) => Array(e.count).fill(e.card));
-  const orderedCardIds = orderedCards.map((c) => c.id);
+  const sections = deckSections({ quantities, zones, cardsById, lang: uiLang });
+  const slots = buildSlots(sections);
+  // Same list as before: slots are the canonical order expanded per copy.
+  const orderedCardIds = slots.map((s) => s.cardId);
+
+  // A subset only applies once one has actually been confirmed. Unticking
+  // "partial" keeps `selected` alive so re-ticking it does not throw away the
+  // ticking work -- it disables a filter, it does not undo it.
+  const activeSelection = partial && selected ? selected : null;
+  const exportCardIds = activeSelection ? selectedCardIds(slots, activeSelection) : orderedCardIds;
 
   async function pickBack(group, file) {
     if (!file) return;
@@ -76,19 +88,25 @@ export default function ExportDialog({ deck, cardsById, quantities, zones = empt
     setResult(null);
     try {
       if (format === 'mpc') {
-        const r = await api.exportDeck({ deckName: deck.name, cardIds: orderedCardIds, backAssignments: backs, lang: imageLang, proxyMode });
+        const r = await api.exportDeck({ deckName: deck.name, cardIds: exportCardIds, backAssignments: backs, lang: imageLang, proxyMode });
         setResult(
           t('export.result.zip', { playdeck: r.counts.playdeck, locationdeck: r.counts.locationdeck }) +
           (r.failures.length ? t('export.result.failuresManifest', { n: r.failures.length }) : '')
         );
       } else if (format === 'pdf') {
-        const r = await api.exportPdf({ deckName: deck.name, cardIds: orderedCardIds, backAssignments: backs, includeBacks, format: pageFormat, lang: imageLang, proxyMode });
+        const r = await api.exportPdf({ deckName: deck.name, cardIds: exportCardIds, backAssignments: backs, includeBacks, format: pageFormat, lang: imageLang, proxyMode });
         setResult(
           t('export.result.pdf', { fmt: pageFormat.toUpperCase(), pages: r.pages }) +
           (r.failures.length ? t('export.result.failures', { n: r.failures.length }) : '')
         );
       } else {
-        const text = buildDeckListText(cardsById, quantities, deck.name, listLang, { zones, notes: deck.notes, mode: deck.mode, ruleset: deck.ruleset });
+        // The text list never took an id list: buildDeckListText re-derives its
+        // own sections from raw quantities/zones, so the subset has to reach it
+        // in that shape or the .txt would come out complete.
+        const src = activeSelection
+          ? selectedQuantitiesZones(slots, activeSelection)
+          : { quantities, zones };
+        const text = buildDeckListText(cardsById, src.quantities, deck.name, listLang, { zones: src.zones, notes: deck.notes, mode: deck.mode, ruleset: deck.ruleset });
         downloadText(text, `${(deck.name || 'deck').replace(/[^a-zA-Z0-9_-]+/g, '_')}.txt`);
         setResult(t('export.result.list'));
       }
@@ -99,7 +117,10 @@ export default function ExportDialog({ deck, cardsById, quantities, zones = empt
     }
   }
 
-  const runLabel = busy ? t('export.run.generating') : format === 'mpc' ? t('export.run.zip') : format === 'pdf' ? t('export.run.pdf') : t('export.run.list');
+  const needsPicking = partial && !selected;
+  const runLabel = needsPicking
+    ? t('export.partial.run')
+    : busy ? t('export.run.generating') : format === 'mpc' ? t('export.run.zip') : format === 'pdf' ? t('export.run.pdf') : t('export.run.list');
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -154,7 +175,19 @@ export default function ExportDialog({ deck, cardsById, quantities, zones = empt
           </div>
         )}
 
-        <p className="muted">{t('export.selected', { n: orderedCardIds.length })}</p>
+        <p className="muted">{t('export.selected', { n: exportCardIds.length })}</p>
+
+        <label className="row" style={{ cursor: 'pointer' }}>
+          <input type="checkbox" checked={partial} onChange={(e) => setPartial(e.target.checked)} />
+          {t('export.partial.toggle')}
+        </label>
+        {partial && selected && (
+          <div className="row">
+            <button className="btn secondary small" onClick={() => setPicking(true)}>
+              {t('export.partial.edit')}
+            </button>
+          </div>
+        )}
 
         {showBackPickers && GROUPS.map((g) => (
           <div className="row" key={g.key}>
@@ -192,10 +225,25 @@ export default function ExportDialog({ deck, cardsById, quantities, zones = empt
 
         <div className="row" style={{ justifyContent: 'flex-end' }}>
           <button className="btn secondary" onClick={onClose}>{t('common.close')}</button>
-          <button className="btn" onClick={runExport} disabled={busy || orderedCardIds.length === 0}>
+          <button
+            className="btn"
+            onClick={() => (needsPicking ? setPicking(true) : runExport())}
+            disabled={busy || exportCardIds.length === 0}
+          >
             {runLabel}
           </button>
         </div>
+
+        {picking && (
+          <CardSelectionDialog
+            sections={sections}
+            slots={slots}
+            initialSelected={selected || allKeys(slots)}
+            lang={uiLang}
+            onConfirm={(next) => { setSelected(next); setPicking(false); }}
+            onCancel={() => setPicking(false)}
+          />
+        )}
       </div>
     </div>
   );
