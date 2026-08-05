@@ -24,6 +24,12 @@ const SEV_ICON = { error: '⛔', warning: '⚠', info: 'ℹ' };
 // across the warnings list on the way somewhere else never flashes it.
 const WARN_HOVER_DELAY_MS = 180;
 
+// Both sideboards are zones a deck may simply never use, so both stay an
+// invitation while empty rather than advertising "0 / 10" -- a budget nobody
+// opted into. The play deck, the location deck and the pool are not here: the
+// first two are what a deck IS, and the pool is dictated by the side.
+export const OPTIONAL_TABS = new Set(['sideboard', 'sideboardFw']);
+
 // validate.js resolves card names English-first (it has no notion of the
 // user's display language). Where a warning's params carry a card `id` (or,
 // for the multi-name/avatar-reference cases, an `ids`/`avatarId`), look the
@@ -144,6 +150,9 @@ export default function DeckPanel({
   onPreview,
   proxyMode = false,
   capCtx = null,
+  dirty = false,
+  onSave,
+  saveState = 'idle',
 }) {
   const t = useT();
   const { previewRef, previewImgRef, stampRef, trackPointer, hidePreview } = useCardPreview(lang, proxyMode);
@@ -311,7 +320,6 @@ export default function DeckPanel({
     cards: t('zones.cards'),
     notes: t('zones.notes'),
   };
-  const optionalTabs = new Set(['sideboardFw']);
   const tabTitles = { sideboardFw: t('zones.sideboardFwFull') };
 
   // Entries + editing wired for whichever tab is active. play/location/cards
@@ -380,6 +388,12 @@ export default function DeckPanel({
         <b>{deck && deck.name ? t('panel.titleNamed', { name: deck.name }) : t('panel.title')}</b>
         <span className={`side-badge ${sideKey}`}>{t(`side.${sideKey}`)}</span>
         <span className="muted deckpanel-total">({deckTotal})</span>
+        <button
+          className="btn small deckpanel-save"
+          onClick={onSave}
+          disabled={!dirty || saveState === 'saving'}
+          title={t('decks.save')}
+        >{saveState === 'saved' ? `✓ ${t('decks.saved')}` : t('decks.save')}</button>
         {!asSheet && (
           <button
             className="deckpanel-max"
@@ -389,6 +403,9 @@ export default function DeckPanel({
           >{isMaxed ? '⇥' : '⤢'}</button>
         )}
       </div>
+      {saveState !== 'idle' && saveState !== 'saving' && saveState !== 'saved' && (
+        <p className="deckpanel-save-error">{saveState}</p>
+      )}
 
       <div className="ztabs-row">
         <ZoneTabs
@@ -399,7 +416,7 @@ export default function DeckPanel({
           labels={tabLabels}
           counts={tabCounts}
           caps={tabCaps}
-          optional={optionalTabs}
+          optional={OPTIONAL_TABS}
           titles={tabTitles}
         />
       </div>

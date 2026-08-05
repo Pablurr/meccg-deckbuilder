@@ -2,8 +2,11 @@ import React, { useEffect, useState } from 'react';
 import * as api from '../api.js';
 import { useT } from '../i18n.jsx';
 import { useIsMobile } from '../lib/useIsMobile.js';
+import { deckPayload } from '../lib/deck.js';
+import { buildDeckListZip } from '../lib/export/deckListZip.js';
+import { buildDeckListText } from '../lib/deckList.js';
 
-export default function DeckManager({ deck, cardIds, quantities, zones, onClose, onLoad, onSaved }) {
+export default function DeckManager({ deck, cardIds, quantities, zones, cardsById, uiLang, onClose, onLoad, onSaved, onRenamed }) {
   const t = useT();
   const isMobile = useIsMobile();
   const [decks, setDecks] = useState([]);
@@ -14,11 +17,97 @@ export default function DeckManager({ deck, cardIds, quantities, zones, onClose,
   const [renamingId, setRenamingId] = useState(null); // deck id whose name is being edited inline
   const [renameValue, setRenameValue] = useState('');
   const [dragIndex, setDragIndex] = useState(null); // index of the row currently being dragged (desktop reorder)
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [exporting, setExporting] = useState(false);
+  const [exportDone, setExportDone] = useState(false);
 
   async function refresh() {
-    setDecks(await api.listDecks());
+    const rows = await api.listDecks();
+    setDecks(rows);
+    setSelectedIds((prev) => {
+      const alive = new Set(rows.map((r) => r.id));
+      const next = new Set([...prev].filter((id) => alive.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
   }
   useEffect(() => { refresh().catch(() => {}); }, []);
+
+  function toggleSelected(id) {
+    setExportDone(false); // the note describes the last export, not the current selection
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAll() {
+    setExportDone(false); // the note describes the last export, not the current selection
+    setSelectedIds((prev) => (prev.size === decks.length ? new Set() : new Set(decks.map((d) => d.id))));
+  }
+
+  // Text lists only: several decks pulling their images at once is a browser
+  // memory problem, not a bigger version of the same button. These .txt files
+  // paste straight back into the importer, so a batch export doubles as a
+  // backup -- which is the reason to reuse buildDeckListText rather than write
+  // a second, quietly diverging serialiser here.
+  async function exportSelection() {
+    setExporting(true);
+    setError(null);
+    setExportDone(false);
+    try {
+      const entries = [];
+      // Sequential on purpose: reads come from localStorage and the list is
+      // short, so ordering the archive like the on-screen list is worth more
+      // than parallelism nobody would perceive.
+      for (const d of decks) {
+        if (!selectedIds.has(d.id)) continue;
+        // The open deck is exported from what is on SCREEN, not from what is on
+        // disk: the single-deck text export reads App's live quantities/zones,
+        // and a batch that read storage instead would put two different lists
+        // under one deck name depending on which button produced them. It is
+        // also the deck most likely to be ticked with unsaved edits in it.
+        let full;
+        if (d.id === deck.id) {
+          full = { ...deck, quantities, zones };
+        } else {
+          // A deck deleted between the click and its turn in this loop must cost
+          // the user that one deck, not the whole archive: getDeck throws rather
+          // than returning undefined, so an uncaught read would discard every
+          // deck already gathered.
+          try {
+            full = await api.getDeck(d.id);
+          } catch {
+            continue;
+          }
+        }
+        entries.push({
+          name: full.name,
+          text: buildDeckListText(cardsById, full.quantities || {}, full.name, uiLang, {
+            zones: full.zones, notes: full.notes, mode: full.mode, ruleset: full.ruleset,
+          }),
+        });
+      }
+      // Every ticked deck vanished before its turn: writing an empty archive
+      // would be a lie about what got exported, so just stop here. `finally`
+      // still clears `exporting`.
+      if (entries.length === 0) return;
+      const bytes = await buildDeckListZip(entries);
+      const url = URL.createObjectURL(new Blob([bytes], { type: 'application/zip' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `decks-${new Date().toISOString().slice(0, 10)}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setExportDone(true);
+    } catch (e) {
+      setError(t('common.error', { msg: e.message }));
+    } finally {
+      setExporting(false);
+    }
+  }
 
   function startRename(d) {
     setRenamingId(d.id);
@@ -34,7 +123,12 @@ export default function DeckManager({ deck, cardIds, quantities, zones, onClose,
     setRenamingId(null);
     if (!value) return; // empty name: cancel silently rather than saving a blank one
     try {
-      await api.updateDeck(id, { name: value });
+      const saved = await api.updateDeck(id, { name: value });
+      // Renaming the deck that is currently open moves what is on disk without
+      // moving anything in App -- which left the header showing the old name and
+      // the Save button claiming the two agreed. The next save then wrote
+      // deck.name back over the rename.
+      if (id === deck.id) onRenamed(saved);
       await refresh();
     } catch (e) {
       setError(e.message === 'storage-full' ? t('decks.storageFull') : t('common.error', { msg: e.message }));
@@ -80,10 +174,7 @@ export default function DeckManager({ deck, cardIds, quantities, zones, onClose,
     setBusy(true);
     setError(null);
     try {
-      const payload = {
-        name, cardIds, quantities, backAssignments: deck.backAssignments || {},
-        mode: deck.mode, ruleset: deck.ruleset, zones, notes: deck.notes, order: deck.order,
-      };
+      const payload = deckPayload({ deck, cardIds, quantities, zones, name });
       const saved = deck.id ? await api.updateDeck(deck.id, payload) : await api.createDeck(payload);
       onSaved(saved);
       await refresh();
@@ -142,6 +233,26 @@ export default function DeckManager({ deck, cardIds, quantities, zones, onClose,
         </p>
         {error && <p style={{ color: 'var(--danger)', marginTop: 0 }}>{error}</p>}
 
+        {decks.length > 0 && (
+          <div className="row deck-select-bar">
+            <label style={{ cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={selectedIds.size === decks.length}
+                onChange={toggleAll}
+              />
+              {' '}{t('decks.selectAll')}
+            </label>
+            <span className="spacer" />
+            {exportDone && <span className="muted">✅ {t('decks.exportDone')}</span>}
+            <button
+              className="btn secondary"
+              onClick={exportSelection}
+              disabled={exporting || selectedIds.size === 0}
+            >{t('decks.exportSelection')} ({selectedIds.size})</button>
+          </div>
+        )}
+
         <ul className="deck-list">
           {decks.length === 0 && <li className="muted">{t('decks.none')}</li>}
           {decks.map((d, i) => {
@@ -159,6 +270,13 @@ export default function DeckManager({ deck, cardIds, quantities, zones, onClose,
                 }}
                 onDragEnd={() => setDragIndex(null)}
               >
+                <input
+                  type="checkbox"
+                  className="deck-select"
+                  checked={selectedIds.has(d.id)}
+                  onChange={() => toggleSelected(d.id)}
+                  aria-label={t('decks.selectDeck')}
+                />
                 {isMobile && (
                   <span className="order-btns">
                     <button className="btn secondary small" disabled={i === 0} onClick={() => moveUp(i)} aria-label={t('decks.moveUp')}>▲</button>

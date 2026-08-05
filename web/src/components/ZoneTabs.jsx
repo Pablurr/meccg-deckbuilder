@@ -17,6 +17,24 @@ import React, { useState } from 'react';
 // does not read as a target at all. It is the tab's own state rather than the
 // panel's: nothing outside this bar needs to know, and a drop or a leave
 // always clears it, so it cannot get stuck lit.
+
+// How one pill reads, from its numbers alone. Pulled out of the render because
+// it is the only behaviour in this file worth pinning, and the project has no
+// DOM test environment: a component is covered by testing the pure function it
+// renders from.
+//
+// `count === null` means "this tab carries no count" (Notes) and must not be
+// read as an empty zone -- an empty optional zone shows the invitation, a
+// countless one shows nothing at all.
+export function tabPresentation({ count, cap, optional }) {
+  const inviting = !!optional && count === 0;
+  return {
+    inviting,
+    over: cap != null && count != null && count > cap,
+    showCount: !inviting && count != null,
+  };
+}
+
 export default function ZoneTabs({ tabs, active, onSelect, onDrop, labels, counts, caps, optional, titles }) {
   const [dragOver, setDragOver] = useState(null);
   return (
@@ -24,8 +42,7 @@ export default function ZoneTabs({ tabs, active, onSelect, onDrop, labels, count
       {tabs.map((id) => {
         const cap = caps[id];
         const count = counts[id];
-        const over = cap != null && count != null && count > cap;
-        const inviting = optional && optional.has(id) && !count;
+        const { inviting, over, showCount } = tabPresentation({ count, cap, optional: optional && optional.has(id) });
         return (
           <button
             key={id}
@@ -54,7 +71,7 @@ export default function ZoneTabs({ tabs, active, onSelect, onDrop, labels, count
             // visible pill, which shows no count either while the zone is
             // still just an invitation.
             aria-label={titles && titles[id]
-              ? `${labels[id]}${!inviting && count != null ? ` ${cap != null ? `${count} / ${cap}` : count}` : ''} — ${titles[id]}`
+              ? `${labels[id]}${showCount ? ` ${cap != null ? `${count} / ${cap}` : count}` : ''} — ${titles[id]}`
               : undefined}
             onClick={() => onSelect(id)}
             onDragOver={(e) => e.preventDefault()}
@@ -63,7 +80,7 @@ export default function ZoneTabs({ tabs, active, onSelect, onDrop, labels, count
             onDrop={(e) => { setDragOver(null); onDrop(e, id); }}
           >
             {inviting ? `+ ${labels[id]}` : labels[id]}
-            {!inviting && count != null && (
+            {showCount && (
               <span className="cnt">{cap != null ? `${count} / ${cap}` : count}</span>
             )}
           </button>

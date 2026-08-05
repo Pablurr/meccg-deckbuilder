@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { backGroupForType, deckCounts, deckWarnings, expandQuantities, countOccurrences, totalCopies } from '../web/src/lib/deck.js';
+import { backGroupForType, deckCounts, deckWarnings, expandQuantities, countOccurrences, totalCopies, deckSignature, deckPayload } from '../web/src/lib/deck.js';
 
 const cardsById = new Map([
   ['AS-1', { id: 'AS-1', type: 'Character', alignment: 'Minion', image: 'x.jpg' }],
@@ -73,5 +73,74 @@ describe('deckWarnings', () => {
     const w = deckWarnings(cardsById, ['AS-1', 'BA-1'], { playdeck: 'backs/a.png' });
     expect(w).toContainEqual({ code: 'missingBack', group: 'locationdeck' });
     expect(w.some((m) => m.code === 'missingBack' && m.group === 'playdeck')).toBe(false);
+  });
+});
+
+describe('deckSignature', () => {
+  const base = {
+    deck: { name: 'A', mode: 'freeform', ruleset: null, notes: { starting: 'x' }, backAssignments: {} },
+    quantities: { 'AS-7': 2 },
+    zones: { pool: {}, sideboard: { 'AS-1': 1 }, sideboardFw: {} },
+  };
+
+  // The trap this function exists to avoid: JSON.stringify walks keys in
+  // insertion order, so two identical decks built by different click orders
+  // would hash differently and the Save button would light up on its own.
+  it('ignores key insertion order', () => {
+    const shuffled = {
+      ...base,
+      quantities: { 'AS-7': 2 },
+      zones: { sideboardFw: {}, sideboard: { 'AS-1': 1 }, pool: {} },
+      deck: { backAssignments: {}, notes: { starting: 'x' }, ruleset: null, mode: 'freeform', name: 'A' },
+    };
+    expect(deckSignature(shuffled)).toBe(deckSignature(base));
+  });
+
+  it('changes when any persisted field changes', () => {
+    const sig = deckSignature(base);
+    expect(deckSignature({ ...base, deck: { ...base.deck, name: 'B' } })).not.toBe(sig);
+    expect(deckSignature({ ...base, quantities: { 'AS-7': 3 } })).not.toBe(sig);
+    expect(deckSignature({ ...base, zones: { ...base.zones, pool: { 'BA-1': 1 } } })).not.toBe(sig);
+    expect(deckSignature({ ...base, deck: { ...base.deck, notes: { starting: 'y' } } })).not.toBe(sig);
+    expect(deckSignature({ ...base, deck: { ...base.deck, backAssignments: { playdeck: 'b.png' } } })).not.toBe(sig);
+    expect(deckSignature({ ...base, deck: { ...base.deck, mode: 'deckbuilding', ruleset: { side: 'wizard', length: 'standard', tournament: false, ruleOverrides: {} } } })).not.toBe(sig);
+  });
+
+  // A deck saved a second ago must not read as modified because storage
+  // handed back an id and a position.
+  it('ignores id, order and updatedAt', () => {
+    const sig = deckSignature(base);
+    expect(deckSignature({ ...base, deck: { ...base.deck, id: 'd1', order: 3, updatedAt: 12345 } })).toBe(sig);
+  });
+});
+
+describe('deckPayload', () => {
+  it('carries every field a saved deck needs, and takes its name from the argument', () => {
+    const p = deckPayload({
+      deck: { id: 'd1', name: 'Old', mode: 'freeform', ruleset: null, notes: { starting: 's' }, backAssignments: { playdeck: 'b.png' }, order: 2 },
+      cardIds: ['AS-7', 'AS-7'],
+      quantities: { 'AS-7': 2 },
+      zones: { pool: {}, sideboard: {}, sideboardFw: {} },
+      name: 'New',
+    });
+    expect(p).toEqual({
+      name: 'New',
+      cardIds: ['AS-7', 'AS-7'],
+      quantities: { 'AS-7': 2 },
+      backAssignments: { playdeck: 'b.png' },
+      mode: 'freeform',
+      ruleset: null,
+      zones: { pool: {}, sideboard: {}, sideboardFw: {} },
+      notes: { starting: 's' },
+      order: 2,
+    });
+  });
+
+  it('falls back to the deck name when no name is given', () => {
+    const p = deckPayload({
+      deck: { name: 'Kept', backAssignments: {} },
+      cardIds: [], quantities: {}, zones: {},
+    });
+    expect(p.name).toBe('Kept');
   });
 });
