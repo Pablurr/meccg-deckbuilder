@@ -1187,3 +1187,15 @@ code {
   .card-modal-zone-name { font-size: 14px; }
   .card-modal-zone-row { gap: 10px; }
 }
+
+.modal-wide { max-width: 1100px; width: 92vw; }
+.select-grid { max-height: 60vh; overflow-y: auto; margin: 8px 0; }
+.select-section { margin-bottom: 10px; }
+.select-head { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-weight: 600; }
+.select-head.sub { padding-left: 18px; font-weight: 500; opacity: 0.9; }
+.select-chevron { background: none; border: 0; cursor: pointer; color: inherit; padding: 0 2px; }
+.select-cards { display: flex; flex-wrap: wrap; gap: 10px; padding: 4px 0 8px 36px; }
+.select-card { width: 90px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.select-card img { width: 90px; border-radius: 3px; }
+.select-card-name { font-size: 11px; text-align: center; line-height: 1.2; }
+.select-boxes { display: flex; gap: 3px; flex-wrap: wrap; justify-content: center; }
