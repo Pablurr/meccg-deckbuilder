@@ -31,7 +31,13 @@ export const PROXY_PATCH_RECT = { x: 0.1377, y: 0.9232, w: 0.3146, h: 0.0606 };
 
 // "Proxy" label: Arial Bold, sized like the card's own
 // "Remastérisé - Traduction non officielle" line and sitting on its band.
-export const PROXY_LABEL_FONT_FRAC = 0.0155;          // of card width
+// The July calibration derived this from that line's CAP height (≈6.2px at
+// 570 width) divided by Arial's cap-height ratio, which undersizes it: the
+// real printed line's full glyph extent (ascenders, accents -- what the eye
+// actually compares against) measures closer to 9-11px at 570 width. Recut
+// against that fuller measurement (2026-08-05); the longest translated set
+// name still clears PROXY_PATCH_RECT with 24px to spare at this size.
+export const PROXY_LABEL_FONT_FRAC = 0.021;           // of card width
 export const PROXY_LABEL_POS = { cx: 0.295, cy: 0.9565 };
 
 // The same label spec expressed in container-query units, for the CSS overlay
@@ -47,22 +53,22 @@ export const PROXY_LABEL_DY_CQH =
 // whose third column keeps the unfloored FR tint) and committed as literals so
 // CSS and canvas render identically.
 export const PROXY_LABEL_COLOR = {
-  'hero-character': '#506069',
-  'minion-character': '#B2ADB3',
-  'hero-site': '#6D6B62',
-  'minion-site': '#A2A09F',
-  'balrog-site': '#BFB3AD',
-  'fw-site': '#635F5C',
-  'hero-resource': '#BEBBB8',
-  'minion-resource': '#B8B9BB',
-  'stage-resource': '#DADFDD',
-  'hazard': '#B6B5B2',
-  'red': '#BDBAB8',
-  'alatar': '#555E61',
-  'gandalf': '#555350',
-  'pallando': '#C0C0D3',
-  'radagast': '#594943',
-  'saruman': '#87827E',
+  'hero-character': '#4C5A62',
+  'minion-character': '#BCB8BC',
+  'hero-site': '#68665D',
+  'minion-site': '#A9A7A6',
+  'balrog-site': '#CAC0BB',
+  'fw-site': '#5C5956',
+  'hero-resource': '#BEBDBA',
+  'minion-resource': '#B9BABC',
+  'stage-resource': '#DCE1E0',
+  'hazard': '#B7B6B4',
+  'red': '#BEBBB9',
+  'alatar': '#50585B',
+  'gandalf': '#4F4C4A',
+  'pallando': '#BEBED2',
+  'radagast': '#51433E',
+  'saruman': '#7F7B78',
 };
 
 // The en/es patch, or the fr variant (the FR card images come from a different

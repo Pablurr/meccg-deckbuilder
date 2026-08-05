@@ -34,7 +34,7 @@ COLORS = os.path.join(ROOT, 'scripts', 'proxy-patch-colors.txt')
 REF_W, REF_H = 570, 796
 CORE = (0.150, 0.9320, 0.440, 0.9750)   # x0, y0, x1, y1 — fully opaque
 MARGIN_PX = 7                            # alpha ramp, at REF_W
-LABEL_FONT_FRAC = 0.0155
+LABEL_FONT_FRAC = 0.021  # kept in sync with PROXY_LABEL_FONT_FRAC in web/src/lib/proxy.js
 LABEL_CX, LABEL_CY = 0.295, 0.9565
 INK_DIFF_MIN = 28      # card-vs-patch luminance delta that counts as printed ink
 MIN_CONTRAST = 80      # label luminance must clear this against BOTH patch variants
@@ -272,8 +272,15 @@ def label_colour(key):
         at = lambda L: tuple(round(c * 255) for c in colorsys.hls_to_rgb(h, L, s))
         # Move away from the frame: darker under a light one, lighter under a dark
         # one. Targeting the worst of the two variants clears both at once.
+        # BISECT_MARGIN pushes past the floor by a couple of luminance units:
+        # the bisection converges to the exact boundary, and rounding the
+        # continuous HLS result to 8-bit RGB can shift luminance by ~1 unit,
+        # occasionally landing back under the floor (caught by the assertion
+        # below on the 0.021 font-size recalibration -- fw-site missed by 0.8).
+        BISECT_MARGIN = 2
         darker = sum(plums) / 2 >= 128
-        want = (min(plums) - MIN_CONTRAST) if darker else (max(plums) + MIN_CONTRAST)
+        want = (min(plums) - MIN_CONTRAST - BISECT_MARGIN) if darker \
+            else (max(plums) + MIN_CONTRAST + BISECT_MARGIN)
         want = max(0.0, min(255.0, want))
         lo, hi = 0.0, 1.0
         for _ in range(40):                 # bisect: HLS lightness is not luminance
