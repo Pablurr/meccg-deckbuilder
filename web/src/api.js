@@ -5,16 +5,18 @@ import { fetchBytes, fetchCardImageBytes, dataUrlToBytes, mapLimit } from './lib
 import { toMpcPng, toStampedJpeg } from './lib/export/bleedCanvas.js';
 import { buildDeckZip } from './lib/export/zip.js';
 import { buildSheetPdf } from './lib/export/pdf.js';
-import { swatchKeyForCard } from './lib/proxy.js';
+import { swatchKeyForCard, proxyStampFor } from './lib/proxy.js';
 import { loadPatchBitmaps, closePatchBitmaps } from './lib/export/proxyDraw.js';
 
-let _index = null; // id -> card, set by getCards(); used by the export functions
+let _index = null;     // id -> card, set by getCards(); used by the export functions
+let _setNames = null;  // set code -> { en, es, fr }, likewise — the stamp labels need it
 
 export async function getCards() {
   const res = await fetch('/cards.json');
   if (!res.ok) throw new Error(`GET /cards.json → ${res.status}`);
   const { cards, facets, index, setNames } = parseCards(await res.json());
   _index = index;
+  _setNames = setNames;
   return { cards, facets, setNames, defaultBacks: { playdeck: true, locationdeck: true } };
 }
 
@@ -95,18 +97,21 @@ async function prefetchFronts(cards, lang, process) {
   };
 }
 
-// (card) => { patchBmp, key } | null. Null when proxy mode is off or the card
-// takes no stamp (Regions). Loads only the patches this deck needs, in the
-// export's image language. Returns { stampFor, closePatches } so callers can
-// free the bitmaps after export.
+// (card) => { patchBmp, key, text, color } | null. Loads only the patches this
+// deck needs, in the export's image language. Returns { stampFor, closePatches }
+// so callers can free the bitmaps after export.
+//
+// The early bail is per-language, not global: en/es always mask the copyright
+// notice, so only fr can skip the work entirely when proxy mode is off.
 async function makeStampFor(cards, lang, proxyMode) {
-  if (!proxyMode) return { stampFor: () => null, closePatches: () => {} };
+  if (lang === 'fr' && !proxyMode) return { stampFor: () => null, closePatches: () => {} };
+  const setNames = _setNames || {};
   const keys = new Set(cards.map(swatchKeyForCard).filter(Boolean));
   const patches = await loadPatchBitmaps(keys, lang);
   return {
     stampFor: (card) => {
-      const key = swatchKeyForCard(card);
-      return key ? { patchBmp: patches.get(key), key } : null;
+      const spec = proxyStampFor(card, lang, proxyMode, setNames);
+      return spec ? { ...spec, patchBmp: patches.get(spec.key) } : null;
     },
     closePatches: () => closePatchBitmaps(patches),
   };

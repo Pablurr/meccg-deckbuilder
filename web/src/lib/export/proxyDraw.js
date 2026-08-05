@@ -1,13 +1,14 @@
 import {
-  PROXY_PATCH_RECT, PROXY_LABEL, PROXY_LABEL_FONT_FRAC,
-  PROXY_LABEL_POS, PROXY_LABEL_COLOR, patchUrl,
+  PROXY_PATCH_RECT, PROXY_LABEL_FONT_FRAC, PROXY_LABEL_POS, patchUrl,
 } from '../proxy.js';
 
 // Bake the proxy stamp into a cut-size face: the frame patch drawn over the
-// copyright / set-name zone, "Proxy" in Arial Bold on top. Browser-only
+// copyright / set-name zone, the label in Arial Bold on top. Browser-only
 // (canvas 2d ctx). If the patch bitmap is missing, fill with the average of the
-// pixels already under the rect — proxy mode must never leave the notice visible.
-export function drawProxyOnFace(ctx, w, h, patchBmp, key) {
+// pixels already under the rect — the notice must never survive the export.
+// The label text and colour are decided by proxyStampFor, never here: this
+// function draws what it is handed.
+export function drawProxyOnFace(ctx, w, h, patchBmp, text, color) {
   const r = PROXY_PATCH_RECT;
   const x = Math.round(r.x * w);
   const y = Math.round(r.y * h);
@@ -23,11 +24,11 @@ export function drawProxyOnFace(ctx, w, h, patchBmp, key) {
     ctx.fillStyle = `rgb(${Math.round(R / n)},${Math.round(G / n)},${Math.round(B / n)})`;
     ctx.fillRect(x, y, rw, rh);
   }
-  ctx.fillStyle = PROXY_LABEL_COLOR[key] || '#F0F0EA';
+  ctx.fillStyle = color;
   ctx.font = `bold ${Math.round(PROXY_LABEL_FONT_FRAC * w)}px Arial, Helvetica, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(PROXY_LABEL, PROXY_LABEL_POS.cx * w, PROXY_LABEL_POS.cy * h);
+  ctx.fillText(text, PROXY_LABEL_POS.cx * w, PROXY_LABEL_POS.cy * h);
 }
 
 // Fetch + decode the patch PNGs once per export, in the export's image language.
