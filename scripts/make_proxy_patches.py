@@ -201,8 +201,13 @@ def fr_tint(key):
     which matters because the ink is light on the dark frames and dark on the
     light ones.
     """
-    patch = Image.open(os.path.join(OUT, '%s-fr.png' % key)).convert('RGB')
-    pp = list(patch.get_flattened_data())
+    patch = Image.open(os.path.join(OUT, '%s-fr.png' % key)).convert('RGBA')
+    pp = list(patch.convert('RGB').get_flattened_data())
+    # The patch is deliberately transparent where the frame is cut away (site
+    # tears, the margin alpha ramp); a pixel there is template residue, not
+    # printed ink, so it must not enter the diff below. Same a > 200 guard as
+    # patch_label_lum, for the same reason.
+    pa = list(patch.getchannel('A').get_flattened_data())
     plum = sum(_lum(q) for q in pp) / len(pp)
     acc, cards = [0.0, 0.0, 0.0], 0
     for p in [q for q in fr_card_paths() if _key_of_fr(q) == key][:12]:
@@ -210,8 +215,8 @@ def fr_tint(key):
         w, h = im.size
         _, outer, _ = boxes(w, h, key)
         band = im.crop(outer).resize(patch.size, Image.LANCZOS)
-        ink = [b for b, q in zip(band.get_flattened_data(), pp)
-               if abs(_lum(b) - _lum(q)) > INK_DIFF_MIN]
+        ink = [b for b, q, a in zip(band.get_flattened_data(), pp, pa)
+               if a > 200 and abs(_lum(b) - _lum(q)) > INK_DIFF_MIN]
         if len(ink) < 40:
             continue
         # Keep the half furthest from the frame tone: the glyph core, not the
@@ -249,8 +254,11 @@ def label_colour(key):
     the notice either way) but not for "Proxy", which is functional information
     when checking a print run and was contrast-guaranteed by construction
     before. So: keep the sampled hue and saturation, move only the lightness,
-    and only as far as the floor requires. Ten of the sixteen keys clear it
-    untouched and keep their FR tint exactly.
+    and only as far as the floor requires. On the last committed run (see
+    scripts/proxy-patch-colors.txt), 9 of the 16 keys cleared it untouched and
+    kept their FR tint exactly, 7 were pushed — this split is corpus-dependent
+    (which FR cards exist locally under cards/fr), not a fixed guarantee, and
+    can shift on a future resample against a different corpus snapshot.
 
     Returns (final_hex, fr_tint_hex, moved).
     """
@@ -258,22 +266,29 @@ def label_colour(key):
     plums = [patch_label_lum(key, ''), patch_label_lum(key, '-fr')]
     as_hex = lambda c: '#%02X%02X%02X' % tuple(c)
     if all(abs(_lum(tint) - p) >= MIN_CONTRAST for p in plums):
-        return as_hex(tint), as_hex(tint), False
-    h, _l, s = colorsys.rgb_to_hls(*[c / 255 for c in tint])
-    at = lambda L: tuple(round(c * 255) for c in colorsys.hls_to_rgb(h, L, s))
-    # Move away from the frame: darker under a light one, lighter under a dark
-    # one. Targeting the worst of the two variants clears both at once.
-    darker = sum(plums) / 2 >= 128
-    want = (min(plums) - MIN_CONTRAST) if darker else (max(plums) + MIN_CONTRAST)
-    want = max(0.0, min(255.0, want))
-    lo, hi = 0.0, 1.0
-    for _ in range(40):                     # bisect: HLS lightness is not luminance
-        mid = (lo + hi) / 2
-        if _lum(at(mid)) < want:
-            lo = mid
-        else:
-            hi = mid
-    return as_hex(at((lo + hi) / 2)), as_hex(tint), True
+        final, moved = tint, False
+    else:
+        h, _l, s = colorsys.rgb_to_hls(*[c / 255 for c in tint])
+        at = lambda L: tuple(round(c * 255) for c in colorsys.hls_to_rgb(h, L, s))
+        # Move away from the frame: darker under a light one, lighter under a dark
+        # one. Targeting the worst of the two variants clears both at once.
+        darker = sum(plums) / 2 >= 128
+        want = (min(plums) - MIN_CONTRAST) if darker else (max(plums) + MIN_CONTRAST)
+        want = max(0.0, min(255.0, want))
+        lo, hi = 0.0, 1.0
+        for _ in range(40):                 # bisect: HLS lightness is not luminance
+            mid = (lo + hi) / 2
+            if _lum(at(mid)) < want:
+                lo = mid
+            else:
+                hi = mid
+        final, moved = at((lo + hi) / 2), True
+    # Enforce the floor rather than trust it: a future resample must fail loudly
+    # here instead of silently shipping a label that reads illegibly on print.
+    assert all(abs(_lum(final) - p) >= MIN_CONTRAST for p in plums), (
+        'label_colour(%r): final luminance %.1f does not clear MIN_CONTRAST=%d '
+        'against both patch variants (%s)' % (key, _lum(final), MIN_CONTRAST, plums))
+    return as_hex(final), as_hex(tint), moved
 
 
 def _require_corpus(path, label):

@@ -140,8 +140,10 @@ export async function exportPdf({ deckName, cardIds, backAssignments, includeBac
   const cards = cardIds.map((id) => index.get(id)).filter(Boolean);
   const { stampFor, closePatches } = await makeStampFor(cards, lang, proxyMode);
   try {
-    // Proxy off: raw CDN bytes, the PDF scales them (no resampling — unchanged).
-    // Proxy on: bake the stamp into a cut-size JPEG face instead.
+    // Gate is stamp = stampFor(card), not proxyMode directly: fr with proxy off is the
+    // only case where stampFor returns null, so only that case keeps raw CDN bytes (the
+    // PDF scales them, no resampling). Everything else (en/es always, fr proxy on) gets a
+    // stamp baked into a cut-size JPEG face — see ARCHITECTURE.md §7.
     const getFrontBytes = await prefetchFronts(cards, lang, (bytes, card) => {
       const stamp = stampFor(card);
       return stamp ? toStampedJpeg(bytes, stamp) : bytes;

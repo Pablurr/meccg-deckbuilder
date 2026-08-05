@@ -7,18 +7,16 @@
 > Public : LLM. Style : dense, factuel, pas de prose d'introduction.
 > Doc utilisateur : [`README.md`](../README.md). Ce fichier-ci décrit le *comment* et le *pourquoi*.
 
-**Dernière mise à jour : 2026-08-04** — couleurs du libellé Proxy échantillonnées sur les cartes FR (tâche 4/4)
-(branche `qol-minor-features`, `8cf904e..2e4ab4a`) : `deckSignature`/`deckPayload`
-(`deck.js`) donnent au deck ouvert la capacité de dire s'il diffère de ce qui est enregistré,
-d'où un **bouton Enregistrer dans l'en-tête du panneau** piloté par `savedSignature` (§4, §5) ;
-**export massif** de plusieurs deck lists en une archive (`deckListZip.js`, §7) ; les **deux
-talons** deviennent des onglets optionnels qui s'affichent en invitation tant qu'ils sont vides
-(`OPTIONAL_TABS`/`tabPresentation`, §10) ; la page « ? » devient une **page d'aide en deux
-parties** (`FeaturesDoc.jsx` + `RulesDoc.jsx`, §10) ; lien **« Suggérer une amélioration »**
-dans la rangée du logo (§10) ; et le garde de terminologie FR **perd sa dernière exemption** —
-`GLOSSARY_KEYS` supprimé, toute chaîne française y est désormais soumise (§9). Deux pièges
-trouvés en revue et consignés : la **renommage** d'un deck ouvert certifiait à tort un accord
-disque/mémoire (§5), et `zip.file()` **écrase silencieusement** un chemin dupliqué (§7).
+**Dernière mise à jour : 2026-08-04** — branche `proxy-setname-mask` (`c0b7f67..HEAD`) :
+le masque du copyright en/es devient **inconditionnel** — `proxyStampFor(card, lang,
+proxyMode, setNames)` (§8) est désormais le point de décision unique appelé par les trois
+chemins de rendu (grille/modale, survol, export) ; l'interrupteur Mode Proxy ne choisit plus
+*si* la zone est repeinte pour en/es, seulement *quel texte* y est écrit : « Proxy » activé,
+sinon le nom (traduit) du set. Le fr est inchangé. La table `PROXY_LABEL_COLOR` (16 clés) est
+**régénérée à partir de pixels FR réels** (`scripts/make_proxy_patches.py` : `fr_tint`
+différencie chaque carte contre son propre patch `-fr` pour isoler l'encre du nom de set,
+insensible à la polarité clair/sombre) avec un plancher de lisibilité (`MIN_CONTRAST = 80`)
+qui pousse en luminosité HLS les 7 clés dont la teinte FR mesurée est illisible.
 
 ---
 
@@ -115,7 +113,7 @@ web/src/            toute l'application
     export/         pipeline d'export pur (10 modules, aucun import React)
     *.js            deck, deckStore, filter, importDeck, lang, proxy, tags, zoom…
 web/public/         servi tel quel : cards.json, card-backs/, proxy-patches/, _redirects
-test/               35 fichiers Vitest, 637 tests
+test/               35 fichiers Vitest, 644 tests
 docs/superpowers/   specs et plans d'implémentation, datés (historique des intentions)
 scripts/            make_proxy_patches.py (génération des patchs proxy, hors build)
 ```
@@ -711,10 +709,17 @@ navigateur produisent le même ordre. Ne remplace pas ce `'en'` par `lang`.
 `api.exportPdf()` → `prefetchFronts` → `buildSheetPdf({ cards, getFrontBytes, getBackBytes,
 includeBacks, format })`.
 
-- **Proxy éteint : les octets CDN bruts sont embarqués tels quels** — pdf-lib met à
-  l'échelle vectoriellement vers 2,5×3,5 po, donc aucun rééchantillonnage. C'est voulu.
-- **Proxy allumé : `toStampedJpeg`** produit une face à la taille de coupe avec le tampon
-  cuit dedans. C'est la seule différence entre les deux chemins.
+- **Le chemin dépend de `stampFor(card)`, pas directement de `proxyMode`** — fr, proxy
+  éteint : `stampFor` renvoie `null`, les octets CDN bruts sont embarqués tels quels ;
+  pdf-lib met à l'échelle vectoriellement vers 2,5×3,5 po, donc aucun rééchantillonnage.
+  Pour tout le reste (en/es dans tous les cas, fr proxy allumé), `stampFor` renvoie un
+  tampon et `toStampedJpeg` produit une face à la taille de coupe, rééchantillonnée et
+  ré-encodée en JPEG avec le tampon cuit dedans.
+- **Conséquence pour en/es : l'export PDF perd la propriété « pas de rééchantillonnage »
+  même proxy éteint**, puisque le masquage du copyright exige de repeindre des pixels. Le
+  mode proxy est actif par défaut, donc la plupart des utilisateurs étaient déjà sur le
+  chemin tamponné — mais c'est un changement de fidélité d'image réel et jusqu'ici non
+  documenté.
 - `embedAuto` **renifle la signature** PNG (`89 50 4E 47`) au lieu de se fier au nom : les
   faces CDN sont des JPEG, les dos peuvent être PNG (défauts livrés) ou JPEG (uploads
   normalisés).
@@ -826,10 +831,11 @@ correct pour des proxies, pas parfaitement net. C'est inhérent aux fichiers sou
 L'app **repeint** la zone avec le cadre vierge du type de carte, puis écrit un libellé par-dessus.
 
 **En/es : le masque est inconditionnel.** Le `©19xx Tolkien Enterprises` de ces deux langues
-ne doit **jamais** atteindre un envoi d'impression, que l'utilisateur ait pensé ou non à
-activer le mode Proxy — l'interrupteur ne décide donc plus *si* la zone est repeinte pour
-en/es, seulement *quel texte* y est écrit : « Proxy » en mode proxy, sinon le nom (traduit)
-du set, qui est de toute façon ce que les cartes FR impriment déjà à cet endroit-là.
+ne doit **jamais** atteindre un envoi d'impression (sauf les Régions, voir plus bas), que
+l'utilisateur ait pensé ou non à activer le mode Proxy — l'interrupteur ne décide donc plus
+*si* la zone est repeinte pour en/es, seulement *quel texte* y est écrit : « Proxy » en mode
+proxy, sinon le nom (traduit) du set, qui est de toute façon ce que les cartes FR impriment
+déjà à cet endroit-là.
 **Fr garde son ancien comportement** (rien tant que le mode Proxy est éteint) : les images FR
 portent le nom du set à cet emplacement au lieu d'une mention de copyright, donc il n'y a
 rien à masquer.
@@ -1354,7 +1360,7 @@ rafraîchissement.
 
 ## §11 — Tests
 
-`npm test` → Vitest, **35 fichiers, 637 tests**. Node pur, pas de DOM : les composants ne
+`npm test` → Vitest, **35 fichiers, 644 tests**. Node pur, pas de DOM : les composants ne
 sont pas montés, ce sont les **modules purs** qui sont testés.
 
 C'est ce qui dicte la façon d'aborder un travail d'interface ici : **on extrait la décision

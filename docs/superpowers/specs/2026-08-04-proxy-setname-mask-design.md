@@ -85,8 +85,10 @@ Geometry, the 32 patch PNGs, and the `-fr` tone offset are **all unchanged**
   saturation, push luminance until it clears a floor of 80 against the label
   footprint of *both* patch variants** (`<key>.png` and `<key>-fr.png` — they
   differ by up to ±40 per channel, and one colour serves all three
-  languages). Verified: 10 of the 16 keys clear the floor untouched and keep
-  their FR tint exactly; 6 are pushed away from the frame tone with hue
+  languages). Verified against the last committed run
+  (`scripts/proxy-patch-colors.txt`): 9 of the 16 keys clear the floor
+  untouched and keep their FR tint exactly; 7 are pushed away from the frame
+  tone with hue
   preserved.
 - **Official translated set names already exist in `cards.json`**, one row
   per set (`AS`, `BA`, `DM`, `LE`, `TD`, `TW`, `WH`), each with `en`/`es`/`fr`
@@ -226,16 +228,22 @@ by a two-stage sample-then-floor pass:
 
 - **The contrast floor is what keeps `"Proxy"` legible**, replacing the
   guarantee the retired synthetic pick gave by construction. It is therefore
-  an invariant, not a nicety: a test asserts every key clears 80 against both
-  patch variants, so a future resample cannot quietly reintroduce an
-  invisible label. The floor value itself is calibrated by eye on the QA
+  an invariant, not a nicety: `label_colour` in `scripts/make_proxy_patches.py`
+  asserts its own result clears 80 against both patch variants before
+  returning, so a future regeneration run fails loudly instead of quietly
+  shipping an invisible label. There is no JS-side test for this — the PNGs
+  have no decoder on that side — so the assertion at generation time is the
+  only enforcement. The floor value itself is calibrated by eye on the QA
   sheet.
-- **Six keys do not show their true FR tint.** `hero-character`, `fw-site`,
-  `alatar`, `gandalf`, `pallando`, `radagast` and `saruman` are pushed by the
-  floor, so they are "FR hue, corrected luminance" rather than a faithful
-  copy. This is the accepted trade from the legibility decision above; the
-  generator records the pre-floor tint alongside the final value so the
-  divergence stays visible to a reviewer.
+- **Seven keys do not show their true FR tint (on the last committed run).**
+  `hero-character`, `fw-site`, `alatar`, `gandalf`, `pallando`, `radagast` and
+  `saruman` are pushed by the floor, so they are "FR hue, corrected
+  luminance" rather than a faithful copy. This count is corpus-dependent
+  (which FR cards `fr_tint` finds locally under `cards/fr`), not a fixed
+  guarantee — a future resample against a different corpus snapshot could
+  floor a different set of keys. This is the accepted trade from the
+  legibility decision above; the generator records the pre-floor tint
+  alongside the final value so the divergence stays visible to a reviewer.
 - **Five keys are sampled from very few cards** — `alatar`, `gandalf`,
   `pallando`, `radagast`, `saruman` have only 2 FR cards each, `fw-site` 4.
   Small samples, but these are also the keys the floor overrides most, so the

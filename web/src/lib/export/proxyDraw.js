@@ -24,7 +24,7 @@ export function drawProxyOnFace(ctx, w, h, patchBmp, text, color) {
     ctx.fillStyle = `rgb(${Math.round(R / n)},${Math.round(G / n)},${Math.round(B / n)})`;
     ctx.fillRect(x, y, rw, rh);
   }
-  ctx.fillStyle = color;
+  ctx.fillStyle = color || '#F0F0EA';
   ctx.font = `bold ${Math.round(PROXY_LABEL_FONT_FRAC * w)}px Arial, Helvetica, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
