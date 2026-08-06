@@ -64,7 +64,9 @@ npx wrangler pages deploy web/dist
    sont reconnues **dans n'importe quel ordre**, en markdown ou en texte brut, et en
    **français, anglais ou espagnol** ; une carte finit toujours dans une zone où elle a le
    droit d'être, même si
-   la liste collée la range ailleurs (un site listé sous « Talon » rejoint les sites). La
+   la liste collée la range ailleurs (un site listé sous « Talon » rejoint les sites, et une
+   section « Other characters » après « Starting »/« Réserve » renvoie ses personnages à la
+   pioche plutôt que la réserve). La
    quantité peut se lire **devant ou derrière** le nom (`3x Bûrat`, `Bûrat - 3`, `Bûrat
    (3)`) ; une parenthèse après le nom sert aussi à désambiguïser (`Angmarim (Hero)`,
    `Bûrat (AS)`) quand plusieurs cartes portent le même nom (accents ignorés, nom complet

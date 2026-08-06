@@ -7,13 +7,16 @@
 > Public : LLM. Style : dense, factuel, pas de prose d'introduction.
 > Doc utilisateur : [`README.md`](../README.md). Ce fichier-ci décrit le *comment* et le *pourquoi*.
 
-**Dernière mise à jour : 2026-08-05** — trois améliorations de confort sur l'import et le
+**Dernière mise à jour : 2026-08-05** — quatre améliorations de confort sur l'import et le
 panneau de deck. §4 : les lignes de pure décoration (`----`, `####`, `====`…) collées dans une
 liste sont désormais ignorées plutôt que de finir en notes ; en-têtes `Starting`/`Starting
 company`/`Starting deck` (et FR/ES) ajoutés comme alias de la réserve, distincts de « Starting
-notes ». §10 : la pastille Réserve du panneau de deck affiche un suffixe `(+n)` pour les objets
-mineurs/événements de stage qu'elle contient en plus des personnages comptés par `n / max`
-(`poolExtraCount`, `DeckPanel.jsx` ; prop `extras`, `ZoneTabs.jsx`).
+notes » ; en-tête `Other characters` (et FR/ES) ajouté comme zone qui referme une section
+réserve/starting et renvoie ses personnages à la pioche, plutôt que de rester un groupe (ou un
+titre inconnu) qui laisse la zone intacte et les y laisse fuiter. §10 : la pastille Réserve du
+panneau de deck affiche un suffixe `(+n)` pour les objets mineurs/événements de stage qu'elle
+contient en plus des personnages comptés par `n / max` (`poolExtraCount`, `DeckPanel.jsx` ;
+prop `extras`, `ZoneTabs.jsx`).
 
 Précédent : branche `export-card-selection` (`37d9d15..HEAD`) — export d'un sous-ensemble
 choisi du deck, sur les trois formats (ZIP MPC, planches PDF, liste texte). Nouvelle case
@@ -118,7 +121,7 @@ web/src/            toute l'application
     export/         pipeline d'export pur (10 modules, aucun import React)
     *.js            deck, deckStore, filter, importDeck, lang, proxy, tags, zoom…
 web/public/         servi tel quel : cards.json, card-backs/, proxy-patches/, _redirects
-test/               36 fichiers Vitest, 672 tests
+test/               36 fichiers Vitest, 674 tests
 docs/superpowers/   specs et plans d'implémentation, datés (historique des intentions)
 scripts/            make_proxy_patches.py (génération des patchs proxy, hors build)
 ```
@@ -335,6 +338,16 @@ lib/importDeck.js = façade, API publique inchangée (263 → 139 lignes)
   `NOTE_TITLES.starting` (« Starting notes »/« Notes de départ »), qui sélectionne un champ de
   note et non une zone ; les deux ne peuvent pas collisionner puisque leurs libellés diffèrent
   (« Starting » vs « Starting notes »).
+- **En-tête reconnu pour refermer `pool` (2026-08-05).** `Other characters`, `Additional
+  characters`, `Non-starting characters`, `Autres personnages`, `Otros personajes` sont une
+  entrée `zone('quantities', 'Character')`, au même titre que Sites/Regions plus haut, et pas
+  un simple `group('Character')` comme la ligne `Characters` juste en dessous. Un groupe ne
+  change pas la zone, et un titre NON reconnu la laisse intacte aussi (`document.js`) : sans
+  cette entrée, une liste qui ouvre « ## Starting » puis « ## Other characters » aurait
+  silencieusement continué de router ses personnages vers la réserve — la section même que ce
+  titre est censé refermer. Distinct du groupe `Characters` (qui ne fait que poser un indice de
+  type, sans changer de zone) précisément parce que son sens communautaire est l'inverse : il
+  ferme une section, il ne la prolonge pas.
 - **En-têtes reconnus pour `sideboardFw` (2026-08-03).** `Sideboard vs FW`, `Sideboard vs.
   FW`, `Sideboard vs Fallen-wizard`, `FW sideboard`, `Fallen-wizard opponent sideboard`,
   `Anti-FW sideboard`, `SB vs FW`, `Talon vs SD`, `Talon contre Sorcier déchu`, `SB vs MC`,
@@ -1454,7 +1467,7 @@ rafraîchissement.
 
 ## §11 — Tests
 
-`npm test` → Vitest, **36 fichiers, 672 tests**. Node pur, pas de DOM : les composants ne
+`npm test` → Vitest, **36 fichiers, 674 tests**. Node pur, pas de DOM : les composants ne
 sont pas montés, ce sont les **modules purs** qui sont testés.
 
 C'est ce qui dicte la façon d'aborder un travail d'interface ici : **on extrait la décision
@@ -1730,4 +1743,5 @@ transformation*, donc lis le compte de **fichiers**, pas seulement celui des tes
 | 2026-08-04 | Revue finale de branche `proxy-setname-mask` avant merge, un tour de correctifs (`b3280a4..28bb2c6`). §7 : les deux puces sur le rééchantillonnage PDF affirmaient encore un invariant faux (« Proxy éteint = octets bruts, la seule différence entre les deux chemins ») — le chemin dépend en réalité de `stampFor(card)`, pas de `proxyMode` directement, donc en/es sont **toujours** rééchantillonnés en JPEG même mode Proxy éteint (perte de fidélité réelle et jusque-là non documentée, sauf pour les Régions — jamais tamponnées, seul cas restant sur octets bruts en en/es). Commentaire équivalent dans `api.js` corrigé. `web/src/lib/i18n.js` : six chaînes (`proxy.tooltip` + `docs.feat.proxy`, ×3 langues) décrivaient encore l'ancien comportement (« recouvre le copyright par Proxy ») alors que pour en/es le copyright est maintenant toujours couvert et la case ne choisit que la légende — réécrites, gardent la garde de terminologie FR. §8 : la formule absolue « ne doit jamais atteindre un envoi d'impression » gagne l'exception Régions. `scripts/make_proxy_patches.py` : `fr_tint` ouvrait le patch `-fr` en RGB, perdant son canal alpha — sur les cadres Site déchirés, ça laissait le résidu du template (pas de l'encre) participer à l'échantillonnage, exactement le piège que la différenciation est censée éviter ; corrigé avec le même garde `a > 200` que `patch_label_lum`. Assertion de plancher ajoutée en fin de `label_colour` (l'invariant n'était vérifié qu'à l'œil sur la planche QA). `docs/superpowers/specs/2026-08-04-proxy-setname-mask-design.md` : comptage des clés poussées corrigé (10/6 → 9/7, cohérent avec `proxy-patch-colors.txt`), et la fausse mention d'un test JS pour le plancher redirigée vers cette nouvelle assertion. `proxyDraw.js` : fallback défensif `color \|\| '#F0F0EA'` restauré. En-tête de ce document réécrit (résumait encore la branche `qol-minor-features`). §11 : 35 fichiers, 644 tests, 0 échec. |
 | 2026-08-05 | `PROXY_LABEL_FONT_FRAC` recalibré (`0.0155` → `0.021`) sur signalement du propriétaire : le rendu en/es hors mode Proxy paraissait nettement plus petit que le vrai nom de set imprimé sur les cartes FR. Diagnostic : le calibrage de juillet dérivait la taille de police de la hauteur de capitale (juste les majuscules) de « Remastérisé… », mais l'œil compare l'étendue pleine du glyphe (accents, apostrophe), plus grande — vérifié en mesurant les lignes de pixels actives de « Contre l'Ombre » et « Remastérisé… » sur `cards/fr/as/Burat.jpg` (9-11 px de haut à 570 px de large, contre 6.2 px de hauteur de capitale utilisés jusque-là), puis confirmé à l'écran (`getBoundingClientRect`/`getComputedStyle` sur `.proxy-stamp span` : la taille de police calculée correspondait exactement à `PROXY_LABEL_FONT_FRAC × largeur affichée` — la formule était juste, la constante trop petite). Le nom traduit le plus long garde 24 px de marge dans `PROXY_PATCH_RECT` à la nouvelle taille (vérifié comme pour la taille d'origine). Ce recalibrage a exposé un bug latent dans le bisecteur de `label_colour` : `fw-site` échouait la nouvelle assertion de plancher, l'arrondi RVB 8 bits repoussant la luminance finale ~0.8 sous le plancher — corrigé par `BISECT_MARGIN = 2`, une marge de sécurité sur la cible de recherche du bisecteur (pas sur l'assertion elle-même, qui reste stricte). Couleurs régénérées (la taille de police change l'empreinte que `patch_label_lum` échantillonne) ; les 32 patchs PNG restent identiques. §11 : 35 fichiers, 644 tests, 0 échec. |
 | 2026-08-05 | Export d'un sous-ensemble du deck. Nouvelle case « Export partiel » dans `ExportDialog`, qui ouvre une grille de choix des cartes, par exemplaire. L'export complet reste le défaut et son chemin est inchangé. La découverte qui a façonné le design : ZIP/PDF et liste texte ne consomment pas la même donnée, donc la sélection est projetée dans deux formes plutôt qu'une (§7). §11 : 36 fichiers, 661 tests, 0 échec. |
-| 2026-08-05 | Trois améliorations de confort demandées par le propriétaire. **§4 :** lignes de pure décoration (`----`, `#####`, `====`…) désormais ignorées plutôt que collectées en notes — `DECORATION_ONLY` dans `resolve.js`, testée sur `line.raw` avant que la ligne ne rejoigne `prose`, en amont d'`isMarked` (une ligne qui commence par de la décoration mais contient du texte reste de la prose normale). Nouveaux alias d'en-tête pour la réserve : `Starting`/`Starting company`/`Starting deck` (+ FR/ES), distincts de `NOTE_TITLES.starting` (« Starting notes », un champ de note, pas une zone). **§10 :** la pastille Réserve du panneau de deck gagne un suffixe `(+n)` pour les objets mineurs/événements de stage qu'elle contient, en plus du `n / max` qui ne compte que les personnages (règle 1.7) — `poolExtraCount` (`DeckPanel.jsx`, complément de `poolCharCount`) alimente un nouveau prop `extras` sur `ZoneTabs`, optionnel et vide partout sauf sur l'onglet `pool`, jamais mélangé au compte principal ni au plafond. Vérifié dans l'app réelle (import d'une liste avec séparateurs de forum et en-tête « Starting » contenant un personnage + un objet mineur légal pour la réserve : « Réserve 1 / 10 (+1) »). §11 : `test/importResolve.test.js` (lignes de décoration), `test/importVocabulary.test.js` (alias `Starting`), `test/zoneTabs.test.js` (`poolExtraCount`) — 36 fichiers, 672 tests, 0 échec. |
+| 2026-08-05 | Trois améliorations de confort demandées par le propriétaire. **§4 :** lignes de pure décoration (`----`, `#####`, `====`…) désormais ignorées plutôt que collectées en notes — `DECORATION_ONLY` dans `resolve.js`, testée sur `line.raw` avant que la ligne ne rejoigne `prose`, en amont d'`isMarked` (une ligne qui commence par de la décoration mais contient du texte reste de la prose normale). Nouveaux alias d'en-tête pour la réserve : `Starting`/`Starting company`/`Starting deck` (+ FR/ES), distincts de `NOTE_TITLES.starting` (« Starting notes », un champ de note, pas une zone). **§10 :** la pastille Réserve du panneau de deck gagne un suffixe `(+n)` pour les objets mineurs/événements de stage qu'elle contient, en plus du `n / max` qui ne compte que les personnages (règle 1.7) — `poolExtraCount` (`DeckPanel.jsx`, complément de `poolCharCount`) alimente un nouveau prop `extras` sur `ZoneTabs`, optionnel et vide partout sauf sur l'onglet `pool`, jamais mélangé au compte principal ni au plafond. Vérifié dans l'app réelle (import d'une liste avec séparateurs de forum et en-tête « Starting » contenant un personnage + un objet mineur légal pour la réserve : « Réserve 1 / 10 (+1) »). §11 : `test/importResolve.test.js` (lignes de décoration), `test/importVocabulary.test.js` (alias `Starting`), `test/zoneTabs.test.js` (`poolExtraCount`) — 36 fichiers, 674 tests, 0 échec. |
+| 2026-08-05 | Bug signalé par le propriétaire juste après la tâche précédente : la clé « Other characters » ne refermait pas la section réserve/starting, laissant ses personnages fuiter dans la réserve. **§4 :** nouvelle entrée `zone('quantities', 'Character')` pour `Other characters`/`Additional characters`/`Non-starting characters` (+ FR/ES) dans `vocabulary.js`, au même titre que Sites/Regions — pas un `group('Character')` comme la ligne `Characters` juste en dessous, parce qu'un groupe ne change pas la zone et qu'un titre inconnu la laisse intacte aussi (`document.js`), les deux lisant silencieusement la section suivante comme une continuation du starting company plutôt que sa clôture. Vérifié dans l'app réelle : `## Starting` (Bûrat) puis `## Other characters` (Angmarim) importés en freeform donnent « Réserve 1 » + « Cartes 1 », pas « Réserve 2 ». §11 : nouveaux tests dans `test/importVocabulary.test.js` (la table) et `test/importResolve.test.js` (le pipeline complet, second personnage en `target: 'quantities'`) — 36 fichiers, 674 tests, 0 échec. |

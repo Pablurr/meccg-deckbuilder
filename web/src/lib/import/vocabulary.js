@@ -82,6 +82,16 @@ export const TABLE = [
   [['Pool', 'Starting pool', 'Starting', 'Starting company', 'Starting deck',
     'Réserve', 'Compagnie de départ', 'Reserva', 'Compañía inicial', SECTION_TITLES.pool], zone('pool')],
 
+  // -- zone: "Other characters" is a common community heading for the
+  // characters NOT part of the starting company -- i.e. the play deck, not
+  // the pool. Read as a plain group (as "Characters" is, below) it would not
+  // change the zone, and since an UNRECOGNISED heading also leaves the zone
+  // alone (document.js), the section right after "## Starting"/"## Pool"
+  // would silently keep routing its characters into the pool. Reading it as
+  // a zone (like Sites/Regions above) closes the pool section explicitly.
+  [['Other characters', 'Additional characters', 'Non-starting characters',
+    'Autres personnages', 'Otros personajes'], zone('quantities', 'Character')],
+
   // -- groups: the hint is always a TYPE_ORDER value, never a finer category.
   [['Characters', 'Personnages', 'Personajes', GROUP_TITLES.characters], group('Character')],
   [['Resources', 'Ressources', 'Recursos', GROUP_TITLES.resources], group('Resource')],

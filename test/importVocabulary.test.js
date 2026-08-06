@@ -45,6 +45,17 @@ describe('lookupHeading — a heading is its content, not its markdown level', (
     }
   });
 
+  it('"Other characters" is a zone too, closing a pool/starting-company section', () => {
+    // A group heading (like plain "Characters") does not change the zone; an
+    // UNRECOGNISED heading also leaves the zone alone (document.js). Either
+    // reading would let "## Other characters" silently keep routing cards
+    // into the pool if it followed "## Starting"/"## Pool" -- it must
+    // instead close that section and send its characters to the play deck.
+    for (const s of ['Other characters', 'Additional characters', 'Autres personnages', 'Otros personajes']) {
+      expect(lookupHeading(s)).toMatchObject({ family: 'zone', zone: 'quantities', type: 'Character' });
+    }
+  });
+
   it('"Deck" alone is the play deck, which is why the metadata block is not called that', () => {
     expect(lookupHeading('Deck')).toMatchObject({ family: 'zone', zone: 'quantities' });
     expect(lookupHeading('Metadata')).toMatchObject({ family: 'meta' });
