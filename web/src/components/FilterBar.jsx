@@ -149,19 +149,44 @@ export default function FilterBar({ facets, setNames = {}, filters, onChange, la
     <div className="filterbar" ref={barRef}>
       <div className="filterbar-top">
         <img className="brand-logo" src="/meccg-logo.png" alt="MECCG" />
-        <div className="search-group">
-          <input
-            type="search"
-            placeholder={t('filter.search')}
-            value={filters.search || ''}
-            onChange={(e) => set('search', e.target.value)}
-          />
-          <input
-            type="search"
-            placeholder={t('filter.searchText')}
-            value={filters.cardText || ''}
-            onChange={(e) => set('cardText', e.target.value)}
-          />
+        {/* .search-row is `display: contents` on desktop (see styles.css) --
+            purely a grouping node for mobile, where it becomes the actual
+            flex line search-group used to own alone. That split (a wrapper
+            that owns "does this pair get its own row" vs. the plain flex
+            children inside sharing that row's width) sidesteps a flexbox
+            trap: giving search-group itself a forced-wrap basis (100%, as it
+            had before) means the WRAP decision places it alone on its line
+            before flex-grow/shrink ever run, so filters-toggle can never
+            join that same line no matter how either one is later sized. */}
+        <div className="search-row">
+          <div className="search-group">
+            <input
+              type="search"
+              placeholder={t(isMobile ? 'filter.searchShort' : 'filter.search')}
+              value={filters.search || ''}
+              onChange={(e) => set('search', e.target.value)}
+            />
+            <input
+              type="search"
+              placeholder={t(isMobile ? 'filter.searchTextShort' : 'filter.searchText')}
+              value={filters.cardText || ''}
+              onChange={(e) => set('cardText', e.target.value)}
+            />
+          </div>
+          {/* Mobile only: icon + fold arrow only -- "Filtres" stays as the
+              button's accessible name via the visually-hidden span, not as
+              visible text (see .sr-only), which is what actually frees the
+              width the search boxes needed. */}
+          {isMobile && (
+            <button
+              className={`chip-toggle filters-toggle ${filtersOpen ? 'on' : ''}`}
+              onClick={() => setFiltersOpen((o) => !o)}
+              aria-expanded={filtersOpen}
+            >
+              <span aria-hidden="true">▽ {filtersOpen ? '▴' : '▾'}</span>
+              <span className="sr-only">{t('filter.filters')}</span>
+            </button>
+          )}
         </div>
         <ProxyToggle on={proxyMode} onChange={onProxyChange} />
         <LangPicker
@@ -183,12 +208,6 @@ export default function FilterBar({ facets, setNames = {}, filters, onChange, la
           aria-label={t('suggest.label')}
         >💡</a>
       </div>
-      {isMobile && (
-        <button
-          className={`chip-toggle filters-toggle ${filtersOpen ? 'on' : ''}`}
-          onClick={() => setFiltersOpen((o) => !o)}
-        >{t('filter.filters')} {filtersOpen ? '▴' : '▾'}</button>
-      )}
       <div className="filterbar-bottom" style={isMobile && !filtersOpen ? { display: 'none' } : undefined}>
         {facet('sets', t('filter.set'))}
         {facet('types', t('filter.type'), TYPE_ORDER)}

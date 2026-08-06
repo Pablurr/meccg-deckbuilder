@@ -39,6 +39,11 @@ export const translations = {
     // Filter bar
     'filter.search': 'Chercher par titre',
     'filter.searchText': 'Chercher dans le texte',
+    // Mobile-only: the logo row (§10) already fights for width, so the two
+    // search boxes share a row with the "Filtres" toggle -- one word each
+    // rather than the full desktop sentence.
+    'filter.searchShort': 'Titre',
+    'filter.searchTextShort': 'Texte',
     'filter.set': 'Set',
     'filter.type': 'Type',
     'filter.alignment': 'Alignement',
@@ -442,6 +447,8 @@ export const translations = {
 
     'filter.search': 'Search by title',
     'filter.searchText': 'Search in text',
+    'filter.searchShort': 'Title',
+    'filter.searchTextShort': 'Text',
     'filter.set': 'Set',
     'filter.type': 'Type',
     'filter.alignment': 'Alignment',
@@ -834,6 +841,8 @@ export const translations = {
     // Filter bar
     'filter.search': 'Buscar por título',
     'filter.searchText': 'Buscar en el texto',
+    'filter.searchShort': 'Título',
+    'filter.searchTextShort': 'Texto',
     'filter.set': 'Set',
     'filter.type': 'Tipo',
     'filter.alignment': 'Alineación',

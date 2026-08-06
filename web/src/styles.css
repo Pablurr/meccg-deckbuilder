@@ -62,6 +62,11 @@ body {
 }
 /* Proxy toggle, language picker and ? sit at the far right of the top row. */
 .filterbar-top .proxy-toggle { margin-left: auto; margin-right: 10px; flex: 0 0 auto; }
+/* Transparent on desktop: a pure grouping node so search-group (its only
+   child there -- filters-toggle is mobile-only) sizes exactly as if it were
+   still a direct child of .filterbar-top. Becomes a real flex line on mobile
+   (see media query) so search-group and filters-toggle can share one row. */
+.search-row { display: contents; }
 /* The two search boxes share one line and shrink together. */
 .search-group {
   display: flex;
@@ -1056,16 +1061,26 @@ code {
   /* Filter bar: the two search boxes stay on one line (shrunk); brand smaller. */
   .filterbar { padding: 8px 10px; }
   .brand-logo { height: 26px; }
-  .filters-toggle { align-self: flex-start; }
-  /* Three rows, not four. Left to wrap on its own the top row broke into
-     logo / searches / proxy+languages+?, and with the Filtres button below it
-     that put four rows of chrome above the grid. The search pair takes a full
-     row of its own so the other four items share the first: measured at 375px
-     they need 293px of the 355 available, so nothing has to shrink.
-     `order` moves the searches visually below controls that follow them in the
-     DOM; the DOM order is kept as-is because reaching the search box early is
-     the better keyboard path, and desktop still wants it beside the logo. */
-  .search-group { flex: 1 0 100%; order: 1; }
+  /* Three rows, not four/five. Left to wrap on its own the top row broke into
+     logo / searches / proxy+languages+? / Filtres, one row of chrome too many
+     above the grid. `.search-row` (see the base rule, `display: contents` on
+     desktop) becomes a real flex line here, forced onto its own row exactly
+     as `search-group` alone used to be (`flex: 1 0 100%; order: 1`) -- so the
+     other five items share the first row. `order` moves it visually below
+     controls that follow it in the DOM; the DOM order is kept as-is because
+     reaching the search box early is the better keyboard path, and desktop
+     still wants it beside the logo. Giving THIS wrapper the forced-wrap
+     basis, rather than `search-group` itself, is what lets `filters-toggle`
+     share the row: the flex-wrap algorithm assigns items to lines using
+     their hypothetical (pre-grow) size, so a child forced to 100% is placed
+     alone on its line before flex-grow/shrink ever run -- no later sizing
+     can pull a sibling onto that same line once that has happened. Nesting
+     search-group and filters-toggle as this wrapper's own flex children
+     sidesteps the trap entirely: they only ever negotiate width with each
+     other, inside a line whose existence is already decided. */
+  .search-row { display: flex; flex: 1 0 100%; order: 1; gap: 4px; min-width: 0; }
+  .search-row .search-group { flex: 1 1 auto; min-width: 0; }
+  .search-row .filters-toggle { flex: 0 0 auto; }
   /* Logo row: five items (logo, Proxy, langue, ?, 💡) have to hold one line
      on their own now that the search boxes wrap away. Tightened the three
      joints that actually cost width -- the gap between every item, the Proxy
