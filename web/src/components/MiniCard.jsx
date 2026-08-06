@@ -11,11 +11,17 @@ import { ZONE_LABEL_KEY } from '../lib/rules/zones.js';
 // Hover shows the shared full-size preview so the card stays readable at any panel width.
 //
 // `moveTargets` is the zones this copy may move to, already excluding the one
-// it sits in. Dragging the card onto a zone tab stays the desktop route, but
-// the card is not draggable on touch at all, so without this menu a phone user
-// had to remove the copy and re-add it from the browser just to reshuffle
-// zones. An empty list (a Site, which only ever has the deck) renders no
+// it sits in. Dragging the card onto a zone tab stays the desktop route, and
+// the ⇄ trigger below is its DESKTOP-ONLY fallback for anyone who would rather
+// not drag. An empty list (a Site, which only ever has the deck) renders no
 // trigger, rather than a menu with nothing to choose.
+//
+// On mobile it is deliberately absent: tapping the thumbnail already opens
+// CardPreviewModal, which carries a −/count/+ per legal zone and so offers the
+// very same destinations (move = −1 here, +1 there) with 44px targets and room
+// to say why a + is blocked. Keeping both meant two ways to do one thing, and
+// the cramped one -- zone buttons crushed into a ~105px thumbnail overlay --
+// was the worse of the two.
 export default function MiniCard({ card, qty, lang, thumbW, onChangeQty, onToggle, trackPointer, hidePreview, isMobile, onPreview, proxyMode, setNames, zone = 'deck', room = { remaining: Infinity, ruleId: null }, moveTargets = [], onMove }) {
   const t = useT();
   const [confirming, setConfirming] = useState(false);
@@ -103,11 +109,11 @@ export default function MiniCard({ card, qty, lang, thumbW, onChangeQty, onToggl
               >−</button>
             </div>
           )}
-          {moveTargets.length > 0 && (
+          {!isMobile && moveTargets.length > 0 && (
             // Deliberately a sibling of .qty-ctrl rather than a fourth button
-            // inside it: as its own control it can be grown to a 44px touch
-            // target on mobile without stretching the +/count/− stack, whose
-            // compact size the deck grid depends on at every panel width.
+            // inside it, so it can be sized independently of the +/count/−
+            // stack, whose compact size the deck grid depends on at every
+            // panel width.
             <button
               className="deck-mini-move-btn"
               onClick={() => setMoving(true)}

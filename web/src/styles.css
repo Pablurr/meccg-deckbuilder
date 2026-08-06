@@ -1018,12 +1018,16 @@ code {
 }
 /* The cap reason is on-screen text rather than the title= tooltip it used to
    be: a tooltip is unreachable by touch, and the disabled + button it explains
-   cannot take focus either, so a blocked + had no way to say why. */
+   cannot take focus either, so a blocked + had no way to say why.
+   A direct child of the bar (not of a zone row) since it is now printed once
+   per distinct reason for the whole card, so it carries .card-modal-zone's
+   width rule itself to stay aligned with the rows it explains. */
 .card-modal-zone-reason {
+  width: 100%;
+  max-width: 420px;
   font-size: 12px;
   line-height: 1.35;
   color: var(--muted);
-  padding-top: 3px;
 }
 
 /* ---- Deck panel as full-screen bottom sheet (mobile) ---- */
@@ -1189,26 +1193,14 @@ code {
      the card modal owns that editing now, so the rules that used to enlarge
      them are gone rather than left behind matching nothing. */
 
-  /* The only touch route to moving a copy between zones -- the card is not
-     draggable on mobile -- so it gets a full 44px target even though it costs
-     a visible corner of the thumbnail. */
-  /* Sized against the CARD, not the viewport: the panel's own width drives
-     these tiles' size via the shared .grid rule, independently of screen
-     width, so a flat 44px here collided with the qty stack at the card's
-     smallest size -- measured at the 60px floor, the button
-     spanned x 18-62 across a stack at x 44-66, making a tap there ambiguous.
-     Stacking them vertically does not rescue it either: the stack is 54px
-     tall and the card only 84px at that size.
-     So the touch size applies only once the card can hold it beside the stack
-     (44 + ~22 + margins), and below that the compact button stays. A target
-     smaller than the guideline is a compromise; two overlapping targets are a
-     defect. */
-  @container (min-width: 80px) {
-    .deck-mini-move-btn { width: 44px; height: 44px; font-size: 20px; border-radius: 8px; }
-  }
-  /* Destination buttons fill the tile, so they can afford the full height;
-     the overlay scrolls if a three-zone card is shown at a small zoom. */
-  .deck-mini-move .btn { min-height: 44px; font-size: 15px; }
+  /* No mobile sizing for .deck-mini-move-btn / .deck-mini-move: the ⇄ trigger
+     and its destination overlay are desktop-only (see MiniCard.jsx), because
+     tapping the thumbnail opens CardPreviewModal, which reaches the same
+     zones with 44px targets instead of buttons crushed into a ~105px tile.
+     The rules that used to grow both to a touch size lived here and were
+     deleted with it -- they had needed a @container query to keep the 44px
+     button from overlapping the qty stack on the narrowest cards, a
+     collision the modal simply does not have. */
   /* Zone rows in the card modal: keep the name from crowding the 44px
      buttons on a narrow phone. */
   .card-modal-zone-name { font-size: 14px; }

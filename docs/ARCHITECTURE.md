@@ -7,8 +7,12 @@
 > Public : LLM. Style : dense, factuel, pas de prose d'introduction.
 > Doc utilisateur : [`README.md`](../README.md). Ce fichier-ci décrit le *comment* et le *pourquoi*.
 
-**Dernière mise à jour : 2026-08-05** — six améliorations de confort sur l'import, le panneau
-de deck et le mobile. §4 : les lignes de pure décoration (`----`, `####`, `====`…) collées dans
+**Dernière mise à jour : 2026-08-05** — sept améliorations de confort sur l'import, le panneau
+de deck et le mobile. **Dernier lot (§10) :** en mobile, `CardPreviewModal` devient la route
+unique vers les zones — le bouton `⇄` de la vignette de deck est supprimé (il offrait les mêmes
+destinations dans un calque écrasé sur une vignette de ~105 px), et les avertissements de
+plafond de la modale sont dédupliqués par raison (`capNotices`) au lieu d'être répétés sous
+chaque zone. Dette §14 n°9 réglée au passage. §4 : les lignes de pure décoration (`----`, `####`, `====`…) collées dans
 une liste sont désormais ignorées plutôt que de finir en notes ; en-têtes `Starting`/`Starting
 company`/`Starting deck` (et FR/ES) ajoutés comme alias de la réserve, distincts de « Starting
 notes » ; en-tête `Other characters` (et FR/ES) ajouté comme zone qui referme une section
@@ -127,7 +131,7 @@ web/src/            toute l'application
     export/         pipeline d'export pur (10 modules, aucun import React)
     *.js            deck, deckStore, filter, importDeck, lang, proxy, tags, zoom…
 web/public/         servi tel quel : cards.json, card-backs/, proxy-patches/, _redirects
-test/               36 fichiers Vitest, 674 tests
+test/               37 fichiers Vitest, 678 tests
 docs/superpowers/   specs et plans d'implémentation, datés (historique des intentions)
 scripts/            make_proxy_patches.py (génération des patchs proxy, hors build)
 ```
@@ -1238,7 +1242,8 @@ Différences de forme :
 - `DeckPanel` passe en feuille plein écran (`asSheet`) ; le panneau latéral disparaît.
 - `CardBrowser` rend les `ZoneCtrls` en lecture seule ; l'ajout passe par
   `CardPreviewModal`, qui porte un sélecteur de zone.
-- `MiniCard` réduit `− / count / +` à un simple compteur ; le bouton `⇄` (déplacer) reste.
+- `MiniCard` réduit `− / count / +` à un simple compteur, et **le bouton `⇄` (déplacer)
+  disparaît (2026-08-05)** — voir « Une seule modale… » ci-dessous.
 - `FilterBar` replie les facettes derrière un bouton « Filtres », icône seule (`▽`) + flèche de
   pli en mobile (texte visible sur desktop, où le bouton n'existe même pas -- voir plus bas).
 - `DeckDrawer` affiche d'abord « voir le deck » avec le total, puis **des icônes seules**.
@@ -1268,6 +1273,48 @@ Différences de forme :
   langue/`?`/`💡` sur la première ligne (jusqu'à 288 px), boîtes de recherche (148 px chacune) +
   bouton Filtres (48 px) sur la seconde (jusqu'à 365 px) ; à 1280 px, layout desktop identique à
   avant (largeurs, placeholders complets, bouton Filtres absent du DOM).
+
+### Une seule modale pour les zones en mobile (`CardPreviewModal`, 2026-08-05)
+
+**Une seule instance de `CardPreviewModal` vit dans `App`**, pilotée par l'état `previewCard`,
+et **les deux écrans mobiles y poussent la même carte** : la tuile du navigateur
+(`CardBrowser`, `onPreview`) comme la vignette du deck (`MiniCard` → `DeckPanel` → `onPreview`).
+Ses `rows` viennent de `zoneTargets(card)` — la liste que le glisser-déposer valide déjà (§6) —
+donc la modale ne peut pas proposer une zone qu'un dépôt refuserait, et elle expose un
+`− / compteur / +` par zone légale.
+
+**Le bouton `⇄` de la vignette a donc été supprimé en mobile.** Il offrait exactement les
+mêmes destinations, mais à travers un calque de boutons de zone écrasés dans une vignette de
+~105 px ; la modale atteint les mêmes zones avec des cibles de 44 px et la place d'expliquer
+pourquoi un `+` est bloqué. Un déplacement s'y fait en `−1` ici, `+1` là. **Sur desktop il
+reste** : le glisser-déposer y est la route principale et `⇄` son repli pour qui préfère ne
+pas glisser ; la modale, elle, n'y est pas le modèle d'interaction (survol + glisser).
+Conséquence CSS : les règles mobiles qui grossissaient `⇄` à 44 px ont été supprimées avec
+lui, **dette n°9 comprise** (le point de rupture `@container (min-width: 80px)` qui l'empêchait
+de chevaucher la pile `qty` sur les tuiles les plus étroites — une collision que la modale n'a
+tout simplement pas).
+
+**Les avertissements de plafond sont dédupliqués (`capNotices`).** Presque tous les plafonds
+comptent les exemplaires **toutes zones confondues** (une carte unique, c'est un exemplaire
+dans tout le deck), donc une carte saturée l'est partout pour la même raison — et la phrase
+était imprimée sous *chaque* ligne : trois copies de « Carte unique — un seul exemplaire dans
+tout le deck. (CoE §1.3.1) » coûtaient 58 px d'une barre qui partage l'écran avec l'image
+qu'elle commente (mesuré : barre 231 → 289 px, image 581 → 523 px). `capNotices` regroupe
+désormais les zones **par raison** et la barre imprime une ligne par raison *distincte*, en
+pied de barre (mesuré après : 289 → 257 px, image rendue à 555 px). Ce n'est **pas** réduit à
+une seule chaîne parce qu'un sous-plafond par zone existe bel et bien (1.6.2, un exemplaire
+d'avatar par talon) : deux zones peuvent être bloquées pour des raisons différentes, et
+chaque entrée n'est préfixée de ses zones que lorsqu'il y en a plus d'une à distinguer.
+Fonction pure exportée et testée (`test/cardPreviewModal.test.js`), même idiome que
+`tabPresentation` — ce dépôt ne monte jamais un composant dans un test (§11).
+
+> **Le verrou `deck.mode === 'deckbuilding'` sur les `rows` est délibéré et conservé.** En
+> *Impression libre*, la modale n'offre que la pioche : ce mode n'a pas de zones (il imprime,
+> il ne construit pas), et lui en proposer inviterait un deck freeform à faire grossir des
+> données de zone qui ne veulent rien dire pour lui. C'est ce qui explique l'impression
+> « la modale ne propose que la pioche » : elle propose bien toutes les zones légales, mais
+> seulement en *Construction de deck*. Retirer `⇄` en mobile a d'ailleurs supprimé
+> l'incohérence inverse, où ce bouton offrait pool/talon **même en freeform**.
 
 ### Contrôles de zone sur une tuile (`ZoneRow`, desktop)
 
@@ -1500,7 +1547,7 @@ rafraîchissement.
 
 ## §11 — Tests
 
-`npm test` → Vitest, **36 fichiers, 674 tests**. Node pur, pas de DOM : les composants ne
+`npm test` → Vitest, **37 fichiers, 678 tests**. Node pur, pas de DOM : les composants ne
 sont pas montés, ce sont les **modules purs** qui sont testés.
 
 C'est ce qui dicte la façon d'aborder un travail d'interface ici : **on extrait la décision
@@ -1704,12 +1751,11 @@ son en-tête, et le passage de `scope: { zone: 'sideboard' }` à
    liste et « (9) » une fois ouvert. Hors périmètre de ce lot ; consigné pour ne pas être
    redécouvert de zéro à la prochaine session.
 
-9. **Le point de rupture `@container (min-width: 80px)` sur `.deck-mini-move-btn` est peut-être
-   devenu du code mort.** Il bascule le bouton « déplacer » vers sa taille tactile de 44 px une
-   fois la tuile assez large — mais le plancher de la grille (`GRID_MIN_WIDTH = 120`,
-   `lib/cardGrid.js`) dépasse maintenant ce seuil en permanence, donc la branche compacte du
-   bouton pourrait ne plus jamais s'exécuter. Non vérifié, non retiré : modifier une règle de
-   cible tactile à l'aveugle est plus risqué que de la garder.
+9. ~~**Le point de rupture `@container (min-width: 80px)` sur `.deck-mini-move-btn` est
+   peut-être devenu du code mort.**~~ **Réglée le 2026-08-05**, et sans avoir eu à trancher la
+   question : le bouton `⇄` n'existe plus en mobile (la modale le remplace, §10), donc la règle
+   `@container` qui lui donnait sa cible tactile de 44 px a été supprimée avec lui. Le bouton
+   compact desktop, seul survivant, n'a jamais dépendu de ce seuil.
 
 11. **`DeckManager.duplicate()` construit encore son payload à la main**, et omet `order`
     volontairement (une copie ne doit pas revendiquer la position de l'original). `deckPayload`
@@ -1776,7 +1822,8 @@ transformation*, donc lis le compte de **fichiers**, pas seulement celui des tes
 | 2026-08-04 | Revue finale de branche `proxy-setname-mask` avant merge, un tour de correctifs (`b3280a4..28bb2c6`). §7 : les deux puces sur le rééchantillonnage PDF affirmaient encore un invariant faux (« Proxy éteint = octets bruts, la seule différence entre les deux chemins ») — le chemin dépend en réalité de `stampFor(card)`, pas de `proxyMode` directement, donc en/es sont **toujours** rééchantillonnés en JPEG même mode Proxy éteint (perte de fidélité réelle et jusque-là non documentée, sauf pour les Régions — jamais tamponnées, seul cas restant sur octets bruts en en/es). Commentaire équivalent dans `api.js` corrigé. `web/src/lib/i18n.js` : six chaînes (`proxy.tooltip` + `docs.feat.proxy`, ×3 langues) décrivaient encore l'ancien comportement (« recouvre le copyright par Proxy ») alors que pour en/es le copyright est maintenant toujours couvert et la case ne choisit que la légende — réécrites, gardent la garde de terminologie FR. §8 : la formule absolue « ne doit jamais atteindre un envoi d'impression » gagne l'exception Régions. `scripts/make_proxy_patches.py` : `fr_tint` ouvrait le patch `-fr` en RGB, perdant son canal alpha — sur les cadres Site déchirés, ça laissait le résidu du template (pas de l'encre) participer à l'échantillonnage, exactement le piège que la différenciation est censée éviter ; corrigé avec le même garde `a > 200` que `patch_label_lum`. Assertion de plancher ajoutée en fin de `label_colour` (l'invariant n'était vérifié qu'à l'œil sur la planche QA). `docs/superpowers/specs/2026-08-04-proxy-setname-mask-design.md` : comptage des clés poussées corrigé (10/6 → 9/7, cohérent avec `proxy-patch-colors.txt`), et la fausse mention d'un test JS pour le plancher redirigée vers cette nouvelle assertion. `proxyDraw.js` : fallback défensif `color \|\| '#F0F0EA'` restauré. En-tête de ce document réécrit (résumait encore la branche `qol-minor-features`). §11 : 35 fichiers, 644 tests, 0 échec. |
 | 2026-08-05 | `PROXY_LABEL_FONT_FRAC` recalibré (`0.0155` → `0.021`) sur signalement du propriétaire : le rendu en/es hors mode Proxy paraissait nettement plus petit que le vrai nom de set imprimé sur les cartes FR. Diagnostic : le calibrage de juillet dérivait la taille de police de la hauteur de capitale (juste les majuscules) de « Remastérisé… », mais l'œil compare l'étendue pleine du glyphe (accents, apostrophe), plus grande — vérifié en mesurant les lignes de pixels actives de « Contre l'Ombre » et « Remastérisé… » sur `cards/fr/as/Burat.jpg` (9-11 px de haut à 570 px de large, contre 6.2 px de hauteur de capitale utilisés jusque-là), puis confirmé à l'écran (`getBoundingClientRect`/`getComputedStyle` sur `.proxy-stamp span` : la taille de police calculée correspondait exactement à `PROXY_LABEL_FONT_FRAC × largeur affichée` — la formule était juste, la constante trop petite). Le nom traduit le plus long garde 24 px de marge dans `PROXY_PATCH_RECT` à la nouvelle taille (vérifié comme pour la taille d'origine). Ce recalibrage a exposé un bug latent dans le bisecteur de `label_colour` : `fw-site` échouait la nouvelle assertion de plancher, l'arrondi RVB 8 bits repoussant la luminance finale ~0.8 sous le plancher — corrigé par `BISECT_MARGIN = 2`, une marge de sécurité sur la cible de recherche du bisecteur (pas sur l'assertion elle-même, qui reste stricte). Couleurs régénérées (la taille de police change l'empreinte que `patch_label_lum` échantillonne) ; les 32 patchs PNG restent identiques. §11 : 35 fichiers, 644 tests, 0 échec. |
 | 2026-08-05 | Export d'un sous-ensemble du deck. Nouvelle case « Export partiel » dans `ExportDialog`, qui ouvre une grille de choix des cartes, par exemplaire. L'export complet reste le défaut et son chemin est inchangé. La découverte qui a façonné le design : ZIP/PDF et liste texte ne consomment pas la même donnée, donc la sélection est projetée dans deux formes plutôt qu'une (§7). §11 : 36 fichiers, 661 tests, 0 échec. |
-| 2026-08-05 | Trois améliorations de confort demandées par le propriétaire. **§4 :** lignes de pure décoration (`----`, `#####`, `====`…) désormais ignorées plutôt que collectées en notes — `DECORATION_ONLY` dans `resolve.js`, testée sur `line.raw` avant que la ligne ne rejoigne `prose`, en amont d'`isMarked` (une ligne qui commence par de la décoration mais contient du texte reste de la prose normale). Nouveaux alias d'en-tête pour la réserve : `Starting`/`Starting company`/`Starting deck` (+ FR/ES), distincts de `NOTE_TITLES.starting` (« Starting notes », un champ de note, pas une zone). **§10 :** la pastille Réserve du panneau de deck gagne un suffixe `(+n)` pour les objets mineurs/événements de stage qu'elle contient, en plus du `n / max` qui ne compte que les personnages (règle 1.7) — `poolExtraCount` (`DeckPanel.jsx`, complément de `poolCharCount`) alimente un nouveau prop `extras` sur `ZoneTabs`, optionnel et vide partout sauf sur l'onglet `pool`, jamais mélangé au compte principal ni au plafond. Vérifié dans l'app réelle (import d'une liste avec séparateurs de forum et en-tête « Starting » contenant un personnage + un objet mineur légal pour la réserve : « Réserve 1 / 10 (+1) »). §11 : `test/importResolve.test.js` (lignes de décoration), `test/importVocabulary.test.js` (alias `Starting`), `test/zoneTabs.test.js` (`poolExtraCount`) — 36 fichiers, 674 tests, 0 échec. |
+| 2026-08-05 | Trois améliorations de confort demandées par le propriétaire. **§4 :** lignes de pure décoration (`----`, `#####`, `====`…) désormais ignorées plutôt que collectées en notes — `DECORATION_ONLY` dans `resolve.js`, testée sur `line.raw` avant que la ligne ne rejoigne `prose`, en amont d'`isMarked` (une ligne qui commence par de la décoration mais contient du texte reste de la prose normale). Nouveaux alias d'en-tête pour la réserve : `Starting`/`Starting company`/`Starting deck` (+ FR/ES), distincts de `NOTE_TITLES.starting` (« Starting notes », un champ de note, pas une zone). **§10 :** la pastille Réserve du panneau de deck gagne un suffixe `(+n)` pour les objets mineurs/événements de stage qu'elle contient, en plus du `n / max` qui ne compte que les personnages (règle 1.7) — `poolExtraCount` (`DeckPanel.jsx`, complément de `poolCharCount`) alimente un nouveau prop `extras` sur `ZoneTabs`, optionnel et vide partout sauf sur l'onglet `pool`, jamais mélangé au compte principal ni au plafond. Vérifié dans l'app réelle (import d'une liste avec séparateurs de forum et en-tête « Starting » contenant un personnage + un objet mineur légal pour la réserve : « Réserve 1 / 10 (+1) »). §11 : `test/importResolve.test.js` (lignes de décoration), `test/importVocabulary.test.js` (alias `Starting`), `test/zoneTabs.test.js` (`poolExtraCount`) — 36 fichiers, 672 tests, 0 échec. |
 | 2026-08-05 | Bug signalé par le propriétaire juste après la tâche précédente : la clé « Other characters » ne refermait pas la section réserve/starting, laissant ses personnages fuiter dans la réserve. **§4 :** nouvelle entrée `zone('quantities', 'Character')` pour `Other characters`/`Additional characters`/`Non-starting characters` (+ FR/ES) dans `vocabulary.js`, au même titre que Sites/Regions — pas un `group('Character')` comme la ligne `Characters` juste en dessous, parce qu'un groupe ne change pas la zone et qu'un titre inconnu la laisse intacte aussi (`document.js`), les deux lisant silencieusement la section suivante comme une continuation du starting company plutôt que sa clôture. Vérifié dans l'app réelle : `## Starting` (Bûrat) puis `## Other characters` (Angmarim) importés en freeform donnent « Réserve 1 » + « Cartes 1 », pas « Réserve 2 ». §11 : nouveaux tests dans `test/importVocabulary.test.js` (la table) et `test/importResolve.test.js` (le pipeline complet, second personnage en `target: 'quantities'`) — 36 fichiers, 674 tests, 0 échec. |
 | 2026-08-05 | Régression mobile signalée par le propriétaire : la ligne du logo (logo, Proxy, langue, `?`, `💡`) ne tenait plus sur une seule ligne à 375 px. §10 : dans le bloc `@media (max-width: 768px)` de `styles.css`, `gap` de `.filterbar-top` ramené de 8px à 4px, marge droite du logo de 4px à 2px, et la marge droite de 10px + le `margin-left: auto` du bouton Proxy (utiles seulement sur desktop, où le bouton partage sa ligne avec les boîtes de recherche) mis à 0 en mobile, plus son padding horizontal resserré à 6px (contre 10px hérité de `.chip-toggle`). Purement des joints de mise en page desktop devenus inutiles en mobile depuis que les boîtes de recherche passent sur leur propre ligne (`order: 1`, déjà en place) — aucune règle desktop touchée. Vérifié dans le navigateur réel aux deux largeurs (mesure `getBoundingClientRect`) : à 375 px les cinq éléments tiennent sur une ligne (288 px occupés sur 355 disponibles) ; à 1280 px le bouton Proxy reste poussé à droite comme avant. §11 : aucun test (mise en page pure, aucun module JS testable) — 36 fichiers, 674 tests, 0 échec (inchangé). |
 | 2026-08-05 | Suite immédiate de la tâche précédente, deux demandes du propriétaire une fois la ligne du logo réglée. **§9 :** nouvelles clés `filter.searchShort`/`filter.searchTextShort` (FR « Titre »/« Texte », EN « Title »/« Text », ES « Título »/« Texto ») — un mot au lieu de la phrase desktop (`filter.search`/`filter.searchText`), choisies par `FilterBar` selon `isMobile`, seulement pour le `placeholder` des deux boîtes ; le desktop garde le texte complet. **§10 :** le bouton « Filtres » perd son texte visible en mobile pour une icône `▽` + la flèche de pli déjà là (`aria-expanded` ajouté sur le bouton ; « Filtres » reste son nom accessible via un `<span className="sr-only">`, jamais affiché — même idiome que `.drawer .lbl`, généralisé au `.sr-only` déjà global plutôt que dupliqué). Les deux boîtes de recherche partagent maintenant leur ligne avec ce bouton compact. **Piège flexbox rencontré et documenté (§10) :** donner directement `flex: 1 0 100%` à `search-group` (comme avant cette tâche) empêche structurellement `filters-toggle` de jamais rejoindre sa ligne — l'algorithme de retour à la ligne assigne les éléments par leur taille hypothétique (`flex-basis`) AVANT que `flex-grow`/`flex-shrink` ne s'exécutent, donc un enfant forcé à 100% se retrouve seul sur sa ligne dès cette étape et rien ne peut plus y faire entrer un voisin ensuite ; `flex-basis: 0` sur `search-group` a d'abord semblé résoudre ça mais a fusionné les DEUX lignes en une seule bien trop chargée pour la même raison inversée (taille hypothétique trop petite pour forcer un nouveau retour à la ligne). Résolu par un intercalaire `.search-row` : `display: contents` sur desktop (transparent — `search-group`, son seul enfant là, se comporte exactement comme avant), un vrai conteneur flex forcé à 100% en mobile (reproduisant fidèlement l'ancienne règle de `search-group`), à l'intérieur duquel `search-group` et `filters-toggle` ne négocient la largeur qu'entre eux, sur une ligne dont l'existence est déjà tranchée. Vérifié dans le navigateur réel : à 375 px, ligne 1 = logo/Proxy/langue/`?`/`💡` (jusqu'à 288 px), ligne 2 = boîtes (148 px chacune) + bouton Filtres (48 px, jusqu'à 365 px) ; à 1280 px, layout et placeholders desktop identiques à avant, bouton Filtres absent du DOM (toujours `isMobile`-gated). §11 : aucun nouveau test (mise en page pure) mais le test de parité des clés i18n couvre les deux nouvelles — 36 fichiers, 674 tests, 0 échec (inchangé). |
+| 2026-08-05 | Trois demandes du propriétaire sur l'ergonomie tactile des zones. **§10, nouvelle sous-section « Une seule modale pour les zones en mobile ».** (1) *Constat, pas correctif :* la modale du navigateur de cartes proposait **déjà** toutes les zones légales (`rows` ← `zoneTargets`, une seule instance de `CardPreviewModal` dans `App` partagée par les deux écrans) — l'impression contraire vient du verrou `deck.mode === 'deckbuilding'`, et le deck par défaut est en *Impression libre*. Vérifié dans le navigateur : freeform → « Pioche » seule ; construction de deck → « Pioche / Talon / Talon vs SD ». Verrou **conservé délibérément** (le mode freeform n'a pas de zones), la note du §10 explique pourquoi et signale que retirer `⇄` supprime l'incohérence inverse, où ce bouton offrait pool/talon même en freeform. (2) **Bouton `⇄` supprimé en mobile** (`!isMobile` dans `MiniCard`) : il offrait exactement les mêmes destinations que la modale, mais via un calque de boutons écrasés dans une vignette de ~105 px ; la modale les atteint avec des cibles de 44 px et la place d'expliquer un `+` bloqué (déplacement = `−1` ici, `+1` là). Desktop inchangé — le glisser-déposer y reste la route principale et `⇄` son repli. Les règles CSS mobiles du bouton meurent avec lui, **dette §14 n°9 réglée sans avoir eu à trancher sa question** (le `@container (min-width: 80px)` existait pour éviter un chevauchement avec la pile `qty`, collision que la modale n'a pas). (3) **Avertissements de plafond dédupliqués** — `capNotices` (fonction pure exportée de `CardPreviewModal.jsx`) regroupe les zones **par raison** et la barre imprime une ligne par raison *distincte*, en pied de barre au lieu d'une sous chaque zone : presque tous les plafonds comptent les exemplaires toutes zones confondues, donc la même phrase était répétée autant de fois qu'il y a de zones. **Pas** réduit à une chaîne unique : le sous-plafond 1.6.2 (un avatar par talon) permet deux raisons différentes, et chaque entrée n'est préfixée de ses zones que s'il y en a plusieurs. Mesuré dans le navigateur réel sur une carte unique saturée : 3 phrases → 1, barre 289 → 257 px, image 523 → 555 px. Parcours complet revérifié en 375 px (tuile du navigateur *et* vignette du deck ouvrent la même modale ; déplacement Pioche→Talon effectif, `⇄` absent) et en 1280 px (`⇄` toujours là, 20×18 px). §11 : `test/cardPreviewModal.test.js` (4 tests sur `capNotices`) — 37 fichiers, 678 tests, 0 échec. **Note de tenue de ce document :** un `replace_all` du compte de tests avait écrasé quatre entrées historiques de ce journal (elles consignent le compte *de leur époque*, pas le compte courant) ; restaurées depuis `git show HEAD`, et l'entrée « Trois améliorations » corrigée à ses 672 tests réels — une inexactitude que le même réflexe avait déjà introduite au commit précédent. |

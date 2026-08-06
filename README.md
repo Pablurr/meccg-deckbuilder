@@ -116,7 +116,16 @@ longueur de partie choisie. Le panneau affiche des onglets par zone avec compteu
 plafonds (ex. `Réserve 3 / 10`) ; la réserve ajoute un suffixe `(+n)` quand elle contient des
 objets mineurs ou événements de stage (règle 1.7), comptés à part des personnages puisqu'ils
 ne répondent pas au même plafond (ex. `Réserve 3 / 10 (+1)`). Déposer une carte sur un onglet
-l'y déplace. Dans le
+l'y déplace.
+
+**Sur mobile**, toucher une carte — dans le navigateur de cartes comme dans le deck — ouvre la
+même fenêtre plein écran, avec un `−`/`+` par zone où cette carte a le droit d'aller. C'est là
+qu'on ajoute, retire et déplace un exemplaire (déplacer = `−1` dans une zone, `+1` dans
+l'autre) ; les zones ne sont proposées qu'en mode **Construction de deck**, l'Impression libre
+n'en ayant pas. Quand un `+` est bloqué, la raison est écrite sous les compteurs, une seule
+fois même si elle vaut pour plusieurs zones.
+
+Dans le
 navigateur de cartes, chaque carte affiche un compteur par zone ; en mode Construction de
 deck, un filtre de **légalité** (activé par défaut) masque les cartes non éligibles au camp
 choisi (la longueur de partie n'affecte que la limite de talon, pas la légalité d'une carte)
