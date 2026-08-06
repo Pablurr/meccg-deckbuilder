@@ -183,7 +183,14 @@ export default function FilterBar({ facets, setNames = {}, filters, onChange, la
               onClick={() => setFiltersOpen((o) => !o)}
               aria-expanded={filtersOpen}
             >
-              <span aria-hidden="true">▽ {filtersOpen ? '▴' : '▾'}</span>
+              {/* 🔻 rather than the geometric ▽ it replaces: Unicode has no
+                funnel emoji, and this is the closest real one -- the same
+                downward-tapering silhouette every interface uses for
+                "filter", but rendered in colour by the system emoji font, so
+                it reads as an icon instead of as a stray glyph. The fold
+                arrow beside it stays monochrome, which is what keeps the two
+                triangles from being read as one control. */}
+            <span aria-hidden="true">🔻{filtersOpen ? '▴' : '▾'}</span>
               <span className="sr-only">{t('filter.filters')}</span>
             </button>
           )}
