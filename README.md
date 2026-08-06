@@ -69,7 +69,9 @@ npx wrangler pages deploy web/dist
    (3)`) ; une parenthèse après le nom sert aussi à désambiguïser (`Angmarim (Hero)`,
    `Bûrat (AS)`) quand plusieurs cartes portent le même nom (accents ignorés, nom complet
    requis). Tout ce qui n'est ni un titre de section ni une ligne de carte est conservé
-   comme note. Une fois l'analyse faite, choisis la **cible** (nouveau deck ou remplacement
+   comme note, sauf les lignes de pure décoration (`----`, `####`, `====`…) — un séparateur de
+   forum ou de markdown copié avec la liste, ignoré plutôt que gardé en note. Une fois
+   l'analyse faite, choisis la **cible** (nouveau deck ou remplacement
    du deck ouvert), le **mode** et, en construction de deck, le **camp** et la **longueur de
    partie** — préremplis depuis le bloc `## Metadata` du texte collé s'il y en a un, sinon
    depuis le deck ouvert. Les cartes ambiguës proposent un menu de choix, et les cartes
@@ -109,7 +111,10 @@ en plus du talon normal, préselectionnées pour un adversaire jouant Sorcier d�
 (`+ Talon vs SD`) tant qu'elle est vide, et devient un onglet normal avec compteur dès qu'une
 carte y est ajoutée ; en construction de deck, son plafond de 10 s'applique quelle que soit la
 longueur de partie choisie. Le panneau affiche des onglets par zone avec compteurs et
-plafonds (ex. `Réserve 3 / 10`), et déposer une carte sur un onglet l'y déplace. Dans le
+plafonds (ex. `Réserve 3 / 10`) ; la réserve ajoute un suffixe `(+n)` quand elle contient des
+objets mineurs ou événements de stage (règle 1.7), comptés à part des personnages puisqu'ils
+ne répondent pas au même plafond (ex. `Réserve 3 / 10 (+1)`). Déposer une carte sur un onglet
+l'y déplace. Dans le
 navigateur de cartes, chaque carte affiche un compteur par zone ; en mode Construction de
 deck, un filtre de **légalité** (activé par défaut) masque les cartes non éligibles au camp
 choisi (la longueur de partie n'affecte que la limite de talon, pas la légalité d'une carte)

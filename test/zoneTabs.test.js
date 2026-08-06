@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { tabPresentation } from '../web/src/components/ZoneTabs.jsx';
-import { OPTIONAL_TABS } from '../web/src/components/DeckPanel.jsx';
+import { OPTIONAL_TABS, poolExtraCount } from '../web/src/components/DeckPanel.jsx';
 
 describe('tabPresentation', () => {
   // "0 / 10" claims a budget the player never opted into. An optional zone
@@ -45,5 +45,27 @@ describe('tabPresentation', () => {
 describe('OPTIONAL_TABS', () => {
   it('covers both sideboards and nothing else', () => {
     expect([...OPTIONAL_TABS].sort()).toEqual(['sideboard', 'sideboardFw']);
+  });
+});
+
+describe('poolExtraCount', () => {
+  // Complement of poolCharCount: starting minor items/stage events live in
+  // the pool too, but answer to their own maxMinorItems cap (POOL-ITEMS),
+  // not the character cap the pool pill's "n / max" already shows. This
+  // feeds the pill's "(+n)" suffix instead.
+  const cardsById = new Map([
+    ['char-1', { type: 'Character' }],
+    ['item-1', { type: 'Resource' }],
+    ['item-2', { type: 'Resource' }],
+  ]);
+
+  it('counts everything in the pool that is not a Character', () => {
+    expect(poolExtraCount({ 'char-1': 2, 'item-1': 1, 'item-2': 3 }, cardsById)).toBe(4);
+  });
+
+  it('is zero for a pool of characters only, and for an empty pool', () => {
+    expect(poolExtraCount({ 'char-1': 5 }, cardsById)).toBe(0);
+    expect(poolExtraCount({}, cardsById)).toBe(0);
+    expect(poolExtraCount(undefined, cardsById)).toBe(0);
   });
 });

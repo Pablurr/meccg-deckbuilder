@@ -68,6 +68,15 @@ describe('lookupHeading — a heading is its content, not its markdown level', (
     expect(lookupHeading('Stratégie ressources')).toMatchObject({ family: 'notes', field: 'resourceStrategy' });
   });
 
+  it('"Starting"/"Starting company" and their FR/ES equivalents are the pool section', () => {
+    for (const s of ['Starting', 'Starting company', 'Starting deck', 'Compagnie de départ', 'Compañía inicial']) {
+      expect(lookupHeading(s)).toMatchObject({ family: 'zone', zone: 'pool' });
+    }
+    // Distinct from the "Starting notes" heading, which selects a NOTES
+    // field rather than the pool zone -- the two must never collide.
+    expect(lookupHeading('Starting notes')).toMatchObject({ family: 'notes', field: 'starting' });
+  });
+
   it('an unknown heading is not a heading', () => {
     expect(lookupHeading('Plan de jeu')).toBe(null);
     expect(lookupHeading('3x Bûrat')).toBe(null);

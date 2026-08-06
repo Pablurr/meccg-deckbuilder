@@ -75,8 +75,12 @@ export const TABLE = [
     'FW sideboard', 'Fallen-wizard opponent sideboard', 'Anti-FW sideboard', 'SB vs FW',
     'Talon vs SD', 'Talon contre Sorcier déchu', 'SB vs MC',
     SECTION_TITLES.sideboardFw], zone('sideboardFw')],
-  // -- zone: pool
-  [['Pool', 'Starting pool', 'Réserve', 'Reserva', SECTION_TITLES.pool], zone('pool')],
+  // -- zone: pool. "Starting"/"Starting company" and their French/Spanish
+  // equivalents are a common community heading for this same zone -- distinct
+  // from NOTE_TITLES.starting ("Starting notes"), which names a notes field,
+  // not a section, so the two never collide.
+  [['Pool', 'Starting pool', 'Starting', 'Starting company', 'Starting deck',
+    'Réserve', 'Compagnie de départ', 'Reserva', 'Compañía inicial', SECTION_TITLES.pool], zone('pool')],
 
   // -- groups: the hint is always a TYPE_ORDER value, never a finer category.
   [['Characters', 'Personnages', 'Personajes', GROUP_TITLES.characters], group('Character')],

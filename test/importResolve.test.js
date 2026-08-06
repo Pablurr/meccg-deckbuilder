@@ -182,3 +182,23 @@ describe('resolveLines — a trailing parenthetical is not by itself a mark', ()
     expect(resolved[0].status).toBe('notfound');
   });
 });
+
+describe('resolveLines — decoration-only lines are dropped, not kept as prose', () => {
+  // A forum/markdown divider ("----", "####", "===...") carries no
+  // information a player would want back in their notes: without this it
+  // would pass isMarked's checks (no digit, no qty>1, no hint) exactly like
+  // real prose and end up cluttering the notes on every list copied from a
+  // forum post.
+  it.each(['----', '#####', '====', '****', '____', '....', '---===---'])(
+    'drops %j entirely', (raw) => {
+      const { resolved, prose } = one(raw);
+      expect(resolved).toHaveLength(0);
+      expect(prose).toHaveLength(0);
+    },
+  );
+
+  it('a line that merely starts with decoration is still prose', () => {
+    const { prose } = one('-- Contrôler les havres tôt');
+    expect(prose).toEqual(['-- Contrôler les havres tôt']);
+  });
+});
