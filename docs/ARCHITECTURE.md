@@ -7,16 +7,18 @@
 > Public : LLM. Style : dense, factuel, pas de prose d'introduction.
 > Doc utilisateur : [`README.md`](../README.md). Ce fichier-ci décrit le *comment* et le *pourquoi*.
 
-**Dernière mise à jour : 2026-08-05** — quatre améliorations de confort sur l'import et le
-panneau de deck. §4 : les lignes de pure décoration (`----`, `####`, `====`…) collées dans une
-liste sont désormais ignorées plutôt que de finir en notes ; en-têtes `Starting`/`Starting
+**Dernière mise à jour : 2026-08-05** — cinq améliorations de confort sur l'import, le panneau
+de deck et le mobile. §4 : les lignes de pure décoration (`----`, `####`, `====`…) collées dans
+une liste sont désormais ignorées plutôt que de finir en notes ; en-têtes `Starting`/`Starting
 company`/`Starting deck` (et FR/ES) ajoutés comme alias de la réserve, distincts de « Starting
 notes » ; en-tête `Other characters` (et FR/ES) ajouté comme zone qui referme une section
 réserve/starting et renvoie ses personnages à la pioche, plutôt que de rester un groupe (ou un
 titre inconnu) qui laisse la zone intacte et les y laisse fuiter. §10 : la pastille Réserve du
 panneau de deck affiche un suffixe `(+n)` pour les objets mineurs/événements de stage qu'elle
 contient en plus des personnages comptés par `n / max` (`poolExtraCount`, `DeckPanel.jsx` ;
-prop `extras`, `ZoneTabs.jsx`).
+prop `extras`, `ZoneTabs.jsx`) ; en mobile, la ligne du logo (logo + Proxy + langue + `?` + `💡`)
+est resserrée (gap, marge du logo, marge et padding du bouton Proxy) pour tenir sur une seule
+ligne, les boîtes de recherche étant déjà passées en dessous.
 
 Précédent : branche `export-card-selection` (`37d9d15..HEAD`) — export d'un sous-ensemble
 choisi du deck, sur les trois formats (ZIP MPC, planches PDF, liste texte). Nouvelle case
@@ -1235,6 +1237,13 @@ Différences de forme :
 - `MiniCard` réduit `− / count / +` à un simple compteur ; le bouton `⇄` (déplacer) reste.
 - `FilterBar` replie les facettes derrière un bouton « Filtres ».
 - `DeckDrawer` affiche d'abord « voir le deck » avec le total, puis **des icônes seules**.
+- **Ligne du logo (2026-08-05).** Logo + Proxy + langue + `?` + `💡` doivent tenir sur une
+  seule ligne à 375 px, sans les boîtes de recherche (qui passent en dessous via `order: 1`,
+  voir `styles.css`). `gap` de `.filterbar-top` réduit à 4px, marge droite du logo à 2px, et la
+  marge droite de 10px du bouton Proxy (utile seulement sur desktop, pour le séparer des
+  boîtes de recherche qui partagent alors sa ligne) mise à 0 en mobile — les cinq éléments
+  tiennent avec 77 px de marge (288 px occupés sur 355 px disponibles à 375 px de large,
+  mesuré dans le navigateur réel).
 
 ### Contrôles de zone sur une tuile (`ZoneRow`, desktop)
 
@@ -1745,3 +1754,4 @@ transformation*, donc lis le compte de **fichiers**, pas seulement celui des tes
 | 2026-08-05 | Export d'un sous-ensemble du deck. Nouvelle case « Export partiel » dans `ExportDialog`, qui ouvre une grille de choix des cartes, par exemplaire. L'export complet reste le défaut et son chemin est inchangé. La découverte qui a façonné le design : ZIP/PDF et liste texte ne consomment pas la même donnée, donc la sélection est projetée dans deux formes plutôt qu'une (§7). §11 : 36 fichiers, 661 tests, 0 échec. |
 | 2026-08-05 | Trois améliorations de confort demandées par le propriétaire. **§4 :** lignes de pure décoration (`----`, `#####`, `====`…) désormais ignorées plutôt que collectées en notes — `DECORATION_ONLY` dans `resolve.js`, testée sur `line.raw` avant que la ligne ne rejoigne `prose`, en amont d'`isMarked` (une ligne qui commence par de la décoration mais contient du texte reste de la prose normale). Nouveaux alias d'en-tête pour la réserve : `Starting`/`Starting company`/`Starting deck` (+ FR/ES), distincts de `NOTE_TITLES.starting` (« Starting notes », un champ de note, pas une zone). **§10 :** la pastille Réserve du panneau de deck gagne un suffixe `(+n)` pour les objets mineurs/événements de stage qu'elle contient, en plus du `n / max` qui ne compte que les personnages (règle 1.7) — `poolExtraCount` (`DeckPanel.jsx`, complément de `poolCharCount`) alimente un nouveau prop `extras` sur `ZoneTabs`, optionnel et vide partout sauf sur l'onglet `pool`, jamais mélangé au compte principal ni au plafond. Vérifié dans l'app réelle (import d'une liste avec séparateurs de forum et en-tête « Starting » contenant un personnage + un objet mineur légal pour la réserve : « Réserve 1 / 10 (+1) »). §11 : `test/importResolve.test.js` (lignes de décoration), `test/importVocabulary.test.js` (alias `Starting`), `test/zoneTabs.test.js` (`poolExtraCount`) — 36 fichiers, 674 tests, 0 échec. |
 | 2026-08-05 | Bug signalé par le propriétaire juste après la tâche précédente : la clé « Other characters » ne refermait pas la section réserve/starting, laissant ses personnages fuiter dans la réserve. **§4 :** nouvelle entrée `zone('quantities', 'Character')` pour `Other characters`/`Additional characters`/`Non-starting characters` (+ FR/ES) dans `vocabulary.js`, au même titre que Sites/Regions — pas un `group('Character')` comme la ligne `Characters` juste en dessous, parce qu'un groupe ne change pas la zone et qu'un titre inconnu la laisse intacte aussi (`document.js`), les deux lisant silencieusement la section suivante comme une continuation du starting company plutôt que sa clôture. Vérifié dans l'app réelle : `## Starting` (Bûrat) puis `## Other characters` (Angmarim) importés en freeform donnent « Réserve 1 » + « Cartes 1 », pas « Réserve 2 ». §11 : nouveaux tests dans `test/importVocabulary.test.js` (la table) et `test/importResolve.test.js` (le pipeline complet, second personnage en `target: 'quantities'`) — 36 fichiers, 674 tests, 0 échec. |
+| 2026-08-05 | Régression mobile signalée par le propriétaire : la ligne du logo (logo, Proxy, langue, `?`, `💡`) ne tenait plus sur une seule ligne à 375 px. §10 : dans le bloc `@media (max-width: 768px)` de `styles.css`, `gap` de `.filterbar-top` ramené de 8px à 4px, marge droite du logo de 4px à 2px, et la marge droite de 10px + le `margin-left: auto` du bouton Proxy (utiles seulement sur desktop, où le bouton partage sa ligne avec les boîtes de recherche) mis à 0 en mobile, plus son padding horizontal resserré à 6px (contre 10px hérité de `.chip-toggle`). Purement des joints de mise en page desktop devenus inutiles en mobile depuis que les boîtes de recherche passent sur leur propre ligne (`order: 1`, déjà en place) — aucune règle desktop touchée. Vérifié dans le navigateur réel aux deux largeurs (mesure `getBoundingClientRect`) : à 375 px les cinq éléments tiennent sur une ligne (288 px occupés sur 355 disponibles) ; à 1280 px le bouton Proxy reste poussé à droite comme avant. §11 : aucun test (mise en page pure, aucun module JS testable) — 36 fichiers, 674 tests, 0 échec (inchangé). |

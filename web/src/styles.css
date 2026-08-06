@@ -1066,6 +1066,15 @@ code {
      DOM; the DOM order is kept as-is because reaching the search box early is
      the better keyboard path, and desktop still wants it beside the logo. */
   .search-group { flex: 1 0 100%; order: 1; }
+  /* Logo row: five items (logo, Proxy, langue, ?, 💡) have to hold one line
+     on their own now that the search boxes wrap away. Tightened the three
+     joints that actually cost width -- the gap between every item, the Proxy
+     chip's own horizontal padding, and its desktop-only right margin (there
+     to separate it from the search boxes on the SAME row, which no longer
+     happens here since those wrapped to their own row above). */
+  .filterbar-top { gap: 4px; }
+  .brand-logo { margin-right: 2px; }
+  .filterbar-top .proxy-toggle { margin-left: 0; margin-right: 0; padding-left: 6px; padding-right: 6px; }
   /* Chrome buttons -- the filter row, the drawer, modal actions -- are sized
      to 36px rather than the 44px Apple/WCAG-AAA target. They are wide,
      text-labelled, low-frequency controls, and on a phone the header and
