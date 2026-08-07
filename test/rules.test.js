@@ -80,6 +80,41 @@ describe('zonesFor', () => {
       expect(z.extra).not.toContain('pool');
     }
   });
+  it('an agent character offers no pool to a camp that counts it as a hazard (1.3.W2, 1.3.B2)', () => {
+    const anarin = index.get('DM-1');
+    for (const side of ['wizard', 'balrog']) {
+      expect(zonesFor(anarin, side)).toEqual({ primary: 'deck', extra: ['sideboard', 'sideboardFw'] });
+      expect(zoneTargets(anarin, side)).not.toContain('pool');
+    }
+  });
+  it('an agent character keeps the pool for a camp that counts it as a character (1.3.R2, 1.3.F4)', () => {
+    const anarin = index.get('DM-1');
+    for (const side of ['ringwraith', 'fallen-wizard']) {
+      expect(zonesFor(anarin, side)).toEqual({ primary: 'pool', extra: ['deck', 'sideboard', 'sideboardFw'] });
+    }
+  });
+  it('omitting the side keeps every card on its side-blind zones', () => {
+    // Regression guard: the parameter is optional, the way openBalrog and
+    // bannedIds are for isLegalForSide. A caller that knows no camp must
+    // behave exactly as it did before.
+    for (const c of cards) expect(zonesFor(c, undefined)).toEqual(zonesFor(c));
+  });
+  it('an unknown side id changes nothing', () => {
+    const anarin = index.get('DM-1');
+    expect(zonesFor(anarin, 'not-a-side')).toEqual(zonesFor(anarin));
+  });
+  it('a non-agent character keeps the pool for every camp', () => {
+    const plain = firstWhere((c) => c.type === 'Character' && !c.attributes.avatar && c.attributes.agent !== true);
+    for (const side of ['wizard', 'ringwraith', 'fallen-wizard', 'balrog']) {
+      expect(zonesFor(plain, side).primary).toBe('pool');
+    }
+  });
+  it('the two Hazard-type agents were never pool-eligible and still are not', () => {
+    for (const id of ['DM-28', 'DM-29']) {
+      expect(zoneTargets(index.get(id), 'wizard')).not.toContain('pool');
+      expect(zoneTargets(index.get(id), 'ringwraith')).not.toContain('pool');
+    }
+  });
 });
 
 describe('zoneTargets / moveTargets', () => {
@@ -163,6 +198,11 @@ describe('zoneTargets / moveTargets', () => {
   it('returns an empty list for a missing card rather than throwing', () => {
     expect(zoneTargets(null)).toEqual([]);
     expect(moveTargets(null, 'deck')).toEqual([]);
+  });
+  it('drag-and-drop refuses the pool for an agent in a Wizard deck', () => {
+    const anarin = index.get('DM-1');
+    expect(isDropAllowed(anarin, 'pool', 'wizard')).toBe(false);
+    expect(isDropAllowed(anarin, 'pool', 'ringwraith')).toBe(true);
   });
 });
 

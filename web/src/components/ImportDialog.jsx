@@ -133,7 +133,10 @@ export default function ImportDialog({ cards, lang = 'fr', deck, setNames = NO_S
       // The card, not just its id: the zone a line may land in depends on the
       // card's type, and the player's manual pick can change that card.
       const card = line.matches.find((c) => c.id === id) || line.matches[0];
-      const bucket = bucketFor(card, line.target, { quantities, zones });
+      // effectiveSide (already computed above for resolveLines/isLegalForSide)
+      // is null in freeform, so an agent there keeps the side-blind default --
+      // freeform has no camp to route it away from the pool with.
+      const bucket = bucketFor(card, line.target, { quantities, zones }, effectiveSide);
       bucket[id] = (bucket[id] || 0) + count;
     });
     return { quantities, zones };

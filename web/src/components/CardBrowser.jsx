@@ -56,9 +56,9 @@ function ZoneRow({ zone, qty, room, onChange, t, muted = false }) {
 // Deckbuilding-only zone controls for one card cell. State is local to this
 // component instance so expanding one card's extra zones never affects any
 // other cell in the grid.
-function ZoneCtrls({ card, zones, quantities, changeZoneQty, t, capCtx, isMobile }) {
+function ZoneCtrls({ card, zones, quantities, changeZoneQty, t, capCtx, isMobile, side }) {
   const [expanded, setExpanded] = useState(false);
-  const z = zonesFor(card);
+  const z = zonesFor(card, side);
   const zoneQty = (zone) => (zone === 'deck' ? (quantities[card.id] || 0) : (zones[zone][card.id] || 0));
 
   // Touch: the tile reports counts and nothing more. A tap already opens the
@@ -212,7 +212,7 @@ export default function CardBrowser({ cards, filters, quantities, lang, onChange
               />
               <ProxyStamp card={c} lang={lang} on={proxyMode} setNames={setNames} />
               {deckbuilding ? (
-                <ZoneCtrls card={c} zones={zones} quantities={quantities} changeZoneQty={changeZoneQty} t={t} capCtx={capCtx} isMobile={isMobile} />
+                <ZoneCtrls card={c} zones={zones} quantities={quantities} changeZoneQty={changeZoneQty} t={t} capCtx={capCtx} isMobile={isMobile} side={side} />
               ) : (
                 qty > 0 && (
                   <div className="qty-ctrl">

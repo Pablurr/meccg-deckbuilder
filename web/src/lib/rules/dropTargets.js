@@ -36,8 +36,8 @@ const DECK_TAB_GROUP = { play: 'playdeck', location: 'locationdeck' };
 //    destination cannot show is a miss, and a miss leaves the card where it
 //    was. The freeform 'cards' tab shows the whole deck, so it refuses
 //    nothing.
-export function isDropAllowed(card, toTab) {
-  if (!zoneTargets(card).includes(resolveDropTarget(toTab))) return false;
+export function isDropAllowed(card, toTab, sideId) {
+  if (!zoneTargets(card, sideId).includes(resolveDropTarget(toTab))) return false;
   const wantGroup = DECK_TAB_GROUP[toTab];
   return wantGroup == null || backGroupForType(card.type) === wantGroup;
 }

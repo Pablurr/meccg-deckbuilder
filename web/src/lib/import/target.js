@@ -24,20 +24,22 @@ import { zoneTargets } from '../rules/zones.js';
 // 'deck'.
 const ZONE_BY_TARGET = { quantities: 'deck', pool: 'pool', sideboard: 'sideboard', sideboardFw: 'sideboardFw' };
 
-export function targetForCard(card, target) {
+export function targetForCard(card, target, sideId) {
   const wanted = ZONE_BY_TARGET[target] ? target : 'quantities';
   // No card means an unresolved line, which imports nothing anyway; and the
   // main deck is the one zone open to every card, so neither case has a
   // question to answer.
   if (!card || wanted === 'quantities') return 'quantities';
-  return zoneTargets(card).includes(ZONE_BY_TARGET[wanted]) ? wanted : 'quantities';
+  return zoneTargets(card, sideId).includes(ZONE_BY_TARGET[wanted]) ? wanted : 'quantities';
 }
 
 // The map a line's copies should be added to. Both import call sites -- the
 // non-interactive importDeckList and the dialog's live preview -- go through
-// this, so the deck the dialog counts is the deck the app receives.
-export function bucketFor(card, target, { quantities, zones }) {
-  const t = targetForCard(card, target);
+// this, so the deck the dialog counts is the deck the app receives. `sideId`
+// is optional and last for the same reason zoneTargets' is: a caller with no
+// camp (freeform, or a pre-camp resolution) gets the pre-existing answer.
+export function bucketFor(card, target, { quantities, zones }, sideId) {
+  const t = targetForCard(card, target, sideId);
   if (t === 'pool') return zones.pool;
   if (t === 'sideboard') return zones.sideboard;
   if (t === 'sideboardFw') return zones.sideboardFw;

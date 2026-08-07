@@ -1,3 +1,5 @@
+import { SIDES } from './sides.js';
+
 // Which zone counters a card exposes in deckbuilding mode.
 // 'deck' = the main deck; play vs location derives from the card type
 // (backGroupForType), so it is not a zone of its own here.
@@ -9,7 +11,7 @@
 // Site and Region keep an empty `extra`, which is what makes the zone
 // unreachable for them in the three surfaces at once -- drag-and-drop, the
 // "move to" menu and import all ask zoneTargets instead of each deciding.
-export function zonesFor(card) {
+export function zonesFor(card, sideId) {
   const type = card && card.type;
   const a = (card && card.attributes) || {};
   if (type === 'Site' || type === 'Region') return { primary: 'deck', extra: [] };
@@ -17,6 +19,14 @@ export function zonesFor(card) {
     // 1.7 -- the pool holds up to ten NON-avatar characters, so an avatar's
     // zones are the play deck and the two sideboards only.
     if (a.avatar === true) return { primary: 'deck', extra: ['sideboard', 'sideboardFw'] };
+    // 1.3.W2 / 1.3.B2 -- an agent a camp counts as a hazard takes a hazard's
+    // zones: the starting pool holds characters, and for this camp the card is
+    // not one. Side-blind callers keep the old answer, which is why sideId is
+    // optional -- the same contract openBalrog/bannedIds have in sides.js.
+    const side = SIDES[sideId];
+    if (a.agent === true && side && side.agents.role === 'hazard') {
+      return { primary: 'deck', extra: ['sideboard', 'sideboardFw'] };
+    }
     return { primary: 'pool', extra: ['deck', 'sideboard', 'sideboardFw'] };
   }
   // 1.7 -- the pool may also hold up to two minor items. Two families qualify:
@@ -42,17 +52,17 @@ export function zonesFor(card) {
 // re-deriving one from zonesFor: the touch UI and drag-and-drop must not be
 // able to disagree about where a card may go, and a shared function is the
 // only version of that guarantee that cannot rot.
-export function zoneTargets(card) {
+export function zoneTargets(card, sideId) {
   if (!card) return [];
-  const z = zonesFor(card);
+  const z = zonesFor(card, sideId);
   return [...new Set([z.primary, ...z.extra, 'deck'])];
 }
 
 // Where one copy sitting in `fromZone` may be moved to. Empty for a Site,
 // which only ever has the deck -- and an empty list is what tells the deck
 // card to render no move action at all rather than a menu with nothing in it.
-export function moveTargets(card, fromZone) {
-  return zoneTargets(card).filter((zone) => zone !== fromZone);
+export function moveTargets(card, fromZone, sideId) {
+  return zoneTargets(card, sideId).filter((zone) => zone !== fromZone);
 }
 
 // The full-name i18n key per zone. 'deck' maps to zones.play because the play
