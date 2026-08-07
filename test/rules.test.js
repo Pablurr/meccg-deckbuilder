@@ -1076,6 +1076,35 @@ describe('validateDeck', () => {
     expect(hits[0].params.reason).toBe('type');
     expect(hits[0].params.id).toBe(hazard.id);
   });
+  it('POOL-ELIGIBLE: an agent forced into a Wizard pool fires with reason "agent", not "type"', () => {
+    // The reason matters: it is not the card's type that disqualifies it
+    // (it really is a Character), it is the camp that makes it a hazard.
+    const out = validateDeck({
+      ...base,
+      quantities: { [wizardAvatar.id]: 1 },
+      zones: { sideboard: {}, pool: { 'DM-1': 1 } },
+    });
+    const hits = byId(out, 'POOL-ELIGIBLE');
+    expect(hits).toHaveLength(1);
+    expect(hits[0].params.reason).toBe('agent');
+    expect(hits[0].params.id).toBe('DM-1');
+  });
+  it('POOL-ELIGIBLE: the same agent in a Ringwraith pool is perfectly legal', () => {
+    const rwAvatar = firstWhere((c) => c.attributes.avatar && c.alignment === 'Minion');
+    const out = validateDeck({
+      ...base, side: 'ringwraith',
+      quantities: { [rwAvatar.id]: 1 },
+      zones: { sideboard: {}, pool: { 'DM-1': 1 } },
+    });
+    expect(byId(out, 'POOL-ELIGIBLE')).toHaveLength(0);
+  });
+  it('an agent in a Wizard play deck does not eat a pool character slot', () => {
+    const out = validateDeck({
+      ...base,
+      quantities: { [wizardAvatar.id]: 1, 'DM-1': 1 },
+    });
+    expect(byId(out, 'POOL-CHARS')).toHaveLength(0);
+  });
   it('BALROG-MIND: a non-exempt Balrog-side character at/above the per-character mind limit fires by default', () => {
     const balrogAvatar = firstWhere((c) => c.attributes.avatar && c.alignment === 'Balrog');
     const bigMindChar = firstWhere((c) => c.type === 'Character' && !c.attributes.avatar && c.attributes.specific !== 'Balrog' && parseInt(c.attributes.mind, 10) >= 9);

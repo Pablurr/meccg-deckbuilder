@@ -307,13 +307,16 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
     // zonesFor (zones.js) is the single source of truth for what may sit in
     // the pool -- the same function drag-and-drop consults -- so eligibility
     // is derived from it rather than re-decided here.
-    const z = zonesFor(c);
+    const z = zonesFor(c, side);
     const poolEligible = z.primary === 'pool' || z.extra.includes('pool');
     if (!poolEligible) {
-      emit('POOL-ELIGIBLE', { id, name: name(c), reason: 'type' }, 'POOL-ELIGIBLE.type');
+      // 1.3.W2 / 1.3.B2 -- an agent this camp counts as a hazard is a Character
+      // by type, so "type" would be a lie: it is the camp that bars it.
+      const reason = (c.attributes || {}).agent === true && roleFor(c, side).bucket === 'hazard' ? 'agent' : 'type';
+      emit('POOL-ELIGIBLE', { id, name: name(c), reason }, `POOL-ELIGIBLE.${reason}`);
       continue;
     }
-    if (c.type === 'Character') poolChars += n;
+    if (roleFor(c, side).bucket === 'character') poolChars += n;
     else if (c.type === 'Resource') {
       // 1.7 -- "up to two non-unique, non-hoard minor items". The qualifier is
       // about minor items; the six permanent-events playable "in lieu of a
