@@ -620,6 +620,7 @@ export function moveTargets(card, fromZone, sideId) {
 - `web/src/lib/import/target.js:33` : ajouter `sideId` en dernier paramètre et le passer à `zoneTargets`. Remonter le camp depuis l'appelant, que l'import connaît déjà via le deck.
 - `web/src/components/CardBrowser.jsx:61` : passer la prop `side` (déjà reçue ligne 119) à `zonesFor`.
 - `web/src/App.jsx:431` : passer `deck.ruleset.side` à `zoneTargets`, en mode deckbuilding uniquement — c'est déjà la branche conditionnelle de la ligne.
+- `web/src/components/DeckPanel.jsx:359` (`isDropAllowed`) et `:551` (`moveTargets`) : **ce sont les vraies surfaces de glisser-déposer et de menu « déplacer »**. Les oublier laisse le blocage de la Réserve sans effet dans l'UI, qui est tout l'objet de la tâche. `sideKey` est déjà dérivé de `deck.ruleset.side` ligne 181 ; le passer en mode deckbuilding uniquement. (Ajouté le 2026-08-07 : le plan ne listait que les appelants trouvés par un grep sur `zonesFor`/`zoneTargets`, et manquait les deux qui passent par `dropTargets`/`moveTargets`.)
 
 Vérifier qu'aucun appelant n'a été oublié :
 
