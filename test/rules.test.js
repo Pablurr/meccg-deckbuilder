@@ -542,6 +542,40 @@ describe('sides data', () => {
     expect(LENGTHS.long.sideboardMax).toBe(35);
     expect(LENGTHS.campaign.sideboardMax).toBe(40);
   });
+
+  it('isLegalForSide: an agent character is legal for the two camps that count it as a hazard (1.3.W2, 1.3.B2)', () => {
+    // Anarin is a Minion-aligned agent. Without a pass of its own it is hidden
+    // from the Wizard browser, whose alignments are Hero/Neutral/Dual -- while
+    // 1.3.W2 makes it precisely a hazard that camp may play.
+    const anarin = index.get('DM-1');
+    expect(anarin.attributes.agent).toBe(true);
+    expect(anarin.alignment).toBe('Minion');
+    expect(isLegalForSide(anarin, 'wizard')).toBe(true);
+    expect(isLegalForSide(anarin, 'balrog')).toBe(true);
+  });
+
+  it('isLegalForSide: agents stay legal for the camps that count them as characters', () => {
+    const anarin = index.get('DM-1');
+    expect(isLegalForSide(anarin, 'ringwraith')).toBe(true);
+    expect(isLegalForSide(anarin, 'fallen-wizard')).toBe(true);
+  });
+
+  it('isLegalForSide: every agent card is visible to all four camps', () => {
+    const agents = cards.filter((c) => c.attributes.agent === true);
+    expect(agents).toHaveLength(32);
+    const { openBalrog } = siteIndex(cards);
+    for (const c of agents) {
+      for (const side of ['wizard', 'ringwraith', 'fallen-wizard', 'balrog']) {
+        expect(isLegalForSide(c, side, openBalrog)).toBe(true);
+      }
+    }
+  });
+
+  it('isLegalForSide: a ban outranks the agent pass', () => {
+    // Same ordering guard the avatar and Balrog-specific passes already have.
+    const anarin = index.get('DM-1');
+    expect(isLegalForSide(anarin, 'wizard', undefined, new Set(['DM-1']))).toBe(false);
+  });
 });
 
 describe('banned lists', () => {

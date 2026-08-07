@@ -148,6 +148,12 @@ export function isLegalForSide(card, sideId, openBalrog, bannedIds) {
   if (a.specific && SPECIFIC_TO_SIDES[a.specific]) {
     return SPECIFIC_TO_SIDES[a.specific].includes(sideId);
   }
+  // 1.3.W2 / 1.3.B2 -- an agent a camp counts as a HAZARD is playable by that
+  // camp whatever its alignment. Without this the 30 Minion-aligned agent
+  // characters fail the alignment pass below and the browser hides them from a
+  // Wizard deck, which is the one camp 1.3.W2 exists for. Placed after the
+  // `specific` pass so 1.3.4 keeps priority if an agent ever gains one.
+  if (a.agent === true && side.agents.role === 'hazard') return true;
   if (openBalrog && openBalrog.has(card.id)) return true;
   return side.alignments.includes(card.alignment);
 }
