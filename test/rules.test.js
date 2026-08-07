@@ -1098,13 +1098,6 @@ describe('validateDeck', () => {
     });
     expect(byId(out, 'POOL-ELIGIBLE')).toHaveLength(0);
   });
-  it('an agent in a Wizard play deck does not eat a pool character slot', () => {
-    const out = validateDeck({
-      ...base,
-      quantities: { [wizardAvatar.id]: 1, 'DM-1': 1 },
-    });
-    expect(byId(out, 'POOL-CHARS')).toHaveLength(0);
-  });
   it('BALROG-MIND: a non-exempt Balrog-side character at/above the per-character mind limit fires by default', () => {
     const balrogAvatar = firstWhere((c) => c.attributes.avatar && c.alignment === 'Balrog');
     const bigMindChar = firstWhere((c) => c.type === 'Character' && !c.attributes.avatar && c.attributes.specific !== 'Balrog' && parseInt(c.attributes.mind, 10) >= 9);

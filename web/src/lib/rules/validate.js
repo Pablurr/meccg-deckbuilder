@@ -316,6 +316,11 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
       emit('POOL-ELIGIBLE', { id, name: name(c), reason }, `POOL-ELIGIBLE.${reason}`);
       continue;
     }
+    // roleFor(...).bucket, not c.type: an agent-hazard already exited via the
+    // `continue` above, so on every card reachable here the two expressions
+    // agree today. The indirection is defensive -- it is what keeps this cap
+    // reading the same source of truth as the eligibility check above it, so
+    // a future change to that check cannot silently open a gap between them.
     if (roleFor(c, side).bucket === 'character') poolChars += n;
     else if (c.type === 'Resource') {
       // 1.7 -- "up to two non-unique, non-hoard minor items". The qualifier is
