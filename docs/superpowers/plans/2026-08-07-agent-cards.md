@@ -281,7 +281,7 @@ git add web/src/lib/rules/sides.js test/rules.test.js && git commit -m "fix: an 
 
 **Contexte.** 1.3.B4 dit que **tout** personnage non-avatar d'un deck Balrog doit être Orc ou Troll de mind < 9, sauf les cartes Balrog-spécifiques. La règle est aujourd'hui rangée sous `SIDES.balrog.pool`, ce qui la cantonne à la réserve. Le propriétaire a confirmé qu'elle porte sur le deck entier et doit filtrer le navigateur.
 
-Effet mesuré : **35 personnages** passent masqués par défaut dans un navigateur Balrog — 30 de race non-Orc/Troll, plus BA-5, BA-9, LE-20, LE-21, LE-22 (Orc ou Troll de mind 9). Aucun n'est Balrog-spécifique : l'exemption reste théorique, mais doit être codée.
+Effet mesuré : **33 personnages** passent masqués par défaut dans un navigateur Balrog — 30 de race non-Orc/Troll, plus LE-20, LE-21, LE-22 (Trolls de mind 9). BA-5 et BA-9 sont eux aussi des Trolls de mind 9, mais **Balrog-spécifiques**, donc exemptés : l'exemption porte sur deux cartes réelles et doit être couverte par un test. (Corrigé le 2026-08-07 : le plan disait 35 et affirmait l'exemption théorique ; les deux étaient faux.)
 
 Le mind se lit avec `parseInt(a.mind, 10)` — la donnée le stocke en chaîne (`"5"`). Une valeur absente ou non numérique ne restreint rien : une donnée qu'on ne sait pas interpréter ne doit jamais masquer une carte en silence, exactement comme un `specific` inconnu.
 
@@ -291,8 +291,8 @@ Ajouter dans `test/rules.test.js`, `describe('sides data')` :
 
 ```javascript
   it('1.3.B4 is a whole-deck constraint, so it lives on the camp and not on its pool', () => {
-    // Rangee sous `pool`, la regle ne s'appliquait qu'a la reserve, alors que
-    // 1.3.B4 vise tout personnage non-avatar du deck.
+    // Filed under `pool`, the rule only ever reached the starting pool, while
+    // 1.3.B4 governs every non-avatar character in the deck.
     expect(SIDES.balrog.characterRaces).toEqual(['Orc', 'Troll']);
     expect(SIDES.balrog.characterMindLimit).toBe(9);
     expect(SIDES.balrog.pool.requireRaces).toBeUndefined();
@@ -338,8 +338,8 @@ Ajouter dans `test/rules.test.js`, `describe('sides data')` :
   });
 
   it('1.3.B4 hides exactly the 35 characters it should, and none was hidden already', () => {
-    // Assertion sur les vraies donnees : elle empeche un refactor de laisser
-    // tomber la passe pendant que les tests par carte continuent de passer.
+    // Asserted over the real data: this stops a refactor from dropping the
+    // pass while the per-card tests above keep passing.
     const { openBalrog } = siteIndex(cards);
     const newlyHidden = cards.filter((c) => c.type === 'Character' && !c.attributes.avatar
       && c.attributes.agent !== true
