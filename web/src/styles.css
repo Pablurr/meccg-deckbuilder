@@ -1205,6 +1205,15 @@ code {
      buttons on a narrow phone. */
   .card-modal-zone-name { font-size: 14px; }
   .card-modal-zone-row { gap: 10px; }
+  /* Shrink the whole zone-selector stack on phones so the bar cedes height
+     back to the card image above it -- the image is the reason this modal
+     exists, and a tall stack of 44px rows for a three-zone card (Character)
+     can eat a third of the screen. 38px still clears the touch-target floor;
+     going smaller than that would put the +/- taps at risk. */
+  .card-modal-bar { gap: 4px; padding: 8px 12px; }
+  .qty-btn.big { width: 38px; height: 38px; font-size: 22px; }
+  .card-modal-count { font-size: 16px; min-width: 22px; }
+  .card-modal-zone-reason { font-size: 11px; padding-top: 1px; }
 }
 
 .modal-wide { max-width: 1100px; width: 92vw; }
