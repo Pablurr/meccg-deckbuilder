@@ -686,13 +686,11 @@ Ajouter dans `test/rules.test.js`, `describe('validateDeck')` :
     expect(byId(out, 'POOL-ELIGIBLE')).toHaveLength(0);
   });
 
-  it('an agent in a Wizard play deck does not eat a pool character slot', () => {
-    const out = validateDeck({
-      ...base,
-      quantities: { [wizardAvatar.id]: 1, 'DM-1': 1 },
-    });
-    expect(byId(out, 'POOL-CHARS')).toHaveLength(0);
-  });
+*(Corrigé le 2026-08-07 : le plan proposait ici un test « an agent in a Wizard play deck does
+not eat a pool character slot ». Il est **vacuous** — il ne peuple jamais `zones.pool`, donc
+il ne touche jamais le code modifié et passe aussi bien avant qu'après. N'écris pas ce test.
+Voir la note de l'étape 3 : le passage de `c.type === 'Character'` à `roleFor(...).bucket`
+est inobservable aujourd'hui, et un commentaire est le bon véhicule pour ça, pas un test.)*
 ```
 
 - [ ] **Step 2: Lancer les tests pour les voir échouer**
