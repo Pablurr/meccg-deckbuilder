@@ -1098,6 +1098,21 @@ describe('validateDeck', () => {
     });
     expect(byId(out, 'POOL-ELIGIBLE')).toHaveLength(0);
   });
+  it('POOL-ELIGIBLE: a Hazard-type agent in the pool fires with reason "type", not "agent"', () => {
+    // DM-28/DM-29 are agents but never Characters (roles.js:1-3): a Hazard
+    // can never sit in the pool on any camp, so the camp is not why this one
+    // is refused -- unlike DM-1, whose type is Character and whose camp is
+    // what disqualifies it.
+    const out = validateDeck({
+      ...base,
+      quantities: { [wizardAvatar.id]: 1 },
+      zones: { sideboard: {}, pool: { 'DM-28': 1 } },
+    });
+    const hits = byId(out, 'POOL-ELIGIBLE');
+    expect(hits).toHaveLength(1);
+    expect(hits[0].params.reason).toBe('type');
+    expect(hits[0].params.id).toBe('DM-28');
+  });
   it('BALROG-MIND: a non-exempt Balrog-side character at/above the per-character mind limit fires by default', () => {
     const balrogAvatar = firstWhere((c) => c.attributes.avatar && c.alignment === 'Balrog');
     const bigMindChar = firstWhere((c) => c.type === 'Character' && !c.attributes.avatar && c.attributes.specific !== 'Balrog' && parseInt(c.attributes.mind, 10) >= 9);

@@ -311,8 +311,13 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
     const poolEligible = z.primary === 'pool' || z.extra.includes('pool');
     if (!poolEligible) {
       // 1.3.W2 / 1.3.B2 -- an agent this camp counts as a hazard is a Character
-      // by type, so "type" would be a lie: it is the camp that bars it.
-      const reason = (c.attributes || {}).agent === true && roleFor(c, side).bucket === 'hazard' ? 'agent' : 'type';
+      // by type, so "type" would be a lie: it is the camp that bars it. But
+      // DM-28/DM-29 are agents typed Hazard, never Character (roles.js:1-3),
+      // and bucket is 'hazard' for them on every camp regardless -- so the
+      // bucket check alone cannot tell "the camp did this" from "this was
+      // always a hazard". The type gate is what tells them apart.
+      const reason = c.type === 'Character' && (c.attributes || {}).agent === true
+        && roleFor(c, side).bucket === 'hazard' ? 'agent' : 'type';
       emit('POOL-ELIGIBLE', { id, name: name(c), reason }, `POOL-ELIGIBLE.${reason}`);
       continue;
     }
