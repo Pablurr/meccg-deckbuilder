@@ -43,7 +43,7 @@ export const SIDES = {
     alignments: ['Hero', 'Neutral', 'Dual'],
     // 1.3.1 -- three copies of any non-unique card.
     copies: [{ limit: 3 }],
-    pool: { maxCharacters: 10, maxMinorItems: 2, balrogMindPerCharacterLimit: null, requireRaces: null, stagePoints: null },
+    pool: { maxCharacters: 10, maxMinorItems: 2, stagePoints: null },
     agents: { role: 'hazard' },   // 1.3.W2
     flexMaxAsResource: null,      // 1.3.3 -- free choice
     heroTreatment: false,
@@ -51,13 +51,15 @@ export const SIDES = {
     // 1.4.W1 -- a location deck holds only Hero sites, plus 1.4.1's five open Balrog sites.
     locationDeck: { alignments: ['Hero'], unlimitedFwSites: false, requireBalrogVersion: false },
     factionRaces: null,
+    characterRaces: null,      // 1.3.B4 -- Balrog only
+    characterMindLimit: null,  // 1.3.B4 -- Balrog only
   },
   ringwraith: {
     id: 'ringwraith', avatarAlignment: 'Minion',
     alignments: ['Minion', 'Neutral', 'Dual'],
     // 1.3.1 -- three copies of any non-unique card.
     copies: [{ limit: 3 }],
-    pool: { maxCharacters: 10, maxMinorItems: 2, balrogMindPerCharacterLimit: null, requireRaces: null, stagePoints: null },
+    pool: { maxCharacters: 10, maxMinorItems: 2, stagePoints: null },
     agents: { role: 'character' }, // 1.3.R2 (for deck-building requirements)
     flexMaxAsResource: null,
     heroTreatment: false,
@@ -65,6 +67,8 @@ export const SIDES = {
     // 1.4.R1 -- a location deck holds only Minion sites, plus 1.4.1's five open Balrog sites.
     locationDeck: { alignments: ['Minion'], unlimitedFwSites: false, requireBalrogVersion: false },
     factionRaces: null,
+    characterRaces: null,      // 1.3.B4 -- Balrog only
+    characterMindLimit: null,  // 1.3.B4 -- Balrog only
   },
   'fallen-wizard': {
     id: 'fallen-wizard', avatarAlignment: 'Fallen-wizard',
@@ -79,7 +83,7 @@ export const SIDES = {
       { limit: 3 },
     ],
     pool: {
-      maxCharacters: 10, maxMinorItems: 2, balrogMindPerCharacterLimit: null, requireRaces: null,
+      maxCharacters: 10, maxMinorItems: 2,
       // 1.7.F1 -- up to three Stage resource permanent-events in the starting
       // pool, totalling exactly three stage points, at least one non-unique.
       stagePoints: { total: 3, maxCards: 3, minNonUnique: 1 },
@@ -92,15 +96,15 @@ export const SIDES = {
     // its own Fallen-wizard sites (unlimited copies of those, see copies.js).
     locationDeck: { alignments: ['Hero', 'Minion', 'Fallen-wizard'], unlimitedFwSites: true, requireBalrogVersion: false },
     factionRaces: null,
+    characterRaces: null,      // 1.3.B4 -- Balrog only
+    characterMindLimit: null,  // 1.3.B4 -- Balrog only
   },
   balrog: {
     id: 'balrog', avatarAlignment: 'Balrog',
     alignments: ['Minion', 'Neutral', 'Dual', 'Balrog'],
     // 1.3.1 -- three copies of any non-unique card.
     copies: [{ limit: 3 }],
-    // 1.3.B4 -- non-avatar characters must be Orc or Troll with mind < 9,
-    // unless they are Balrog-specific.
-    pool: { maxCharacters: 10, maxMinorItems: 2, balrogMindPerCharacterLimit: 9, requireRaces: ['Orc', 'Troll'], stagePoints: null },
+    pool: { maxCharacters: 10, maxMinorItems: 2, stagePoints: null },
     agents: { role: 'hazard' },   // 1.3.B2
     flexMaxAsResource: null,
     heroTreatment: false,
@@ -110,6 +114,11 @@ export const SIDES = {
     locationDeck: { alignments: ['Minion', 'Balrog'], unlimitedFwSites: false, requireBalrogVersion: true },
     // 1.3.B4 -- "Factions can only be Orc, Troll, Wolf, Animal, or Dragon".
     factionRaces: ['Orc', 'Troll', 'Wolf', 'Animal', 'Dragon'],
+    // 1.3.B4 -- non-avatar characters must be Orc or Troll with mind < 9,
+    // unless they are Balrog-specific. A WHOLE-DECK constraint: it used to sit
+    // under `pool`, which silently reduced it to the starting pool.
+    characterRaces: ['Orc', 'Troll'],
+    characterMindLimit: 9,
   },
 };
 
@@ -154,6 +163,20 @@ export function isLegalForSide(card, sideId, openBalrog, bannedIds) {
   // Wizard deck, which is the one camp 1.3.W2 exists for. Placed after the
   // `specific` pass so 1.3.4 keeps priority if an agent ever gains one.
   if (a.agent === true && side.agents.role === 'hazard') return true;
+  // 1.3.B4 -- a camp may restrict its non-avatar characters by race and mind.
+  // Avatars are already returned above; agents are already returned above too,
+  // which is what keeps the 32 agents (mostly Men and Elves) visible to the
+  // Balrog under 1.3.B2. `specific` cards escaped via SPECIFIC_TO_SIDES above,
+  // which is where 'balrog-exempt' is honoured.
+  //
+  // A mind that is absent or non-numeric restricts nothing: data we cannot
+  // read must not silently hide a card, same principle as an unknown
+  // `specific` value.
+  if (card.type === 'Character' && (side.characterRaces || side.characterMindLimit != null)) {
+    if (!raceAllowed(card, sideId)) return false;
+    const mind = parseInt(a.mind, 10);
+    if (side.characterMindLimit != null && Number.isFinite(mind) && mind >= side.characterMindLimit) return false;
+  }
   if (openBalrog && openBalrog.has(card.id)) return true;
   return side.alignments.includes(card.alignment);
 }
@@ -163,6 +186,6 @@ export function isLegalForSide(card, sideId, openBalrog, bannedIds) {
 // where the rule says "Wolf", and joins several races with commas.
 export function raceAllowed(card, sideId) {
   const side = SIDES[sideId];
-  if (!side || !side.pool.requireRaces) return true;
-  return side.pool.requireRaces.some((r) => matchesRace((card.attributes || {}).race, r));
+  if (!side || !side.characterRaces) return true;
+  return side.characterRaces.some((r) => matchesRace((card.attributes || {}).race, r));
 }

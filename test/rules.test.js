@@ -576,6 +576,83 @@ describe('sides data', () => {
     const anarin = index.get('DM-1');
     expect(isLegalForSide(anarin, 'wizard', undefined, new Set(['DM-1']))).toBe(false);
   });
+
+  it('1.3.B4 is a whole-deck constraint, so it lives on the camp and not on its pool', () => {
+    // Rangee sous `pool`, la regle ne s'appliquait qu'a la reserve, alors que
+    // 1.3.B4 vise tout personnage non-avatar du deck.
+    expect(SIDES.balrog.characterRaces).toEqual(['Orc', 'Troll']);
+    expect(SIDES.balrog.characterMindLimit).toBe(9);
+    expect(SIDES.balrog.pool.requireRaces).toBeUndefined();
+    expect(SIDES.balrog.pool.balrogMindPerCharacterLimit).toBeUndefined();
+    for (const side of ['wizard', 'ringwraith', 'fallen-wizard']) {
+      expect(SIDES[side].characterRaces).toBe(null);
+      expect(SIDES[side].characterMindLimit).toBe(null);
+    }
+  });
+
+  it('isLegalForSide: a non-Orc, non-Troll character is hidden from a Balrog deck (1.3.B4)', () => {
+    const man = firstWhere((c) => c.type === 'Character' && !c.attributes.avatar
+      && c.attributes.agent !== true && c.attributes.specific !== 'Balrog'
+      && ['Minion', 'Neutral'].includes(c.alignment) && matchesRace(c.attributes.race, 'Man'));
+    expect(isLegalForSide(man, 'balrog')).toBe(false);
+    expect(isLegalForSide(man, 'ringwraith')).toBe(true);
+  });
+
+  it('isLegalForSide: an Orc or Troll at the mind limit is hidden from a Balrog deck (1.3.B4)', () => {
+    // Not BA-5/BA-9: those two are Troll, mind 9, AND Balrog-specific, so they
+    // escape via the SPECIFIC_TO_SIDES pass before this one ever runs -- see
+    // the next test. LE-20 is Troll, mind 9, and carries no `specific`, so it
+    // is the real 1.3.B4 case.
+    const bigMind = index.get('LE-20');
+    expect(parseInt(bigMind.attributes.mind, 10)).toBe(9);
+    expect(bigMind.attributes.specific).toBeUndefined();
+    expect(isLegalForSide(bigMind, 'balrog')).toBe(false);
+  });
+
+  it('isLegalForSide: BA-5 and BA-9 are Troll at mind 9 but Balrog-specific, so 1.3.B4 never reaches them', () => {
+    // Ordering guard with real data, complementing the synthetic one below:
+    // both are exempt via SPECIFIC_TO_SIDES.Balrog before the race/mind pass.
+    for (const id of ['BA-5', 'BA-9']) {
+      const c = index.get(id);
+      expect(c.attributes.specific).toBe('Balrog');
+      expect(parseInt(c.attributes.mind, 10)).toBe(9);
+      expect(isLegalForSide(c, 'balrog')).toBe(true);
+    }
+  });
+
+  it('isLegalForSide: agents escape 1.3.B4 -- most of them are Men or Elves', () => {
+    // Without an exemption the race pass would hide all 32 agents from the
+    // Balrog browser, while 1.3.B2 makes them hazards that camp plays.
+    const agents = cards.filter((c) => c.attributes.agent === true);
+    for (const c of agents) expect(isLegalForSide(c, 'balrog')).toBe(true);
+  });
+
+  it('isLegalForSide: a Balrog-specific character escapes 1.3.B4', () => {
+    // specificMode 'balrog-exempt'. No real card is both Balrog-specific and
+    // out of races today, so this is an ordering guard.
+    const balrogAvatar = index.get('BA-3');
+    expect(isLegalForSide(balrogAvatar, 'balrog')).toBe(true);
+  });
+
+  it('isLegalForSide: an avatar is never judged on 1.3.B4', () => {
+    const balrogAvatar = index.get('BA-3');
+    expect(balrogAvatar.attributes.race).toBe('Balrog');
+    expect(isLegalForSide(balrogAvatar, 'balrog')).toBe(true);
+  });
+
+  it('1.3.B4 hides exactly the 33 characters it should, and none was hidden already', () => {
+    // Assertion sur les vraies donnees : elle empeche un refactor de laisser
+    // tomber la passe pendant que les tests par carte continuent de passer.
+    // 30 non-Orc/Troll, plus LE-20/21/22 (Troll, mind 9) -- 33, not 35: BA-5
+    // and BA-9 also match Troll/mind-9 but are Balrog-specific, so they are
+    // exempt by the earlier SPECIFIC_TO_SIDES pass, not by this one.
+    const { openBalrog } = siteIndex(cards);
+    const newlyHidden = cards.filter((c) => c.type === 'Character' && !c.attributes.avatar
+      && c.attributes.agent !== true
+      && SIDES.balrog.alignments.includes(c.alignment)
+      && !isLegalForSide(c, 'balrog', openBalrog));
+    expect(newlyHidden).toHaveLength(33);
+  });
 });
 
 describe('banned lists', () => {
@@ -930,7 +1007,7 @@ describe('validateDeck', () => {
     const hits = byId(out, 'BALROG-MIND');
     expect(hits).toHaveLength(1);
     expect(hits[0].params.id).toBe(bigMindChar.id);
-    expect(hits[0].params.limit).toBe(9); // balrog's balrogMindPerCharacterLimit (sides.js)
+    expect(hits[0].params.limit).toBe(9); // balrog's characterMindLimit (sides.js)
   });
 
   it('BALROG-MIND: a Balrog-specific character is exempt even at/above the mind limit', () => {
@@ -1934,11 +2011,11 @@ describe('web/src/lib/rules/*.js: no literal non-ASCII bytes outside the allow-l
   // ALLOWED_FACTION_KEYS guard in test/i18n.test.js: each entry is a
   // conscious, hand-verified exception, not a blanket pass for the file --
   // every addition is a permanent hole in this guard's coverage for that one
-  // line, forever. Currently just the middle dot ('·') docText.js uses
-  // twice (poolText, playDeckText) to join short doc-page fragments -- a
-  // display separator, not a card-name/race match target, so it never needs
-  // to survive fold()/matchesRace().
-  const ALLOWED = new Set(['docText.js:62', 'docText.js:75']);
+  // line, forever. Currently just the middle dot ('·') docText.js uses three
+  // times (poolText, sideText, playDeckText) to join short doc-page fragments
+  // -- a display separator, not a card-name/race match target, so it never
+  // needs to survive fold()/matchesRace().
+  const ALLOWED = new Set(['docText.js:58', 'docText.js:72', 'docText.js:85']);
 
   it('every byte above 0x7F is on the allow-list', () => {
     const dir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'web', 'src', 'lib', 'rules');

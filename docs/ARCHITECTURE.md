@@ -7,23 +7,23 @@
 > Public : LLM. Style : dense, factuel, pas de prose d'introduction.
 > Doc utilisateur : [`README.md`](../README.md). Ce fichier-ci décrit le *comment* et le *pourquoi*.
 
-**Dernière mise à jour : 2026-08-05** — branche `proxy-setname-mask` (`c0b7f67..HEAD`) :
-le masque du copyright en/es devient **inconditionnel** — `proxyStampFor(card, lang,
-proxyMode, setNames)` (§8) est désormais le point de décision unique appelé par les trois
-chemins de rendu (grille/modale, survol, export) ; l'interrupteur Mode Proxy ne choisit plus
-*si* la zone est repeinte pour en/es, seulement *quel texte* y est écrit : « Proxy » activé,
-sinon le nom (traduit) du set. Le fr est inchangé. La table `PROXY_LABEL_COLOR` (16 clés) est
-**régénérée à partir de pixels FR réels** (`scripts/make_proxy_patches.py` : `fr_tint`
-différencie chaque carte contre son propre patch `-fr` pour isoler l'encre du nom de set,
-insensible à la polarité clair/sombre) avec un plancher de lisibilité (`MIN_CONTRAST = 80`)
-qui pousse en luminosité HLS les 7 clés dont la teinte FR mesurée est illisible.
-**`PROXY_LABEL_FONT_FRAC` recalibré** de `0.0155` à `0.021` (§8) : la valeur de juillet
-dérivait la taille de police de la **hauteur de capitale** de « Remastérisé… », ce qui
-sous-dimensionnait le rendu par rapport à l'étendue réelle du glyphe (empattements, accents)
-que l'œil compare effectivement. Ce recalibrage a exposé un bug latent dans le bisecteur de
-`label_colour` : l'arrondi en RVB 8 bits peut repousser la luminance finale sous le plancher
-de ~1 unité — `fw-site` échouait l'assertion de plancher ajoutée en revue finale. Corrigé par
-`BISECT_MARGIN = 2`, une marge de sécurité sur la cible de recherche (pas sur l'assertion).
+**Dernière mise à jour : 2026-08-07** — branche `agent-card-management` (`a04e54f..HEAD`),
+tâche 3/7 : 1.3.B4 (personnages non-avatars Balrog : Orc ou Troll, esprit < 9) déménage de
+`SIDES[side].pool` vers `SIDES[side]` lui-même — nouvelles clés `characterRaces`/
+`characterMindLimit`, `pool` perd `requireRaces`/`balrogMindPerCharacterLimit` (§6). C'est
+une contrainte de **deck entier**, pas de réserve de départ : rangée sous `pool`, elle ne
+filtrait que le validateur sur la réserve ; `isLegalForSide` gagne une passe — après celle des
+agents (tâche 2), avant `openBalrog` — qui filtre désormais aussi le navigateur de cartes.
+Mesuré sur les données réelles (et non déduit) : **33** personnages passaient jusqu'ici,
+pas 35 comme une estimation de plan non vérifiée le supposait — BA-5 et BA-9 sont Troll à
+esprit 9 mais aussi Balrog-spécifiques (`specific: "Balrog"`), donc déjà sortis plus tôt par
+la passe `SPECIFIC_TO_SIDES` (§6) ; seuls LE-20/21/22 (même profil, sans `specific`) sont de
+vrais cas 1.3.B4. `docText.js` : nouvelle fonction sœur `sideText` porte les deux fragments
+retirés de `poolText`, câblée dans une nouvelle colonne « Contraintes de personnages » de la
+page Règles (§6) plutôt que dans la colonne Réserve, pour ne pas redocumenter la règle comme
+un plafond de réserve. i18n : `docs.pool.balrogMindBelow`/`docs.pool.requireRaces` renommées
+`docs.side.characterMindBelow`/`docs.side.characterRaces`, texte FR reformulé pour parler du
+deck entier plutôt que de la réserve.
 
 ---
 
@@ -493,7 +493,7 @@ dense du projet ; `test/rules.test.js` fait 91 Ko à lui seul.
 | `races.js` | Normalisation/comparaison des races | `singularize`, `matchesRace` |
 | `sites.js` | Index et interrogation des sites | `siteIndex` |
 | `banned.js` | Listes de cartes bannies + résolution vers des ids | `BANNED`, `resolveBanned` |
-| `docText.js` | Génération du texte de la page « Règles et modes » | `copiesText`, `poolText`, `playDeckText`, `refText`, `capTitle` |
+| `docText.js` | Génération du texte de la page « Règles et modes » | `copiesText`, `poolText`, `sideText`, `playDeckText`, `refText`, `capTitle` |
 
 ### Forme canonique d'une règle (`catalog.js`)
 
@@ -584,9 +584,17 @@ deck : il ne refuse rien.
 
 `SIDES` est une table statique indexée par `wizard | ringwraith | fallen-wizard | balrog`.
 Chaque profil porte : `avatarAlignment`, `alignments[]`, `copies[]`, `pool{maxCharacters,
-maxMinorItems, balrogMindPerCharacterLimit, requireRaces, stagePoints}`, `agents{role}`,
-`flexMaxAsResource`, `heroTreatment`, `specificMode`, `locationDeck{alignments,
-unlimitedFwSites, requireBalrogVersion}`, `factionRaces`.
+maxMinorItems, stagePoints}`, `agents{role}`, `flexMaxAsResource`, `heroTreatment`,
+`specificMode`, `locationDeck{alignments, unlimitedFwSites, requireBalrogVersion}`,
+`factionRaces`, `characterRaces`, `characterMindLimit`.
+
+**`characterRaces` / `characterMindLimit` (1.3.B4, tâche 3, 2026-08-07) — `['Orc', 'Troll']`
+/ `9` pour `balrog`, `null` pour les trois autres camps.** Ont vécu sous `pool` jusqu'à cette
+tâche (`requireRaces` / `balrogMindPerCharacterLimit`), ce qui cantonnait silencieusement à
+la réserve de départ une règle qui porte sur **tout personnage non-avatar du deck**. Lues par
+`raceAllowed(card, sideId)` (le premier), par `isLegalForSide` (les deux, voir plus bas) et
+par `validate.js` (`BALROG-RACE`/`BALROG-MIND`, qui lisent désormais `profile.characterRaces`/
+`profile.characterMindLimit` au lieu de `profile.pool.*`).
 
 `GENERAL` porte ce qui ne dépend pas du camp : `agentMindMax: 36`, `uniqueMax: 1`,
 `siteMax: 1`, `avatarMaxCopies: 3`, `avatarMaxDistinct: 2`, `avatarMaxInSideboard: 1`,
@@ -618,7 +626,30 @@ passe **absorbe l'ancien cas spécial** `if (sideId === 'balrog' && a.specific =
 return true`, qui ne faisait que garder les cartes Balrog visibles pour ce seul camp ; la
 nouvelle passe généralise à tout `specific` connu et à tout camp. `specificMode:
 'balrog-exempt'` (`SIDES.balrog`) reste utilisé ailleurs, dans `validate.js`, pour
-l'exemption de race/mind du pool — sans rapport avec cette passe du navigateur.
+l'exemption de race/mind — sans rapport avec cette passe du navigateur.
+
+**`isLegalForSide` — la passe agent (2026-08-07, tâche 2/7).** `a.agent === true &&
+side.agents.role === 'hazard'` renvoie `true` avant toute passe d'alignement : sur les camps
+qui comptent les agents comme périls (Sorcier, Balrog — 1.3.W2/1.3.B2), les 32 cartes
+`Agent` sont alignées Séide et échoueraient sinon le test d'alignement de fin de fonction.
+Placée après la passe `specific` (elle garde priorité si un agent en gagne un un jour), avant
+la passe 1.3.B4 ci-dessous — **c'est cet ordre qui garde les agents visibles dans un
+navigateur Balrog** : la plupart sont Homme ou Elfe, des races que 1.3.B4 exclut. Notez le
+signal : `attributes.agent` est la source de vérité pour les règles ; le mot-clé `"Agent"`
+dans les données de carte n'est qu'une facette de filtre, jamais lu par le code de règles.
+
+**`isLegalForSide` — la passe 1.3.B4 (2026-08-07, tâche 3/7).** Pour un `Character`
+non-avatar, non-agent, non-`specific`-exempté (les trois passes au-dessus rendent déjà tôt),
+`side.characterRaces`/`side.characterMindLimit` filtrent par race puis par esprit — `false`
+si l'une échoue. **Contrainte de deck entier**, donc appliquée au navigateur, pas seulement
+au validateur (voir plus haut : c'était `SIDES.balrog.pool.requireRaces`/
+`balrogMindPerCharacterLimit` jusqu'à cette tâche, ce qui la cantonnait à la réserve). Un
+esprit absent ou non numérique (`Number.isFinite`) **ne restreint rien** — même principe que
+la passe `specific` : une donnée qu'on ne sait pas interpréter ne doit jamais cacher une
+carte en silence. Ordre **chargé de sens** : avatars et agents sortent avant d'atteindre
+cette passe, et les cartes Balrog-spécifiques (`SPECIFIC_TO_SIDES`) aussi — c'est ce qui
+laisse BA-5/BA-9 (Troll, esprit 9, mais `specific: "Balrog"`) visibles malgré leur esprit,
+alors que LE-20/21/22 (même profil racial, sans `specific`) sont bien masqués.
 
 ### Ajouter une règle — ordre des opérations
 
@@ -1386,7 +1417,7 @@ rafraîchissement.
 
 ## §11 — Tests
 
-`npm test` → Vitest, **35 fichiers, 644 tests**. Node pur, pas de DOM : les composants ne
+`npm test` → Vitest, **36 fichiers, 662 tests**. Node pur, pas de DOM : les composants ne
 sont pas montés, ce sont les **modules purs** qui sont testés.
 
 C'est ce qui dicte la façon d'aborder un travail d'interface ici : **on extrait la décision
@@ -1656,3 +1687,4 @@ transformation*, donc lis le compte de **fichiers**, pas seulement celui des tes
 | 2026-08-04 | Couleurs de `PROXY_LABEL_COLOR` régénérées à partir des cartes FR réelles, branche `proxy-setname-mask`, tâche 4/4 (dernière). §8 : `scripts/make_proxy_patches.py` — `label_colour` ne choisit plus entre deux aplats noir/blanc synthétiques ; `fr_tint(key)` isole l'encre du nom de set en différenciant jusqu'à 12 cartes FR par clé contre leur propre patch `-fr` (le cadre vide reconstruit), garde la moitié des pixels différents la plus éloignée du ton du cadre (le cœur du glyphe, pas son anti-crénelage), puis moyenne. Piège qui a fait écarter un seuil luminance-vs-fond local plus simple : les 4 cadres Site ont un coin bas-gauche déchiré dont le bord sombre l'emportait sur les glyphes (lu quasi noir pour `minion-site`, dont « Contre l'Ombre » est pourtant blanc) — la différenciation contre le patch est insensible à la polarité, ce qui compte aussi parce que l'encre est claire sur les cadres sombres et sombre sur les clairs. `label_colour(key)` garde ensuite cette teinte telle quelle si elle passe un plancher de contraste (`MIN_CONTRAST = 80`) face aux **deux** variantes du patch (en/es et fr), sinon la pousse en luminosité HLS (teinte/saturation inchangées) par bissection jusqu'au plancher — nécessaire parce que « Proxy » reste une information fonctionnelle à la lecture d'une planche d'impression, contrairement au nom de set que le masque cache de toute façon. **7 des 16 clés sont poussées** (`hero-character`, `fw-site`, `alatar`, `gandalf`, `pallando`, `radagast`, `saruman` — teinte FR mesurée illisible une fois isolée, jusqu'à un contraste de 2 pour `radagast`) ; les 9 autres gardent leur teinte FR exacte. `scripts/proxy-patch-colors.txt` gagne deux colonnes (teinte FR non poussée, `sampled`/`floored`) ; `_qa()` peint désormais les deux légendes possibles (« Proxy » et un nom de set) pour chaque clé × langue, doublant la planche à 64 panneaux. Les 32 patchs PNG sont régénérés à l'identique (aucun octet ne change) — seule la table de couleurs bouge. Planche `proxy-patch-qa.png` relue : les 16 clés sont lisibles dans les deux langues et les deux légendes, aucune couture visible ; `hero-site`, `fw-site` et `saruman` ont un contraste plus doux que les 13 autres clés (fond texturé/clair) mais restent lisibles au-dessus du plancher. §11 : `test/proxy.test.js` réécrit (le test vérifiait auparavant que chaque clé valait l'un des deux aplats fixes ; il vérifie maintenant 16 teintes distinctes, aucune retombée sur les deux anciens aplats) — 35 fichiers, 644 tests, 0 échec. |
 | 2026-08-04 | Revue finale de branche `proxy-setname-mask` avant merge, un tour de correctifs (`b3280a4..28bb2c6`). §7 : les deux puces sur le rééchantillonnage PDF affirmaient encore un invariant faux (« Proxy éteint = octets bruts, la seule différence entre les deux chemins ») — le chemin dépend en réalité de `stampFor(card)`, pas de `proxyMode` directement, donc en/es sont **toujours** rééchantillonnés en JPEG même mode Proxy éteint (perte de fidélité réelle et jusque-là non documentée, sauf pour les Régions — jamais tamponnées, seul cas restant sur octets bruts en en/es). Commentaire équivalent dans `api.js` corrigé. `web/src/lib/i18n.js` : six chaînes (`proxy.tooltip` + `docs.feat.proxy`, ×3 langues) décrivaient encore l'ancien comportement (« recouvre le copyright par Proxy ») alors que pour en/es le copyright est maintenant toujours couvert et la case ne choisit que la légende — réécrites, gardent la garde de terminologie FR. §8 : la formule absolue « ne doit jamais atteindre un envoi d'impression » gagne l'exception Régions. `scripts/make_proxy_patches.py` : `fr_tint` ouvrait le patch `-fr` en RGB, perdant son canal alpha — sur les cadres Site déchirés, ça laissait le résidu du template (pas de l'encre) participer à l'échantillonnage, exactement le piège que la différenciation est censée éviter ; corrigé avec le même garde `a > 200` que `patch_label_lum`. Assertion de plancher ajoutée en fin de `label_colour` (l'invariant n'était vérifié qu'à l'œil sur la planche QA). `docs/superpowers/specs/2026-08-04-proxy-setname-mask-design.md` : comptage des clés poussées corrigé (10/6 → 9/7, cohérent avec `proxy-patch-colors.txt`), et la fausse mention d'un test JS pour le plancher redirigée vers cette nouvelle assertion. `proxyDraw.js` : fallback défensif `color \|\| '#F0F0EA'` restauré. En-tête de ce document réécrit (résumait encore la branche `qol-minor-features`). §11 : 35 fichiers, 644 tests, 0 échec. |
 | 2026-08-05 | `PROXY_LABEL_FONT_FRAC` recalibré (`0.0155` → `0.021`) sur signalement du propriétaire : le rendu en/es hors mode Proxy paraissait nettement plus petit que le vrai nom de set imprimé sur les cartes FR. Diagnostic : le calibrage de juillet dérivait la taille de police de la hauteur de capitale (juste les majuscules) de « Remastérisé… », mais l'œil compare l'étendue pleine du glyphe (accents, apostrophe), plus grande — vérifié en mesurant les lignes de pixels actives de « Contre l'Ombre » et « Remastérisé… » sur `cards/fr/as/Burat.jpg` (9-11 px de haut à 570 px de large, contre 6.2 px de hauteur de capitale utilisés jusque-là), puis confirmé à l'écran (`getBoundingClientRect`/`getComputedStyle` sur `.proxy-stamp span` : la taille de police calculée correspondait exactement à `PROXY_LABEL_FONT_FRAC × largeur affichée` — la formule était juste, la constante trop petite). Le nom traduit le plus long garde 24 px de marge dans `PROXY_PATCH_RECT` à la nouvelle taille (vérifié comme pour la taille d'origine). Ce recalibrage a exposé un bug latent dans le bisecteur de `label_colour` : `fw-site` échouait la nouvelle assertion de plancher, l'arrondi RVB 8 bits repoussant la luminance finale ~0.8 sous le plancher — corrigé par `BISECT_MARGIN = 2`, une marge de sécurité sur la cible de recherche du bisecteur (pas sur l'assertion elle-même, qui reste stricte). Couleurs régénérées (la taille de police change l'empreinte que `patch_label_lum` échantillonne) ; les 32 patchs PNG restent identiques. §11 : 35 fichiers, 644 tests, 0 échec. |
+| 2026-08-07 | 1.3.B4 déménagée de `SIDES[side].pool` (`requireRaces`/`balrogMindPerCharacterLimit`) vers `SIDES[side]` (`characterRaces`/`characterMindLimit`), branche `agent-card-management`, tâche 3/7. §6 : contrainte de **deck entier**, pas de réserve — `isLegalForSide` gagne une passe entre celle des agents (tâche 2) et `openBalrog`, qui filtre désormais le navigateur en plus du validateur (`raceAllowed` lit `side.characterRaces`, `validate.js` lit `profile.characterRaces`/`characterMindLimit` au lieu de `profile.pool.*`) ; nouvelles entrées décrivant les passes agent et 1.3.B4 dans l'ordre où elles s'exécutent. **Écart avec le plan, vérifié sur les données réelles avant correction du test :** le plan comptait BA-5 et BA-9 (Troll, esprit 9) parmi les personnages nouvellement masqués — ils sont aussi `specific: "Balrog"`, donc déjà exemptés par la passe `SPECIFIC_TO_SIDES` qui s'exécute avant ; total réel **33**, pas 35, et le cas de test « au plafond d'esprit » utilise LE-20 (même profil racial, sans `specific`) à la place de BA-5. `docText.js` : `sideText` (nouvelle fonction sœur de `poolText`) porte les deux fragments retirés du texte de réserve ; câblée dans `RulesDoc.jsx` sous une nouvelle colonne « Contraintes de personnages » (`docs.col.characterConstraints`), pas dans la colonne Réserve. i18n : `docs.pool.balrogMindBelow`/`docs.pool.requireRaces` → `docs.side.characterMindBelow`/`docs.side.characterRaces` (fr/en/es), texte FR reformulé pour parler du deck entier. §11 : 36 fichiers, 662 tests, 0 échec (guard d'octets non-ASCII de `test/rules.test.js` mis à jour : `sideText` ajoute un troisième usage du séparateur `·` dans `docText.js`, à une ligne différente de celle réallouée à `poolText` par le retrait des deux clauses balrog). |

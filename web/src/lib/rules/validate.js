@@ -231,12 +231,12 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
 
     if (side === 'balrog' && c.type === 'Character' && !a.avatar && !balrogExempt) {
       const race = String(a.race || '');
-      if (profile.pool.requireRaces && !raceAllowed(c, side)) {
+      if (profile.characterRaces && !raceAllowed(c, side)) {
         emit('BALROG-RACE', { id: e.id, name: name(c), race });
       }
       const mind = toInt(a.mind);
-      if (mind != null && profile.pool.balrogMindPerCharacterLimit != null && mind >= profile.pool.balrogMindPerCharacterLimit) {
-        emit('BALROG-MIND', { id: e.id, name: name(c), mind, limit: profile.pool.balrogMindPerCharacterLimit });
+      if (mind != null && profile.characterMindLimit != null && mind >= profile.characterMindLimit) {
+        emit('BALROG-MIND', { id: e.id, name: name(c), mind, limit: profile.characterMindLimit });
       }
     }
 

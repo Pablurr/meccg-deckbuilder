@@ -247,7 +247,7 @@ export const translations = {
     // Data values interpolated into the messages above ({alignment}, {race}):
     // localized so a sentence never mixes an English data value with
     // translated prose. Values are those that actually occur (see sides.js
-    // alignments/pool.forbidRaces/requireRaces and the Character race set).
+    // alignments/characterRaces and the Character race set).
     'alignment.Hero': 'Héros',
     'alignment.Minion': 'Séide',
     'alignment.Neutral': 'Neutre',
@@ -337,6 +337,7 @@ export const translations = {
     'docs.col.copies': "Limite d'exemplaires",
     'docs.col.playDeck': 'Taille de la pioche',
     'docs.col.pool': 'Réserve de départ',
+    'docs.col.characterConstraints': 'Contraintes de personnages',
     'docs.copies.default': '{n} par carte',
     // One full phrase per (bucket, alignment) combination -- each language
     // owns its own word order rather than the code concatenating a bucket
@@ -347,8 +348,10 @@ export const translations = {
     'docs.copies.category.resource-Minion': '{n} pour les ressources Séide',
     'docs.pool.maxCharacters': '{n} personnages max',
     'docs.pool.maxMinorItems': '{n} objets mineurs max',
-    'docs.pool.balrogMindBelow': 'esprit par personnage Balrog < {n}',
-    'docs.pool.requireRaces': 'races requises : {races}',
+    // 1.3.B4 -- a whole-deck constraint, not a pool one: saying "réserve"
+    // here would be false documentation (see docs.col.pool above).
+    'docs.side.characterRaces': 'personnages non-avatars, deck entier : races autorisées {races}',
+    'docs.side.characterMindBelow': 'personnages non-avatars, deck entier : esprit < {n}',
     'docs.playDeck.resources': '{min}–{max} ressources',
     'docs.playDeck.hazards': 'autant de périls que de ressources',
     'docs.playDeck.characters': '{n} personnages non-avatar max',
@@ -714,6 +717,7 @@ export const translations = {
     'docs.col.copies': 'Copy limit',
     'docs.col.playDeck': 'Play deck size',
     'docs.col.pool': 'Starting pool',
+    'docs.col.characterConstraints': 'Character constraints',
     'docs.copies.default': '{n} per card',
     // One full phrase per (bucket, alignment) combination -- each language
     // owns its own word order rather than the code concatenating a bucket
@@ -724,8 +728,8 @@ export const translations = {
     'docs.copies.category.resource-Minion': '{n} for Minion resources',
     'docs.pool.maxCharacters': '{n} characters max',
     'docs.pool.maxMinorItems': '{n} minor items max',
-    'docs.pool.balrogMindBelow': 'Balrog mind per character < {n}',
-    'docs.pool.requireRaces': 'required races: {races}',
+    'docs.side.characterRaces': 'non-avatar characters, whole deck: allowed races {races}',
+    'docs.side.characterMindBelow': 'non-avatar characters, whole deck: mind < {n}',
     'docs.playDeck.resources': '{min}–{max} resources',
     'docs.playDeck.hazards': 'as many hazards as resources',
     'docs.playDeck.characters': '{n} non-avatar characters max',
@@ -1099,6 +1103,7 @@ export const translations = {
     'docs.col.copies': 'Límite de copias',
     'docs.col.playDeck': 'Tamaño del mazo de juego',
     'docs.col.pool': 'Reserva inicial',
+    'docs.col.characterConstraints': 'Restricciones de personajes',
     'docs.copies.default': '{n} por carta',
     // One full phrase per (bucket, alignment) combination -- each language
     // owns its own word order rather than the code concatenating a bucket
@@ -1109,8 +1114,8 @@ export const translations = {
     'docs.copies.category.resource-Minion': '{n} para los recursos Secuaz',
     'docs.pool.maxCharacters': '{n} personajes máx.',
     'docs.pool.maxMinorItems': '{n} objetos menores máx.',
-    'docs.pool.balrogMindBelow': 'mente por personaje Balrog < {n}',
-    'docs.pool.requireRaces': 'razas requeridas: {races}',
+    'docs.side.characterRaces': 'personajes no avatar, mazo completo: razas permitidas {races}',
+    'docs.side.characterMindBelow': 'personajes no avatar, mazo completo: mente < {n}',
     'docs.playDeck.resources': '{min}–{max} recursos',
     'docs.playDeck.hazards': 'tantos peligros como recursos',
     'docs.playDeck.characters': '{n} personajes no avatar máx.',
