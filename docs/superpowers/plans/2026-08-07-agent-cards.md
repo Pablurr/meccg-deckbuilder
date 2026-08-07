@@ -12,7 +12,7 @@ Spec de référence : [docs/superpowers/specs/2026-08-07-agent-cards-design.md](
 
 ## Global Constraints
 
-- **Prose en français, code en anglais** (identifiants, commentaires, ids de règles, messages de commit).
+- **Prose en français, code en anglais** (identifiants, commentaires, ids de règles, messages de commit). **Les commentaires de test sont du code** : ils s'écrivent en anglais, comme ceux de la production. Si un bloc de code de ce plan porte un commentaire français, c'est une erreur du plan — traduis-le, ne le supprime pas : il porte le *pourquoi*.
 - **Vocabulaire FR imposé et gardé par un test** : pioche / talon / réserve / péril / séide / progression. Le mot pour un camp est **camp** (`side`), jamais « faction ». Zéro exemption : corriger la chaîne, jamais ajouter de dérogation au garde.
 - **Les ids de règles restent en anglais** (`POOL-ELIGIBLE`, `BALROG-RACE`).
 - **Chaque `code` émis par `validateDeck` doit avoir une clé i18n dans les trois langues** (fr, en, es) — garanti par `test/i18n-rules-contract.test.js`.
@@ -73,9 +73,9 @@ const { cards, index } = parseCards(raw);
 describe('agent card data', () => {
   it('every card flagged as an agent also carries the "Agent" keyword', () => {
     const agents = cards.filter((c) => c.attributes.agent === true);
-    // 30 Character/Minion de Dark Minions + les 2 agents de type Hazard
-    // (DM-28, DM-29). Le keyword dit "c'est un agent", pas "c'est un
-    // agent-personnage", donc les deux Hazard le portent aussi.
+    // 30 Character/Minion cards from Dark Minions plus the two Hazard-type
+    // agents (DM-28, DM-29). The keyword says "this is an agent", not "this
+    // is an agent character", which is why the two hazards carry it too.
     expect(agents).toHaveLength(32);
     for (const c of agents) expect(c.attributes.keywords).toContain('Agent');
   });
@@ -88,8 +88,8 @@ describe('agent card data', () => {
   });
 
   it('The Balrog (BA-3) carries Spawn as a keyword, not as a subtype', () => {
-    // "Spawn" n'est pas un sous-type de carte : c'etait le seul subtype:"Spawn"
-    // du jeu, une entree parasite dans la facette Subtype du navigateur.
+    // "Spawn" is not a card subtype: this was the only subtype:"Spawn" in the
+    // whole game, a stray entry in the browser's Subtype facet.
     const balrog = index.get('BA-3');
     expect(balrog.attributes.subtype).toBeUndefined();
     expect(balrog.attributes.keywords).toContain('Spawn');
@@ -195,9 +195,9 @@ Ajouter dans `test/rules.test.js`, à la fin du `describe('sides data', ...)` :
 
 ```javascript
   it('isLegalForSide: an agent character is legal for the two camps that count it as a hazard (1.3.W2, 1.3.B2)', () => {
-    // Anarin est un agent d'alignement Minion. Sans derogation il serait
-    // masque du navigateur Sorcier, dont les alignements sont Hero/Neutral/Dual
-    // -- alors que 1.3.W2 en fait precisement un peril jouable par ce camp.
+    // Anarin is a Minion-aligned agent. Without a pass of its own it is hidden
+    // from the Wizard browser, whose alignments are Hero/Neutral/Dual -- while
+    // 1.3.W2 makes it precisely a hazard that camp may play.
     const anarin = index.get('DM-1');
     expect(anarin.attributes.agent).toBe(true);
     expect(anarin.alignment).toBe('Minion');
@@ -223,7 +223,7 @@ Ajouter dans `test/rules.test.js`, à la fin du `describe('sides data', ...)` :
   });
 
   it('isLegalForSide: a ban outranks the agent pass', () => {
-    // Meme garde d'ordonnancement que pour les passes avatar et Balrog-specific.
+    // Same ordering guard the avatar and Balrog-specific passes already have.
     const anarin = index.get('DM-1');
     expect(isLegalForSide(anarin, 'wizard', undefined, new Set(['DM-1']))).toBe(false);
   });
@@ -318,15 +318,15 @@ Ajouter dans `test/rules.test.js`, `describe('sides data')` :
   });
 
   it('isLegalForSide: agents escape 1.3.B4 -- most of them are Men or Elves', () => {
-    // Sans exemption, la passe race masquerait les 32 agents du navigateur
-    // Balrog, alors que 1.3.B2 en fait des perils que ce camp joue.
+    // Without an exemption the race pass would hide all 32 agents from the
+    // Balrog browser, while 1.3.B2 makes them hazards that camp plays.
     const agents = cards.filter((c) => c.attributes.agent === true);
     for (const c of agents) expect(isLegalForSide(c, 'balrog')).toBe(true);
   });
 
   it('isLegalForSide: a Balrog-specific character escapes 1.3.B4', () => {
-    // specificMode 'balrog-exempt'. Aucune carte reelle n'est aujourd'hui a la
-    // fois Balrog-specific et hors races : garde d'ordonnancement.
+    // specificMode 'balrog-exempt'. No real card is both Balrog-specific and
+    // out of races today, so this is an ordering guard.
     const balrogAvatar = index.get('BA-3');
     expect(isLegalForSide(balrogAvatar, 'balrog')).toBe(true);
   });
@@ -525,9 +525,9 @@ Ajouter dans `test/rules.test.js`, `describe('zonesFor')` :
   });
 
   it('omitting the side keeps every card on its side-blind zones', () => {
-    // Garde anti-regression : le parametre est optionnel, comme openBalrog et
-    // bannedIds le sont pour isLegalForSide. Un appelant qui ignore le camp
-    // doit se comporter exactement comme avant.
+    // Regression guard: the parameter is optional, the way openBalrog and
+    // bannedIds are for isLegalForSide. A caller that knows no camp must
+    // behave exactly as it did before.
     for (const c of cards) expect(zonesFor(c, undefined)).toEqual(zonesFor(c));
   });
 
@@ -662,8 +662,8 @@ Ajouter dans `test/rules.test.js`, `describe('validateDeck')` :
 
 ```javascript
   it('POOL-ELIGIBLE: an agent forced into a Wizard pool fires with reason "agent", not "type"', () => {
-    // Le motif compte : ce n'est pas le type de la carte qui la disqualifie
-    // (c'est bien un Character), c'est le camp qui en fait un peril.
+    // The reason matters: it is not the card's type that disqualifies it
+    // (it really is a Character), it is the camp that makes it a hazard.
     const out = validateDeck({
       ...base,
       quantities: { [wizardAvatar.id]: 1 },
