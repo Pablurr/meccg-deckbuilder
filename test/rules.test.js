@@ -578,8 +578,8 @@ describe('sides data', () => {
   });
 
   it('1.3.B4 is a whole-deck constraint, so it lives on the camp and not on its pool', () => {
-    // Rangee sous `pool`, la regle ne s'appliquait qu'a la reserve, alors que
-    // 1.3.B4 vise tout personnage non-avatar du deck.
+    // Filed under `pool`, the rule only applied to the starting pool, while
+    // 1.3.B4 targets every non-avatar character in the deck.
     expect(SIDES.balrog.characterRaces).toEqual(['Orc', 'Troll']);
     expect(SIDES.balrog.characterMindLimit).toBe(9);
     expect(SIDES.balrog.pool.requireRaces).toBeUndefined();
@@ -641,8 +641,8 @@ describe('sides data', () => {
   });
 
   it('1.3.B4 hides exactly the 33 characters it should, and none was hidden already', () => {
-    // Assertion sur les vraies donnees : elle empeche un refactor de laisser
-    // tomber la passe pendant que les tests par carte continuent de passer.
+    // Asserted against real data: this stops a refactor from dropping the
+    // pass while the per-card tests keep passing.
     // 30 non-Orc/Troll, plus LE-20/21/22 (Troll, mind 9) -- 33, not 35: BA-5
     // and BA-9 also match Troll/mind-9 but are Balrog-specific, so they are
     // exempt by the earlier SPECIFIC_TO_SIDES pass, not by this one.
