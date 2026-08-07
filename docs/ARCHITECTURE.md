@@ -15,13 +15,18 @@ réserve à un agent-péril au glisser-déposer, au menu « déplacer » et à l
 **optionnel**, dernier paramètre, même contrat qu'`openBalrog`/`bannedIds` dans
 `isLegalForSide` : omis, la sortie est strictement celle d'avant — un test le vérifie sur tout
 le jeu de cartes. Propagé à `zoneTargets`, `moveTargets`, `isDropAllowed`
-(`dropTargets.js`) et `targetForCard`/`bucketFor` (`import/target.js`) ; câblé chez quatre
+(`dropTargets.js`) et `targetForCard`/`bucketFor` (`import/target.js`) ; câblé chez **cinq**
 appelants qui connaissent le camp — `CardBrowser.jsx` (prop `side`), `App.jsx` (aperçu carte,
-branche deckbuilding seulement, `deck.ruleset.side`), et les **deux** appelants réels
-d'`import/target.js` — `importDeckList` (`doc.meta.side`, le camp lu dans l'en-tête collée) et
-la prévisualisation d'`ImportDialog` (`effectiveSide`, déjà calculée pour `resolveLines`). Le
-panneau de deck (`DeckPanel.jsx`, glisser-déposer et menu « déplacer vers ») et `validate.js`
-appellent encore ces fonctions sans camp — hors périmètre de cette tâche, `validate.js` est
+branche deckbuilding seulement, `deck.ruleset.side`), les **deux** appelants réels
+d'`import/target.js` (`importDeckList` via `doc.meta.side`, le camp lu dans l'en-tête collée ;
+la prévisualisation d'`ImportDialog` via `effectiveSide`, déjà calculée pour `resolveLines`),
+et **`DeckPanel.jsx`** (glisser-déposer et menu « déplacer vers » **réels** du panneau de
+deck — un oubli de la première passe, repéré en revue : la liste des appelants du plan venait
+d'un grep sur `zonesFor`/`zoneTargets` qui ne voyait pas les deux appels qui passent par
+`dropTargets`/`moveTargets`). `DeckPanel.jsx` dérive `sideId` du même calcul que `sideKey`
+(son badge de camp) mais rend `undefined`, pas `'freeform'`, hors deckbuilding — c'est la
+valeur « pas de camp » que `zonesFor` et consorts traitent déjà comme side-blind. `validate.js`
+appelle encore `zonesFor(c)` sans camp — seul appelant restant hors périmètre, volontairement :
 prévu tâche 5.
 
 Tâche 3/7 (pour mémoire) : 1.3.B4 (personnages non-avatars Balrog : Orc ou Troll, esprit < 9)
@@ -123,7 +128,7 @@ web/src/            toute l'application
     export/         pipeline d'export pur (10 modules, aucun import React)
     *.js            deck, deckStore, filter, importDeck, lang, proxy, tags, zoom…
 web/public/         servi tel quel : cards.json, card-backs/, proxy-patches/, _redirects
-test/               36 fichiers Vitest, 669 tests
+test/               36 fichiers Vitest, 674 tests
 docs/superpowers/   specs et plans d'implémentation, datés (historique des intentions)
 scripts/            make_proxy_patches.py (génération des patchs proxy, hors build)
 ```
@@ -576,11 +581,13 @@ d'`isLegalForSide` (tâche 2, plus haut). Un `sideId` inconnu ou absent (`SIDES[
 `undefined`) ne restreint rien, même principe que les passes `specific`/1.3.B4 : une donnée
 qu'on ne sait pas interpréter ne doit jamais retirer une zone silencieusement. `zones.js`
 importe désormais `SIDES` de `sides.js` — pas de cycle, `sides.js` ne dépend que de
-`races.js`. `validate.js` appelle encore `zonesFor(c)` sans camp (tâche 5) ; `DeckPanel.jsx`
-(glisser-déposer et menu « déplacer vers » réels) appelle encore `isDropAllowed`/`moveTargets`
-sans camp aussi — les deux hors périmètre de cette tâche, la garantie « trois surfaces, une
-seule table » tient déjà pour `CardBrowser.jsx`, l'aperçu carte d'`App.jsx` et les deux
-appelants réels de l'import.
+`races.js`. Cinq appelants câblés : `CardBrowser.jsx`, l'aperçu carte d'`App.jsx`, les deux
+appelants réels de l'import, et `DeckPanel.jsx` — le glisser-déposer et le menu « déplacer
+vers » **réels** du panneau de deck (`isDropAllowed(card, toZone, sideId)` /
+`moveTargets(card, activeZone, sideId)`), oubliés de la première passe (la liste d'appelants
+du plan venait d'un grep sur `zonesFor`/`zoneTargets` qui ne voit pas les deux appels qui ne
+nomment que `dropTargets`/`moveTargets` — corrigé en revue avant la fin de la tâche 4). Seul
+`validate.js` appelle encore `zonesFor(c)` sans camp, volontairement : tâche 5.
 
 **`dropTargets.js` n'a pas été touché par l'ajout de `sideboardFw`.** Il consomme
 `zoneTargets()` sans jamais énumérer de noms de zone lui-même, donc la nouvelle zone lui
@@ -1441,7 +1448,7 @@ rafraîchissement.
 
 ## §11 — Tests
 
-`npm test` → Vitest, **36 fichiers, 669 tests**. Node pur, pas de DOM : les composants ne
+`npm test` → Vitest, **36 fichiers, 674 tests**. Node pur, pas de DOM : les composants ne
 sont pas montés, ce sont les **modules purs** qui sont testés.
 
 C'est ce qui dicte la façon d'aborder un travail d'interface ici : **on extrait la décision
@@ -1713,3 +1720,4 @@ transformation*, donc lis le compte de **fichiers**, pas seulement celui des tes
 | 2026-08-05 | `PROXY_LABEL_FONT_FRAC` recalibré (`0.0155` → `0.021`) sur signalement du propriétaire : le rendu en/es hors mode Proxy paraissait nettement plus petit que le vrai nom de set imprimé sur les cartes FR. Diagnostic : le calibrage de juillet dérivait la taille de police de la hauteur de capitale (juste les majuscules) de « Remastérisé… », mais l'œil compare l'étendue pleine du glyphe (accents, apostrophe), plus grande — vérifié en mesurant les lignes de pixels actives de « Contre l'Ombre » et « Remastérisé… » sur `cards/fr/as/Burat.jpg` (9-11 px de haut à 570 px de large, contre 6.2 px de hauteur de capitale utilisés jusque-là), puis confirmé à l'écran (`getBoundingClientRect`/`getComputedStyle` sur `.proxy-stamp span` : la taille de police calculée correspondait exactement à `PROXY_LABEL_FONT_FRAC × largeur affichée` — la formule était juste, la constante trop petite). Le nom traduit le plus long garde 24 px de marge dans `PROXY_PATCH_RECT` à la nouvelle taille (vérifié comme pour la taille d'origine). Ce recalibrage a exposé un bug latent dans le bisecteur de `label_colour` : `fw-site` échouait la nouvelle assertion de plancher, l'arrondi RVB 8 bits repoussant la luminance finale ~0.8 sous le plancher — corrigé par `BISECT_MARGIN = 2`, une marge de sécurité sur la cible de recherche du bisecteur (pas sur l'assertion elle-même, qui reste stricte). Couleurs régénérées (la taille de police change l'empreinte que `patch_label_lum` échantillonne) ; les 32 patchs PNG restent identiques. §11 : 35 fichiers, 644 tests, 0 échec. |
 | 2026-08-07 | 1.3.B4 déménagée de `SIDES[side].pool` (`requireRaces`/`balrogMindPerCharacterLimit`) vers `SIDES[side]` (`characterRaces`/`characterMindLimit`), branche `agent-card-management`, tâche 3/7. §6 : contrainte de **deck entier**, pas de réserve — `isLegalForSide` gagne une passe entre celle des agents (tâche 2) et `openBalrog`, qui filtre désormais le navigateur en plus du validateur (`raceAllowed` lit `side.characterRaces`, `validate.js` lit `profile.characterRaces`/`characterMindLimit` au lieu de `profile.pool.*`) ; nouvelles entrées décrivant les passes agent et 1.3.B4 dans l'ordre où elles s'exécutent. **Écart avec le plan, vérifié sur les données réelles avant correction du test :** le plan comptait BA-5 et BA-9 (Troll, esprit 9) parmi les personnages nouvellement masqués — ils sont aussi `specific: "Balrog"`, donc déjà exemptés par la passe `SPECIFIC_TO_SIDES` qui s'exécute avant ; total réel **33**, pas 35, et le cas de test « au plafond d'esprit » utilise LE-20 (même profil racial, sans `specific`) à la place de BA-5. `docText.js` : `sideText` (nouvelle fonction sœur de `poolText`) porte les deux fragments retirés du texte de réserve ; câblée dans `RulesDoc.jsx` sous une nouvelle colonne « Contraintes de personnages » (`docs.col.characterConstraints`), pas dans la colonne Réserve. i18n : `docs.pool.balrogMindBelow`/`docs.pool.requireRaces` → `docs.side.characterMindBelow`/`docs.side.characterRaces` (fr/en/es), texte FR reformulé pour parler du deck entier. §11 : 36 fichiers, 662 tests, 0 échec (guard d'octets non-ASCII de `test/rules.test.js` mis à jour : `sideText` ajoute un troisième usage du séparateur `·` dans `docText.js`, à une ligne différente de celle réallouée à `poolText` par le retrait des deux clauses balrog). |
 | 2026-08-07 | `zonesFor` connaît le camp, branche `agent-card-management`, tâche 4/7. §6 : `zonesFor(card, sideId)` — pour un `Character` non-avatar, `a.agent === true && SIDES[sideId].agents.role === 'hazard'` renvoie désormais les zones d'un Hazard (`deck` + les deux talons) au lieu du `primary: 'pool'` par défaut : sans ce changement, les 32 cartes `Agent` offraient la réserve au glisser-déposer, au menu « déplacer » et à l'import sur les camps (Sorcier, Balrog) qui les comptent comme périls (1.3.W2/1.3.B2) — la réserve d'un camp Spectre/Sorcier-déchu, où l'agent reste un personnage (1.3.R2/1.3.F4), n'est pas touchée. `sideId` optionnel, dernier paramètre, même contrat qu'`openBalrog`/`bannedIds` (`isLegalForSide`) : omis, ou inconnu (`SIDES[sideId]` `undefined`), la sortie est celle d'avant cette tâche — un test le vérifie sur tout le jeu de cartes, un autre sur un id inventé. Propagé à `zoneTargets`/`moveTargets` (même fichier) et à `isDropAllowed` (`dropTargets.js`) et `targetForCard`/`bucketFor` (`import/target.js`, §4). `zones.js` importe `SIDES` de `sides.js` — pas de cycle, `sides.js` ne dépend que de `races.js`. **Quatre appelants câblés,** chacun avec le camp qu'il connaît déjà : `CardBrowser.jsx` (nouvelle prop `side` sur `ZoneCtrls`, déjà reçue par le composant parent) ; `App.jsx` (aperçu carte, `deck.ruleset.side`, branche deckbuilding seulement — une carte fixe le mode, `normalizeDeck` garantit `ruleset.side` dès que `deck.mode === 'deckbuilding'`) ; et **les deux appelants réels** d'`import/target.js` — `importDeckList` (`doc.meta.side`, le camp lu dans l'en-tête « Side: »/« Camp: » du texte collé, déjà utilisé par `resolveLines` juste au-dessus) et la prévisualisation d'`ImportDialog` (`effectiveSide`, déjà calculée pour `resolveLines`/`isLegalForSide` — `null` en freeform, où il n'y a pas de camp pour reclasser l'agent). **Hors périmètre, vérifié par la grep du plan (`zonesFor|zoneTargets|moveTargets|isDropAllowed` sur `web/src`) :** `DeckPanel.jsx` (glisser-déposer et menu « déplacer vers » **réels** du panneau de deck, lignes `isDropAllowed(card, toZone)`/`moveTargets(card, activeZone)`) et `validate.js` (`zonesFor(c)`, tâche 5 à venir) appellent encore ces fonctions sans camp ; le contrat optionnel les laisse corrects mais ne leur fait pas encore refuser la réserve à un agent-péril — seuls `CardBrowser`, l'aperçu carte et les deux chemins d'import bénéficient de la correction pour l'instant. §11 : `test/rules.test.js` gagne six tests dans `describe('zonesFor')` et un dans `describe('zoneTargets / moveTargets')` (drag-and-drop) — 36 fichiers, 669 tests, 0 échec. |
+| 2026-08-07 | Correctif immédiat sur la tâche 4/7 (`agent-card-management`), repéré en revue avant la fin de la tâche : `DeckPanel.jsx` — le glisser-déposer et le menu « déplacer vers » **réels** du panneau de deck — appelait encore `isDropAllowed(card, toZone)`/`moveTargets(card, activeZone)` sans camp, laissant le correctif de la tâche sans effet visible sur les deux surfaces que le bug décrivait explicitement. Cause : la liste d'appelants du plan venait d'un grep sur `zonesFor`/`zoneTargets`, qui ne voit pas les deux appels qui ne nomment que `isDropAllowed`/`moveTargets` (importés de `dropTargets.js`/`zones.js`, pas les fonctions grepées elles-mêmes) — un angle mort du grep, pas de l'implémentation. §6 : nouvelle constante locale `sideId` dans `DeckPanel.jsx`, dérivée par la même condition que `sideKey` (le badge de camp affiché) mais rendant `undefined` plutôt que la chaîne d'affichage `'freeform'` hors deckbuilding — c'est la valeur que `zonesFor`/`isDropAllowed`/`moveTargets` traitent déjà comme « pas de camp », donc un deck freeform n'est pas affecté. §11 : cinq tests ajoutés dans un nouveau `describe('DeckPanel: drag-and-drop and "move to" pass the camp')` : deux lisent le source de `DeckPanel.jsx` et vérifient littéralement que les deux appels portent `sideId` (ce composant n'est pas monté en test — §11 — donc c'est la seule façon de pincer l'oubli lui-même, pas seulement le comportement des fonctions pures qu'il appelle, qui restait correct avant comme après puisqu'elles étaient déjà testées ailleurs) ; les trois autres pincent le comportement attendu — camp Sorcier : pool refusée au dépôt et absente du menu « déplacer » ; camp Spectre : les deux fonctionnent encore ; freeform (`sideId` `undefined`) : inchangé. Vérifié en RED avant correctif : les deux tests de source échouaient contre le fichier commité par la première passe de la tâche 4 (`86fb86f`), les trois tests de comportement passaient déjà (ils n'exercent pas `DeckPanel.jsx`) — signature exacte d'un oubli de câblage plutôt que d'une fonction pure fautive. `validate.js` revérifié : toujours `zonesFor(c)` sans camp, toujours volontaire (tâche 5), non touché. §11 : 36 fichiers, 674 tests, 0 échec. |

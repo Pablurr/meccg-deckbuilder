@@ -298,6 +298,12 @@ export default function DeckPanel({
   // Same derivation and same class as DeckManager's list rows, so the badge a
   // deck wears in the list is the badge it wears open. Freeform has no side.
   const sideKey = deckbuilding && deck.ruleset ? deck.ruleset.side : 'freeform';
+  // The camp fed to zonesFor/zoneTargets/moveTargets/isDropAllowed's optional
+  // sideId -- same condition as sideKey, but undefined (not 'freeform') in
+  // freeform: those functions treat "no camp" as side-blind, which is exactly
+  // freeform's own rule (it has no camp to route an agent card away from the
+  // pool with).
+  const sideId = deckbuilding && deck.ruleset ? deck.ruleset.side : undefined;
 
   const tabCounts = {
     play: counts.byGroup.playdeck,
@@ -356,7 +362,7 @@ export default function DeckPanel({
     if (!payload || !payload.id) return;
     const card = cardsById.get(payload.id);
     if (!card) return;
-    if (!isDropAllowed(card, toZone)) return; // e.g. a Site dropped on Pool: ignored silently
+    if (!isDropAllowed(card, toZone, sideId)) return; // e.g. a Site dropped on Pool: ignored silently
     moveCopy(payload.id, payload.from, resolveDropTarget(toZone));
   }
 
@@ -548,7 +554,7 @@ export default function DeckPanel({
                         : { remaining: Infinity, ruleId: null }}
                       // The touch equivalent of dragging this card onto another
                       // zone tab; both routes end in the same moveCopy.
-                      moveTargets={moveTargets(card, activeZone)}
+                      moveTargets={moveTargets(card, activeZone, sideId)}
                       onMove={(toZone) => moveCopy(card.id, activeZone, toZone)}
                     />
                   ))}

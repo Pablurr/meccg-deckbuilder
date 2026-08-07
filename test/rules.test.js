@@ -206,6 +206,48 @@ describe('zoneTargets / moveTargets', () => {
   });
 });
 
+// DeckPanel.jsx is where the real drag-and-drop and "move to" menu live --
+// isDropAllowed/moveTargets are only ever exercised there through two call
+// sites this repo cannot mount and drive as a DOM tree (§11: pure modules
+// only, no jsdom). A test that only re-calls the two functions in isolation
+// would keep passing even if DeckPanel silently dropped the sideId argument
+// -- that gap shipped once already (code review caught it after task 4's
+// first pass wired every OTHER caller and missed DeckPanel's own two calls).
+// So this checks two different things on purpose: the source text proves
+// DeckPanel actually reaches the two calls with `sideId` (fails if either
+// argument regresses or is renamed without updating this test); the
+// behavioural cases below prove `sideId`'s value -- `deckbuilding &&
+// deck.ruleset ? deck.ruleset.side : undefined`, DeckPanel's own expression
+// -- produces the right answer through both functions for a Wizard deck, a
+// Ringwraith deck, and freeform.
+describe('DeckPanel: drag-and-drop and "move to" pass the camp', () => {
+  const deckPanelSrc = fs.readFileSync(
+    path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'web', 'src', 'components', 'DeckPanel.jsx'),
+    'utf8',
+  );
+  it('the drop handler passes sideId to isDropAllowed', () => {
+    expect(deckPanelSrc).toMatch(/isDropAllowed\(card, toZone, sideId\)/);
+  });
+  it('the "move to" menu passes sideId to moveTargets', () => {
+    expect(deckPanelSrc).toMatch(/moveTargets\(card, activeZone, sideId\)/);
+  });
+  it('a Wizard deck: an agent cannot be dropped on the pool, and the pool is absent from its move targets', () => {
+    const anarin = index.get('DM-1');
+    expect(isDropAllowed(anarin, 'pool', 'wizard')).toBe(false);
+    expect(moveTargets(anarin, 'deck', 'wizard')).not.toContain('pool');
+  });
+  it('a Ringwraith deck: both surfaces still offer the pool to an agent', () => {
+    const anarin = index.get('DM-1');
+    expect(isDropAllowed(anarin, 'pool', 'ringwraith')).toBe(true);
+    expect(moveTargets(anarin, 'deck', 'ringwraith')).toContain('pool');
+  });
+  it('freeform (sideId undefined, as DeckPanel computes it): unchanged, the agent still reaches the pool', () => {
+    const anarin = index.get('DM-1');
+    expect(isDropAllowed(anarin, 'pool', undefined)).toBe(true);
+    expect(moveTargets(anarin, 'deck', undefined)).toContain('pool');
+  });
+});
+
 describe('sideboardFw as a zone (1.6.1)', () => {
   const avatar = cards.find((c) => c.attributes.avatar && c.alignment === 'Hero');
   const character = cards.find((c) => c.type === 'Character' && !c.attributes.avatar && c.alignment === 'Hero');
