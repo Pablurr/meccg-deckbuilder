@@ -174,10 +174,18 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
     // (sides.js isLegalForSide already does, for the browser filter) or a
     // card the browser presents as legal gets contradicted by the validator.
     const openBalrogSite = c.type === 'Site' && siteInfo.openBalrog.has(e.id);
+    // 1.3.W2 / 1.3.B2 -- an agent this camp counts as a hazard is playable
+    // whatever its own alignment (isLegalForSide's agent pass returns before
+    // ever reaching the alignment check, sides.js). ALIGN-LEGAL's own scope is
+    // "every non-avatar card" (rules.ALIGN-LEGAL.doc) -- NOT "every
+    // non-character card" -- so this exemption stays agent-specific rather
+    // than gating on roleFor's bucket, which would silently stop checking
+    // ordinary hazards and resources too.
+    const agentExempt = a.agent === true && profile.agents.role === 'hazard';
 
     if (bannedSet.has(e.id)) emit('BANNED', { id: e.id, name: name(c), side });
 
-    if (!a.avatar && !balrogExempt && !openBalrogSite && !profile.alignments.includes(c.alignment)) {
+    if (!a.avatar && !balrogExempt && !openBalrogSite && !agentExempt && !profile.alignments.includes(c.alignment)) {
       emit('ALIGN-LEGAL', { id: e.id, name: name(c), alignment: c.alignment, side });
     }
 
@@ -229,7 +237,13 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
       });
     }
 
-    if (side === 'balrog' && c.type === 'Character' && !a.avatar && !balrogExempt) {
+    // 1.3.B4 speaks of "Balrog characters", so this reads roleFor's bucket
+    // rather than c.type -- an agent 1.3.B2 counts as a hazard for this camp
+    // is not, for this camp, a character, same reasoning as poolChars below.
+    // roleFor already returns 'avatar' (never 'character') for an avatar, so
+    // !a.avatar stays only as the same defensive belt-and-braces the pool
+    // check keeps.
+    if (side === 'balrog' && roleFor(c, side).bucket === 'character' && !a.avatar && !balrogExempt) {
       const race = String(a.race || '');
       if (profile.characterRaces && !raceAllowed(c, side)) {
         emit('BALROG-RACE', { id: e.id, name: name(c), race });

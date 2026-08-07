@@ -914,6 +914,36 @@ describe('validateDeck', () => {
     expect(byId(out, 'ALIGN-LEGAL')).toHaveLength(1);
     expect(byId(out, 'ALIGN-LEGAL')[0].params.name).toBeTruthy();
   });
+  it('ALIGN-LEGAL: an agent this camp counts as a hazard is exempt, even though its own alignment is Minion (1.3.W2)', () => {
+    // DM-1 (Anarin) is Minion-aligned, and isLegalForSide already exempts it
+    // from the browser filter via the agent-hazard pass -- the validator must
+    // agree, or a card the browser shows as legal gets contradicted here.
+    const agent = index.get('DM-1');
+    expect(agent.alignment).toBe('Minion');
+    const out = validateDeck({ ...base, quantities: { [wizardAvatar.id]: 1, [agent.id]: 1 } });
+    expect(byId(out, 'ALIGN-LEGAL')).toEqual([]);
+  });
+  it('ALIGN-LEGAL: an ordinary Minion-aligned card (not an agent) still fires, exemption is agent-specific', () => {
+    // Guards the fix from over-reaching: ALIGN-LEGAL's own scope is "every
+    // non-avatar card" (rules.ALIGN-LEGAL.doc), not "every non-character
+    // card" -- an ordinary resource or hazard with the wrong alignment must
+    // still be flagged.
+    const minionRes = firstWhere((c) => c.alignment === 'Minion' && c.type === 'Resource' && c.attributes.agent !== true);
+    const out = validateDeck({ ...base, quantities: { [wizardAvatar.id]: 1, [minionRes.id]: 1 } });
+    expect(byId(out, 'ALIGN-LEGAL')).toHaveLength(1);
+  });
+  it('ALIGN-LEGAL: the same agent still needs a legal alignment on the camps that count it as a character (1.3.R2, 1.3.F4)', () => {
+    // The exemption is per-camp, not per-card: for Ringwraith/Fallen-wizard
+    // the agent IS the character 1.3.R2/1.3.F4 speak of, and its alignment is
+    // Minion -- legal for both those camps, so this should NOT fire either,
+    // but for a different reason (alignment membership, not the agent
+    // exemption). Confirms the exemption doesn't accidentally cover every
+    // camp regardless of role.
+    const rwAvatar = firstWhere((c) => c.attributes.avatar && c.alignment === 'Minion');
+    const agent = index.get('DM-1');
+    const out = validateDeck({ ...base, side: 'ringwraith', quantities: { [rwAvatar.id]: 1, [agent.id]: 1 } });
+    expect(byId(out, 'ALIGN-LEGAL')).toEqual([]);
+  });
   it('fallen-wizard: 2 copies max but 3 for Stage resources', () => {
     const fwAvatar = firstWhere((c) => c.attributes.avatar && c.alignment === 'Fallen-wizard');
     const stage = firstWhere((c) => c.alignment === 'Stage' && !c.attributes.unique);
@@ -1169,7 +1199,11 @@ describe('validateDeck', () => {
   });
   it('BALROG-MIND: a non-exempt Balrog-side character at/above the per-character mind limit fires by default', () => {
     const balrogAvatar = firstWhere((c) => c.attributes.avatar && c.alignment === 'Balrog');
-    const bigMindChar = firstWhere((c) => c.type === 'Character' && !c.attributes.avatar && c.attributes.specific !== 'Balrog' && parseInt(c.attributes.mind, 10) >= 9);
+    // Excludes agents: DM-14 (mind 9) would otherwise be the first match, and
+    // 1.3.B2 makes an agent a hazard for the Balrog, not a "Balrog character"
+    // -- BALROG-MIND must not fire for it, so it is the wrong fixture here.
+    const bigMindChar = firstWhere((c) => c.type === 'Character' && !c.attributes.avatar && c.attributes.specific !== 'Balrog'
+      && c.attributes.agent !== true && parseInt(c.attributes.mind, 10) >= 9);
     const out = validateDeck({
       ...base, side: 'balrog',
       quantities: { [balrogAvatar.id]: 1, [bigMindChar.id]: 1 },
@@ -1203,6 +1237,33 @@ describe('validateDeck', () => {
     const hits = byId(out, 'BALROG-RACE');
     expect(hits).toHaveLength(1);
     expect(hits[0].params.id).toBe(wrongRaceChar.id);
+  });
+  it('BALROG-RACE: an agent this camp counts as a hazard is exempt, even off-race (1.3.B2)', () => {
+    // DM-1 (Anarin) is an Elf -- neither Orc nor Troll -- but 1.3.B2 makes it a
+    // hazard for the Balrog, not a "Balrog character" in 1.3.B4's sense.
+    // isLegalForSide's agent-hazard pass already returns before ever reaching
+    // the 1.3.B4 race check (sides.js), so the validator must not disagree.
+    const balrogAvatar = firstWhere((c) => c.attributes.avatar && c.alignment === 'Balrog');
+    const agent = index.get('DM-1');
+    expect(agent.attributes.race).toBe('Elf');
+    const out = validateDeck({
+      ...base, side: 'balrog',
+      quantities: { [balrogAvatar.id]: 1, [agent.id]: 1 },
+    });
+    expect(byId(out, 'BALROG-RACE')).toEqual([]);
+  });
+  it('BALROG-RACE: the two Hazard-type agents were never Balrog characters and are unaffected either way', () => {
+    // DM-28/DM-29 are type Hazard, agent:true. The outer gate already reads
+    // roleFor(...).bucket === 'character', which is 'hazard' for these on
+    // every camp -- confirms the fix doesn't need a separate agent carve-out
+    // here, unlike ALIGN-LEGAL, because the role-based gate already excludes
+    // them.
+    const balrogAvatar = firstWhere((c) => c.attributes.avatar && c.alignment === 'Balrog');
+    const out = validateDeck({
+      ...base, side: 'balrog',
+      quantities: { [balrogAvatar.id]: 1, 'DM-28': 1, 'DM-29': 1 },
+    });
+    expect(byId(out, 'BALROG-RACE')).toEqual([]);
   });
 
   it('FACTION-RACE: a Man faction is illegal for a Balrog, an Orc faction is not (1.3.B4)', () => {
