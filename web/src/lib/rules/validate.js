@@ -231,12 +231,12 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
 
     if (side === 'balrog' && c.type === 'Character' && !a.avatar && !balrogExempt) {
       const race = String(a.race || '');
-      if (profile.pool.requireRaces && !raceAllowed(c, side)) {
+      if (profile.characterRaces && !raceAllowed(c, side)) {
         emit('BALROG-RACE', { id: e.id, name: name(c), race });
       }
       const mind = toInt(a.mind);
-      if (mind != null && profile.pool.balrogMindPerCharacterLimit != null && mind >= profile.pool.balrogMindPerCharacterLimit) {
-        emit('BALROG-MIND', { id: e.id, name: name(c), mind, limit: profile.pool.balrogMindPerCharacterLimit });
+      if (mind != null && profile.characterMindLimit != null && mind >= profile.characterMindLimit) {
+        emit('BALROG-MIND', { id: e.id, name: name(c), mind, limit: profile.characterMindLimit });
       }
     }
 
@@ -307,13 +307,26 @@ export function validateDeck({ side, length, tournament, ruleOverrides = {}, qua
     // zonesFor (zones.js) is the single source of truth for what may sit in
     // the pool -- the same function drag-and-drop consults -- so eligibility
     // is derived from it rather than re-decided here.
-    const z = zonesFor(c);
+    const z = zonesFor(c, side);
     const poolEligible = z.primary === 'pool' || z.extra.includes('pool');
     if (!poolEligible) {
-      emit('POOL-ELIGIBLE', { id, name: name(c), reason: 'type' }, 'POOL-ELIGIBLE.type');
+      // 1.3.W2 / 1.3.B2 -- an agent this camp counts as a hazard is a Character
+      // by type, so "type" would be a lie: it is the camp that bars it. But
+      // DM-28/DM-29 are agents typed Hazard, never Character (roles.js:1-3),
+      // and bucket is 'hazard' for them on every camp regardless -- so the
+      // bucket check alone cannot tell "the camp did this" from "this was
+      // always a hazard". The type gate is what tells them apart.
+      const reason = c.type === 'Character' && (c.attributes || {}).agent === true
+        && roleFor(c, side).bucket === 'hazard' ? 'agent' : 'type';
+      emit('POOL-ELIGIBLE', { id, name: name(c), reason }, `POOL-ELIGIBLE.${reason}`);
       continue;
     }
-    if (c.type === 'Character') poolChars += n;
+    // roleFor(...).bucket, not c.type: an agent-hazard already exited via the
+    // `continue` above, so on every card reachable here the two expressions
+    // agree today. The indirection is defensive -- it is what keeps this cap
+    // reading the same source of truth as the eligibility check above it, so
+    // a future change to that check cannot silently open a gap between them.
+    if (roleFor(c, side).bucket === 'character') poolChars += n;
     else if (c.type === 'Resource') {
       // 1.7 -- "up to two non-unique, non-hoard minor items". The qualifier is
       // about minor items; the six permanent-events playable "in lieu of a

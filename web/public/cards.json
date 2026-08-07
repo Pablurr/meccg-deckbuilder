@@ -6489,14 +6489,16 @@
      "body": "11",
      "prowess": "8",
      "race": "Balrog",
-     "subtype": "Spawn",
      "directInfluence": "6",
      "avatar": true,
      "homeSite": {
       "en": "The Under-gates",
       "es": "Las Puertas de las Profundidades",
       "fr": "Les Portes des Abîmes"
-     }
+     },
+     "keywords": [
+      "Spawn"
+     ]
     },
     "text": {
      "en": "<p><b><i>Unique.</i></b><i> Manifestation of Balrog of Moria.</i> Discard all other manifestations of <i>Balrog of Moria</i> when this card comes into play. +3 to the roll for his company to move between adjacent Under-deeps sites. The Balrog’s prowess is only modified by -1 when not tapping to face a strike. He may not have any followers and may not use region or starter movement.</p>",
@@ -10378,7 +10380,10 @@
       "en": "Moria",
       "es": "Moria",
       "fr": "Moria"
-     }
+     },
+     "keywords": [
+      "Agent"
+     ]
     },
     "text": {
      "en": "<p><b><i>Unique. </i></b><i>Agent. Agent only:</i> may move to a Haven [{H}] <b>and</b> may tap at a company’s new site to attack that company during opponent’s movement/hazard phase.</p>",
@@ -10426,7 +10431,10 @@
       "en": "Goblin-gate, Mount Gundabad",
       "es": "La Puerta de los Trasgos, Monte Gundabad",
       "fr": "Porte des Gobelins, Mont Gundabad"
-     }
+     },
+     "keywords": [
+      "Agent"
+     ]
     },
     "text": {
      "en": "<p><b><i>Unique. </i></b><i>Agent. Agent only:</i> if you choose to discard Baduila at target company’s new site, company must return to its site of origin.</p>",
@@ -10474,7 +10482,10 @@
       "en": "Bree, Cameth Brin",
       "es": "Bree, Cameth Brin",
       "fr": "Bree, Cameth Brin"
-     }
+     },
+     "keywords": [
+      "Agent"
+     ]
     },
     "text": {
      "en": "<p><b><i>Unique. </i></b><i>Agent.</i></p>",
@@ -10522,7 +10533,10 @@
       "en": "Easterling Camp, Variag Camp, Shrel-Kain",
       "es": "Campamento Oriental, Campamento Variag, Shrel-Kain",
       "fr": "Camp des Orientaux,Camp variag, Shrel-Kain"
-     }
+     },
+     "keywords": [
+      "Agent"
+     ]
     },
     "text": {
      "en": "<p><b><i>Unique. </i></b><i>Agent.</i></p>",
@@ -10570,7 +10584,10 @@
       "en": "Dunnish Clan-hold, Bree, Cameth Brin",
       "es": "Fuerte Dunlendino, Bree, Cameth Brin",
       "fr": "Camp fortifié dunéen, Bree, Cameth Brin"
-     }
+     },
+     "keywords": [
+      "Agent"
+     ]
     },
     "text": {
      "en": "<p><b><i>Unique. </i></b><i>Agent.</i></p>",
@@ -10618,7 +10635,10 @@
       "en": "Blue Mountain Dwarf-hold",
       "es": "Fortaleza Enana de las Montañas Azules",
       "fr": "Citadelle naine des Montagnes Bleues"
-     }
+     },
+     "keywords": [
+      "Agent"
+     ]
     },
     "text": {
      "en": "<p><b><i>Unique. </i></b><i>Agent.</i> +2 direct influence against Dwarves and Dwarf Factions.</p>",
@@ -10666,7 +10686,10 @@
       "en": "Carn Dûm, Mount Gram",
       "es": "Carn Dûm, Monte Gram",
       "fr": "Carn Dûm, Mont Gram"
-     }
+     },
+     "keywords": [
+      "Agent"
+     ]
     },
     "text": {
      "en": "<p><b><i>Unique. </i></b><i>Agent. </i>Can use shadow-magic and spirit-magic. <i>Agent only:</i> may tap for an extra strike.</p>",
@@ -10714,7 +10737,10 @@
       "en": "Dol Amroth, Minas Tirith",
       "es": "Dol Amroth, Minas Tirith",
       "fr": "Dol Amroth, Minas Tirith"
-     }
+     },
+     "keywords": [
+      "Agent"
+     ]
     },
     "text": {
      "en": "<p><b><i>Unique. </i></b><i>Agent.</i> +2 direct influence against Elves and Elf Factions. <i>Agent only:</i> may move to a Haven [{H}].</p>",
@@ -10762,7 +10788,10 @@
       "en": "Vale of Erech, Lond Galen",
       "es": "Valle de Erech, Lond Galen",
       "fr": "Val d'Erech, Lond Galen"
-     }
+     },
+     "keywords": [
+      "Agent"
+     ]
     },
     "text": {
      "en": "<p><b><i>Unique. </i></b><i>Agent.</i></p>",
@@ -10810,7 +10839,10 @@
       "en": "Pelargir, Vale of Erech",
       "es": "Pelargir, Valle de Erech",
       "fr": "Pelargir, Val d'Erech"
-     }
+     },
+     "keywords": [
+      "Agent"
+     ]
     },
     "text": {
      "en": "<p><b><i>Unique. </i></b><i>Agent.</i> Can use shadow-magic. +2 direct influence against Dúnedain and factions that can be played in Anfalas, Anórien, Belfalas, Lamedon, and Lebennin.</p>",
@@ -10858,7 +10890,10 @@
       "en": "Iron Hill Dwarf-hold",
       "es": "Fortaleza Enana de las Colinas de Hierro",
       "fr": "Citadelle naine des Monts du Fer"
-     }
+     },
+     "keywords": [
+      "Agent"
+     ]
     },
     "text": {
      "en": "<p><b><i>Unique. </i></b><i>Agent.</i> +2 direct influence against Dwarves and Dwarf Factions.</p>",
@@ -10906,7 +10941,10 @@
       "en": "Shrel-Kain, Lake-town, Easterling Camp",
       "es": "Shrel-Kain, Ciudad del Lago, Campamento Oriental",
       "fr": "Shrel-Kain, Ville du Lac,Camp des Orientaux"
-     }
+     },
+     "keywords": [
+      "Agent"
+     ]
     },
     "text": {
      "en": "<p><b><i>Unique. </i></b><i>Agent.</i></p>",
@@ -10954,7 +10992,10 @@
       "en": "Woodmen-town, Lake-town, Dale",
       "es": "Ciudad de los Hombres del Bosque, Ciudad del Lago, Valle",
       "fr": "Forestville, Ville du Lac, le Val"
-     }
+     },
+     "keywords": [
+      "Agent"
+     ]
     },
     "text": {
      "en": "<p><b><i>Unique. </i></b><i>Agent.</i></p>",
@@ -11002,7 +11043,10 @@
       "en": "Minas Morgul, Cirith Ungol, Barad-dûr",
       "es": "Minas Morgul, Cirith Ungol, Barad-dûr",
       "fr": "Minas Morgul, Cirith Ungol, Barad-Dûr"
-     }
+     },
+     "keywords": [
+      "Agent"
+     ]
     },
     "text": {
      "en": "<p><b><i>Unique. </i></b><i>Agent.</i> Can use spirit-magic. <i>Agent only:</i> may tap to make an influence check on an ally, faction, or character.</p>",
@@ -11050,7 +11094,10 @@
       "en": "Dol Guldur",
       "es": "Dol Guldur",
       "fr": "Dol Guldur"
-     }
+     },
+     "keywords": [
+      "Agent"
+     ]
     },
     "text": {
      "en": "<p><b><i>Unique. </i></b><i>Agent.</i> Can use sorcery. <i>Agent only:</i> may tap at a company's new site to attack that company during its movement/hazard phase with +2 prowess.</p>",
@@ -11098,7 +11145,10 @@
       "en": "Lond Galen, Dol Amroth",
       "es": "Lond Galen, Dol Amroth",
       "fr": "Lond Galen, Dol Amroth"
-     }
+     },
+     "keywords": [
+      "Agent"
+     ]
     },
     "text": {
      "en": "<p><b><i>Unique. </i></b><i>Agent.</i></p>",
@@ -11146,7 +11196,10 @@
       "en": "Southron Oasis, Variag Camp, Pelargir",
       "es": "Oasis Sureño, Campamento Variag, Pelargir",
       "fr": "Oasis suderonne, Camp variag, Pelargir"
-     }
+     },
+     "keywords": [
+      "Agent"
+     ]
     },
     "text": {
      "en": "<p><b><i>Unique. </i></b><i>Agent.</i></p>",
@@ -11194,7 +11247,10 @@
       "en": "Lossadan Camp, Bree",
       "es": "Campamento Lossadan, Bree",
       "fr": "Camp Lossadan, Bree"
-     }
+     },
+     "keywords": [
+      "Agent"
+     ]
     },
     "text": {
      "en": "<p><b><i>Unique. </i></b><i>Agent.</i></p>",
@@ -11242,7 +11298,10 @@
       "en": "Cameth Brin, Dunnish Clan-hold",
       "es": "Cameth Brin, Fuerte Dunlendino",
       "fr": "Cameth Brin, Camp fortifié dunéen"
-     }
+     },
+     "keywords": [
+      "Agent"
+     ]
     },
     "text": {
      "en": "<p><b><i>Unique. </i></b><i>Agent.</i></p>",
@@ -11290,7 +11349,10 @@
       "en": "Thranduil’s Halls, Sarn Goriwing",
       "es": "Estancias de Thranduil, Sarn Goriwing",
       "fr": "Palais de Thranduil, Sarn Goriwing"
-     }
+     },
+     "keywords": [
+      "Agent"
+     ]
     },
     "text": {
      "en": "<p><b><i>Unique. </i></b><i>Agent.</i> +2 direct influence against Elves and Elf Factions. <i>Agent only:</i> may move to a Haven [{H}].</p>",
@@ -11338,7 +11400,10 @@
       "en": "Drúadan Forest, Wose Passage-hold, Stone-circle",
       "es": "Bosque Drúadan, Fuerte de Paso de los Woses, Círculo de Piedras",
       "fr": "Forêt du Drúadan, Tumulus Wose,Cercle de pierres"
-     }
+     },
+     "keywords": [
+      "Agent"
+     ]
     },
     "text": {
      "en": "<p><b><i>Unique. </i></b><i>Agent.</i> +3 direct influence against Wose Factions.</p>",
@@ -11386,7 +11451,10 @@
       "en": "Drúadan Forest, Wose Passage-hold, Stone-circle",
       "es": "Bosque Drúadan, Fuerte de Paso de los Woses, Círculo de Piedras",
       "fr": "Forêt du Drúadan, Tumulus Wose,Cercle de pierres"
-     }
+     },
+     "keywords": [
+      "Agent"
+     ]
     },
     "text": {
      "en": "<p><b><i>Unique. </i></b><i>Agent.</i> +3 direct influence against Wose Factions.</p>",
@@ -11434,7 +11502,10 @@
       "en": "Variag Camp, Easterling Camp, Southron Oasis",
       "es": "Campamento Variag, Campamento Oriental, Oasis Sureño",
       "fr": "Camp variag, Camp des Orientaux,Oasis suderonne"
-     }
+     },
+     "keywords": [
+      "Agent"
+     ]
     },
     "text": {
      "en": "<p><b><i>Unique. </i></b><i>Agent.</i></p>",
@@ -11482,7 +11553,10 @@
       "en": "Minas Tirith, Pelargir",
       "es": "Minas Tirith, Pelargir",
       "fr": "Minas Tirith, Pelargir"
-     }
+     },
+     "keywords": [
+      "Agent"
+     ]
     },
     "text": {
      "en": "<p><b><i>Unique. </i></b><i>Agent.</i> +2 direct influence against Dúnedain and factions that can be played in Anfalas, Anórien, Belfalas, Lamedon, and Lebennin.</p>",
@@ -11530,7 +11604,10 @@
       "en": "Sarn Goriwing, Dol Guldur",
       "es": "Sarn Goriwing, Dol Guldur",
       "fr": "Sarn Goriwing, Dol Guldur"
-     }
+     },
+     "keywords": [
+      "Agent"
+     ]
     },
     "text": {
      "en": "<p><b><i>Unique. </i></b><i>Agent.</i> Can use shadow-magic. <i>Agent only: chooses defending characters; </i>for each successful strike, the company must discard one item (of defender’s choice), but the defending character is not harmed.</p>",
@@ -11578,7 +11655,10 @@
       "en": "Lake-town, Dale, Shrel-Kain",
       "es": "Ciudad del Lago, Shrel-Kain, Valle",
       "fr": "Ville du Lac, le Val, Shrel-Kain"
-     }
+     },
+     "keywords": [
+      "Agent"
+     ]
     },
     "text": {
      "en": "<p><b><i>Unique. </i></b><i>Agent.</i></p>",
@@ -11626,7 +11706,10 @@
       "en": "Edoras, Dunharrow, Isengard",
       "es": "Edoras, El Sagrario, Isengard",
       "fr": "Edoras, Dunharrow, Isengard"
-     }
+     },
+     "keywords": [
+      "Agent"
+     ]
     },
     "text": {
      "en": "<p><b><i>Unique. </i></b><i>Agent.</i> +4 direct influence against <i>Riders of Rohan</i> and any character or minion that has Edoras as a home site.</p>",
@@ -11674,7 +11757,10 @@
       "en": "Bag End, Bree",
       "es": "Bolsón Cerrado, Bree",
       "fr": "Cul-de-Sac, Bree"
-     }
+     },
+     "keywords": [
+      "Agent"
+     ]
     },
     "text": {
      "en": "<p><b><i>Unique. </i></b><i>Manifestation of Mistress Lobelia.</i> <i>Agent.</i> +3 direct influence against Hobbits and Hobbit factions. May not move to any site other than Bree, Old Forest, The White Towers, or a site in The Shire.</p>",
@@ -11722,7 +11808,10 @@
       "en": "Goblin-gate, Moria, Shelob's Lair, Mt. Doom",
       "es": "Puerta de los Trasgos, Moria, El Antro de Ella-laraña, Monte del Destino",
       "fr": "Porte des Gobelins,  Moria,Antre d'Arachne, Montagne du Destin"
-     }
+     },
+     "keywords": [
+      "Agent"
+     ]
     },
     "text": {
      "en": "<p><b><i>Unique. </i></b><i>Manifestation of Gollum. Agent. </i>If face-up, may take an extra agent action (not counting against the hazard limit) each time he normally takes an agent action. If he attacks successfully against a company with a ring, he and a ring (attacker's choice) are discarded. If <i>My Precious</i> attacks and fails but is not defeated, the defender may tap a character in the target company to play <i>Gollum (My Precious</i> is discarded). Any player whose character eliminates <i>My Precious</i> receives -1 kill MPs.</p>",
@@ -17119,7 +17208,10 @@
       "en": "Isengard",
       "es": "Isengard",
       "fr": "Isengard"
-     }
+     },
+     "keywords": [
+      "Agent"
+     ]
     },
     "text": {
      "en": "<p><b><i>Unique.</i></b><i>Half-orc. Agent. Leader.</i> Discard on a body check result of 8. +2 direct influence against Orcs and Orc factions. <i>Agent only:</i> Cannot move to Free-holds [{F}] and Border-holds [{B}].</p>",
@@ -17166,7 +17258,10 @@
       "en": "Edoras, Dunnish Clan-hold",
       "es": "Edoras, Fuerte Dunlendino",
       "fr": "Edoras, Camp fortifié dunéen"
-     }
+     },
+     "keywords": [
+      "Agent"
+     ]
     },
     "text": {
      "en": "<p><b><i>Unique. </i></b><i>Agent.</i> +1 direct influence against <i>Riders of Rohan </i>and <i>Dunlendings</i>.</p>",
@@ -17213,7 +17308,10 @@
       "en": "Edoras, Dunnish Clan-hold",
       "es": "Edoras, Fuerte Dundlendino",
       "fr": "Edoras, Camp fortifié dunéen"
-     }
+     },
+     "keywords": [
+      "Agent"
+     ]
     },
     "text": {
      "en": "<p><b><i>Unique. </i></b><i>Agent.</i> +2 direct influence against <i>Dunlendings</i>.</p>",

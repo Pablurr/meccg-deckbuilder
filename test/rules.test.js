@@ -80,6 +80,41 @@ describe('zonesFor', () => {
       expect(z.extra).not.toContain('pool');
     }
   });
+  it('an agent character offers no pool to a camp that counts it as a hazard (1.3.W2, 1.3.B2)', () => {
+    const anarin = index.get('DM-1');
+    for (const side of ['wizard', 'balrog']) {
+      expect(zonesFor(anarin, side)).toEqual({ primary: 'deck', extra: ['sideboard', 'sideboardFw'] });
+      expect(zoneTargets(anarin, side)).not.toContain('pool');
+    }
+  });
+  it('an agent character keeps the pool for a camp that counts it as a character (1.3.R2, 1.3.F4)', () => {
+    const anarin = index.get('DM-1');
+    for (const side of ['ringwraith', 'fallen-wizard']) {
+      expect(zonesFor(anarin, side)).toEqual({ primary: 'pool', extra: ['deck', 'sideboard', 'sideboardFw'] });
+    }
+  });
+  it('omitting the side keeps every card on its side-blind zones', () => {
+    // Regression guard: the parameter is optional, the way openBalrog and
+    // bannedIds are for isLegalForSide. A caller that knows no camp must
+    // behave exactly as it did before.
+    for (const c of cards) expect(zonesFor(c, undefined)).toEqual(zonesFor(c));
+  });
+  it('an unknown side id changes nothing', () => {
+    const anarin = index.get('DM-1');
+    expect(zonesFor(anarin, 'not-a-side')).toEqual(zonesFor(anarin));
+  });
+  it('a non-agent character keeps the pool for every camp', () => {
+    const plain = firstWhere((c) => c.type === 'Character' && !c.attributes.avatar && c.attributes.agent !== true);
+    for (const side of ['wizard', 'ringwraith', 'fallen-wizard', 'balrog']) {
+      expect(zonesFor(plain, side).primary).toBe('pool');
+    }
+  });
+  it('the two Hazard-type agents were never pool-eligible and still are not', () => {
+    for (const id of ['DM-28', 'DM-29']) {
+      expect(zoneTargets(index.get(id), 'wizard')).not.toContain('pool');
+      expect(zoneTargets(index.get(id), 'ringwraith')).not.toContain('pool');
+    }
+  });
 });
 
 describe('zoneTargets / moveTargets', () => {
@@ -163,6 +198,50 @@ describe('zoneTargets / moveTargets', () => {
   it('returns an empty list for a missing card rather than throwing', () => {
     expect(zoneTargets(null)).toEqual([]);
     expect(moveTargets(null, 'deck')).toEqual([]);
+  });
+  it('drag-and-drop refuses the pool for an agent in a Wizard deck', () => {
+    const anarin = index.get('DM-1');
+    expect(isDropAllowed(anarin, 'pool', 'wizard')).toBe(false);
+    expect(isDropAllowed(anarin, 'pool', 'ringwraith')).toBe(true);
+  });
+  it('freeform (no side) leaves an agent pool-eligible, unchanged from before this parameter existed', () => {
+    const anarin = index.get('DM-1');
+    expect(isDropAllowed(anarin, 'pool', undefined)).toBe(true);
+    expect(moveTargets(anarin, 'deck', undefined)).toContain('pool');
+  });
+});
+
+// DeckPanel.jsx is where the real drag-and-drop and "move to" menu live --
+// isDropAllowed/moveTargets are only ever exercised there through two call
+// sites this repo cannot mount and drive as a DOM tree (§11: pure modules
+// only, no jsdom), so nothing above this line can catch DeckPanel silently
+// dropping the sideId argument -- that gap shipped once already (caught in
+// review after task 4's first pass wired every OTHER caller and missed
+// DeckPanel's own two calls). A behavioural test built from 'wizard'/
+// 'ringwraith'/undefined literals would not have caught it either: it drives
+// isDropAllowed/moveTargets directly and never touches DeckPanel.jsx, so it
+// passes whether or not DeckPanel forwards anything (proven by the RED run
+// in the report -- three earlier versions of exactly that kind of test all
+// passed against the buggy file). The only thing that can fail here is
+// DeckPanel's own source, so that is the only thing this block checks: that
+// both calls literally carry `sideId`, and that `sideId` is literally
+// derived from the deck the same way `sideKey` (the camp badge) is.
+describe('DeckPanel: drag-and-drop and "move to" pass the camp', () => {
+  const deckPanelSrc = fs.readFileSync(
+    path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'web', 'src', 'components', 'DeckPanel.jsx'),
+    'utf8',
+  );
+  it('derives sideId from the deck exactly like sideKey, but undefined (not \'freeform\') outside deckbuilding', () => {
+    expect(deckPanelSrc).toMatch(/const sideId\s*=\s*deckbuilding\s*&&\s*deck\.ruleset\s*\?\s*deck\.ruleset\.side\s*:\s*undefined;/);
+  });
+  it('the drop handler passes sideId to isDropAllowed', () => {
+    // [^)]*, not the literal `card, toZone`, so a harmless reflow (Prettier
+    // wrapping the call across lines, a rename of the other arguments) can't
+    // fail this test -- only dropping or renaming sideId itself can.
+    expect(deckPanelSrc).toMatch(/isDropAllowed\([^)]*,\s*sideId\s*\)/);
+  });
+  it('the "move to" menu passes sideId to moveTargets', () => {
+    expect(deckPanelSrc).toMatch(/moveTargets\([^)]*,\s*sideId\s*\)/);
   });
 });
 
@@ -287,6 +366,43 @@ describe('buildGroups', () => {
   });
 });
 
+describe('buildGroups (display role, 1.3.W2/R2/B2)', () => {
+  const anarin = () => index.get('DM-1');
+  const plainHazard = () => firstWhere((c) => c.type === 'Hazard' && c.attributes.agent !== true);
+
+  it('groups an agent under Hazard for the camps that count it as one', () => {
+    const entries = [{ card: anarin(), qty: 1 }, { card: plainHazard(), qty: 1 }];
+    for (const side of ['wizard', 'balrog']) {
+      const groups = buildGroups(entries, 'en', side);
+      expect(groups.map((g) => g.type)).toEqual(['Hazard']);
+      expect(groups[0].items).toHaveLength(2);
+    }
+  });
+
+  it('groups the same agent under Character for the camps that count it as one', () => {
+    const entries = [{ card: anarin(), qty: 1 }];
+    for (const side of ['ringwraith', 'fallen-wizard']) {
+      expect(buildGroups(entries, 'en', side).map((g) => g.type)).toEqual(['Character']);
+    }
+  });
+
+  it('omitting the side keeps the old grouping by card type', () => {
+    const entries = [{ card: anarin(), qty: 1 }];
+    expect(buildGroups(entries, 'en').map((g) => g.type)).toEqual(['Character']);
+  });
+
+  it('an avatar still groups under Character, since there is no Avatars group here', () => {
+    const avatar = firstWhere((c) => c.attributes.avatar === true && c.type === 'Character');
+    expect(buildGroups([{ card: avatar, qty: 1 }], 'en', 'wizard').map((g) => g.type)).toEqual(['Character']);
+  });
+
+  it('keeps TYPE_ORDER and drops empty groups', () => {
+    const site = firstWhere((c) => c.type === 'Site');
+    const entries = [{ card: plainHazard(), qty: 1 }, { card: site, qty: 1 }];
+    expect(buildGroups(entries, 'en', 'wizard').map((g) => g.type)).toEqual(['Hazard', 'Site']);
+  });
+});
+
 describe('sides data', () => {
   it('exposes the four sides with alignments and copy limits', () => {
     expect(Object.keys(SIDES).sort()).toEqual(['balrog', 'fallen-wizard', 'ringwraith', 'wizard']);
@@ -350,6 +466,20 @@ describe('sides data', () => {
     expect(raceAllowed({ attributes: { race: 'Trolls' } }, 'balrog')).toBe(true);
     expect(raceAllowed({ attributes: { race: 'Man' } }, 'balrog')).toBe(false);
     expect(raceAllowed({ attributes: { race: 'Man' } }, 'wizard')).toBe(true);
+  });
+
+  it('raceAllowed fails open when race data is absent, not just when it mismatches (1.3.B4)', () => {
+    // Every one of the 194 real Character cards carries a race today, so
+    // there is no real card to exercise this with -- the one deliberate
+    // exception to this suite's real-card convention. It stays here because
+    // the principle it guards ("data we cannot read must not silently hide a
+    // card", sides.js:172-174) is the same one the mind check right beside it
+    // already gets, and card data changes between sets.
+    expect(raceAllowed({ attributes: {} }, 'balrog')).toBe(true);
+    expect(raceAllowed({ attributes: { race: '' } }, 'balrog')).toBe(true);
+    // A present race that simply isn't Orc/Troll must still be rejected --
+    // that's the rule working, not unreadable data.
+    expect(raceAllowed({ attributes: { race: 'Man' } }, 'balrog')).toBe(false);
   });
 
   it('SPECIFIC_TO_SIDES covers every specific value in the card data', () => {
@@ -541,6 +671,120 @@ describe('sides data', () => {
     expect(LENGTHS.standard.sideboardMax).toBe(30);
     expect(LENGTHS.long.sideboardMax).toBe(35);
     expect(LENGTHS.campaign.sideboardMax).toBe(40);
+  });
+
+  it('isLegalForSide: an agent character is legal for the two camps that count it as a hazard (1.3.W2, 1.3.B2)', () => {
+    // Anarin is a Minion-aligned agent. Without a pass of its own it is hidden
+    // from the Wizard browser, whose alignments are Hero/Neutral/Dual -- while
+    // 1.3.W2 makes it precisely a hazard that camp may play.
+    const anarin = index.get('DM-1');
+    expect(anarin.attributes.agent).toBe(true);
+    expect(anarin.alignment).toBe('Minion');
+    expect(isLegalForSide(anarin, 'wizard')).toBe(true);
+    expect(isLegalForSide(anarin, 'balrog')).toBe(true);
+  });
+
+  it('isLegalForSide: agents stay legal for the camps that count them as characters', () => {
+    const anarin = index.get('DM-1');
+    expect(isLegalForSide(anarin, 'ringwraith')).toBe(true);
+    expect(isLegalForSide(anarin, 'fallen-wizard')).toBe(true);
+  });
+
+  it('isLegalForSide: every agent card is visible to all four camps', () => {
+    const agents = cards.filter((c) => c.attributes.agent === true);
+    expect(agents).toHaveLength(32);
+    const { openBalrog } = siteIndex(cards);
+    for (const c of agents) {
+      for (const side of ['wizard', 'ringwraith', 'fallen-wizard', 'balrog']) {
+        expect(isLegalForSide(c, side, openBalrog)).toBe(true);
+      }
+    }
+  });
+
+  it('isLegalForSide: a ban outranks the agent pass', () => {
+    // Same ordering guard the avatar and Balrog-specific passes already have.
+    const anarin = index.get('DM-1');
+    expect(isLegalForSide(anarin, 'wizard', undefined, new Set(['DM-1']))).toBe(false);
+  });
+
+  it('1.3.B4 is a whole-deck constraint, so it lives on the camp and not on its pool', () => {
+    // Filed under `pool`, the rule only applied to the starting pool, while
+    // 1.3.B4 targets every non-avatar character in the deck.
+    expect(SIDES.balrog.characterRaces).toEqual(['Orc', 'Troll']);
+    expect(SIDES.balrog.characterMindLimit).toBe(9);
+    expect(SIDES.balrog.pool.requireRaces).toBeUndefined();
+    expect(SIDES.balrog.pool.balrogMindPerCharacterLimit).toBeUndefined();
+    for (const side of ['wizard', 'ringwraith', 'fallen-wizard']) {
+      expect(SIDES[side].characterRaces).toBe(null);
+      expect(SIDES[side].characterMindLimit).toBe(null);
+    }
+  });
+
+  it('isLegalForSide: a non-Orc, non-Troll character is hidden from a Balrog deck (1.3.B4)', () => {
+    const man = firstWhere((c) => c.type === 'Character' && !c.attributes.avatar
+      && c.attributes.agent !== true && c.attributes.specific !== 'Balrog'
+      && ['Minion', 'Neutral'].includes(c.alignment) && matchesRace(c.attributes.race, 'Man'));
+    expect(isLegalForSide(man, 'balrog')).toBe(false);
+    expect(isLegalForSide(man, 'ringwraith')).toBe(true);
+  });
+
+  it('isLegalForSide: an Orc or Troll at the mind limit is hidden from a Balrog deck (1.3.B4)', () => {
+    // Not BA-5/BA-9: those two are Troll, mind 9, AND Balrog-specific, so they
+    // escape via the SPECIFIC_TO_SIDES pass before this one ever runs -- see
+    // the next test. LE-20 is Troll, mind 9, and carries no `specific`, so it
+    // is the real 1.3.B4 case.
+    const bigMind = index.get('LE-20');
+    expect(parseInt(bigMind.attributes.mind, 10)).toBe(9);
+    expect(bigMind.attributes.specific).toBeUndefined();
+    expect(isLegalForSide(bigMind, 'balrog')).toBe(false);
+  });
+
+  it('isLegalForSide: BA-5 and BA-9 are Troll at mind 9 but Balrog-specific, so 1.3.B4 never reaches them', () => {
+    // Ordering guard with real data, complementing the synthetic one below:
+    // both are exempt via SPECIFIC_TO_SIDES.Balrog before the race/mind pass.
+    for (const id of ['BA-5', 'BA-9']) {
+      const c = index.get(id);
+      expect(c.attributes.specific).toBe('Balrog');
+      expect(parseInt(c.attributes.mind, 10)).toBe(9);
+      expect(isLegalForSide(c, 'balrog')).toBe(true);
+    }
+  });
+
+  it('isLegalForSide: agents escape 1.3.B4 -- most of them are Men or Elves', () => {
+    // Without an exemption the race pass would hide all 32 agents from the
+    // Balrog browser, while 1.3.B2 makes them hazards that camp plays.
+    const agents = cards.filter((c) => c.attributes.agent === true);
+    // Stands on its own rather than relying on agentData.test.js failing
+    // first if the data ever lost every `agent` flag.
+    expect(agents.length).toBeGreaterThan(0);
+    for (const c of agents) expect(isLegalForSide(c, 'balrog')).toBe(true);
+  });
+
+  it('isLegalForSide: a Balrog-specific character escapes 1.3.B4', () => {
+    // specificMode 'balrog-exempt'. No real card is both Balrog-specific and
+    // out of races today, so this is an ordering guard.
+    const balrogAvatar = index.get('BA-3');
+    expect(isLegalForSide(balrogAvatar, 'balrog')).toBe(true);
+  });
+
+  it('isLegalForSide: an avatar is never judged on 1.3.B4', () => {
+    const balrogAvatar = index.get('BA-3');
+    expect(balrogAvatar.attributes.race).toBe('Balrog');
+    expect(isLegalForSide(balrogAvatar, 'balrog')).toBe(true);
+  });
+
+  it('1.3.B4 hides exactly the 33 characters it should, and none was hidden already', () => {
+    // Asserted against real data: this stops a refactor from dropping the
+    // pass while the per-card tests keep passing.
+    // 30 non-Orc/Troll, plus LE-20/21/22 (Troll, mind 9) -- 33, not 35: BA-5
+    // and BA-9 also match Troll/mind-9 but are Balrog-specific, so they are
+    // exempt by the earlier SPECIFIC_TO_SIDES pass, not by this one.
+    const { openBalrog } = siteIndex(cards);
+    const newlyHidden = cards.filter((c) => c.type === 'Character' && !c.attributes.avatar
+      && c.attributes.agent !== true
+      && SIDES.balrog.alignments.includes(c.alignment)
+      && !isLegalForSide(c, 'balrog', openBalrog));
+    expect(newlyHidden).toHaveLength(33);
   });
 });
 
@@ -886,6 +1130,43 @@ describe('validateDeck', () => {
     expect(hits[0].params.reason).toBe('type');
     expect(hits[0].params.id).toBe(hazard.id);
   });
+  it('POOL-ELIGIBLE: an agent forced into a Wizard pool fires with reason "agent", not "type"', () => {
+    // The reason matters: it is not the card's type that disqualifies it
+    // (it really is a Character), it is the camp that makes it a hazard.
+    const out = validateDeck({
+      ...base,
+      quantities: { [wizardAvatar.id]: 1 },
+      zones: { sideboard: {}, pool: { 'DM-1': 1 } },
+    });
+    const hits = byId(out, 'POOL-ELIGIBLE');
+    expect(hits).toHaveLength(1);
+    expect(hits[0].params.reason).toBe('agent');
+    expect(hits[0].params.id).toBe('DM-1');
+  });
+  it('POOL-ELIGIBLE: the same agent in a Ringwraith pool is perfectly legal', () => {
+    const rwAvatar = firstWhere((c) => c.attributes.avatar && c.alignment === 'Minion');
+    const out = validateDeck({
+      ...base, side: 'ringwraith',
+      quantities: { [rwAvatar.id]: 1 },
+      zones: { sideboard: {}, pool: { 'DM-1': 1 } },
+    });
+    expect(byId(out, 'POOL-ELIGIBLE')).toHaveLength(0);
+  });
+  it('POOL-ELIGIBLE: a Hazard-type agent in the pool fires with reason "type", not "agent"', () => {
+    // DM-28/DM-29 are agents but never Characters (roles.js:1-3): a Hazard
+    // can never sit in the pool on any camp, so the camp is not why this one
+    // is refused -- unlike DM-1, whose type is Character and whose camp is
+    // what disqualifies it.
+    const out = validateDeck({
+      ...base,
+      quantities: { [wizardAvatar.id]: 1 },
+      zones: { sideboard: {}, pool: { 'DM-28': 1 } },
+    });
+    const hits = byId(out, 'POOL-ELIGIBLE');
+    expect(hits).toHaveLength(1);
+    expect(hits[0].params.reason).toBe('type');
+    expect(hits[0].params.id).toBe('DM-28');
+  });
   it('BALROG-MIND: a non-exempt Balrog-side character at/above the per-character mind limit fires by default', () => {
     const balrogAvatar = firstWhere((c) => c.attributes.avatar && c.alignment === 'Balrog');
     const bigMindChar = firstWhere((c) => c.type === 'Character' && !c.attributes.avatar && c.attributes.specific !== 'Balrog' && parseInt(c.attributes.mind, 10) >= 9);
@@ -896,7 +1177,7 @@ describe('validateDeck', () => {
     const hits = byId(out, 'BALROG-MIND');
     expect(hits).toHaveLength(1);
     expect(hits[0].params.id).toBe(bigMindChar.id);
-    expect(hits[0].params.limit).toBe(9); // balrog's balrogMindPerCharacterLimit (sides.js)
+    expect(hits[0].params.limit).toBe(9); // balrog's characterMindLimit (sides.js)
   });
 
   it('BALROG-MIND: a Balrog-specific character is exempt even at/above the mind limit', () => {
@@ -1900,11 +2181,11 @@ describe('web/src/lib/rules/*.js: no literal non-ASCII bytes outside the allow-l
   // ALLOWED_FACTION_KEYS guard in test/i18n.test.js: each entry is a
   // conscious, hand-verified exception, not a blanket pass for the file --
   // every addition is a permanent hole in this guard's coverage for that one
-  // line, forever. Currently just the middle dot ('·') docText.js uses
-  // twice (poolText, playDeckText) to join short doc-page fragments -- a
-  // display separator, not a card-name/race match target, so it never needs
-  // to survive fold()/matchesRace().
-  const ALLOWED = new Set(['docText.js:62', 'docText.js:75']);
+  // line, forever. Currently just the middle dot ('·') docText.js uses three
+  // times (poolText, sideText, playDeckText) to join short doc-page fragments
+  // -- a display separator, not a card-name/race match target, so it never
+  // needs to survive fold()/matchesRace().
+  const ALLOWED = new Set(['docText.js:58', 'docText.js:72', 'docText.js:85']);
 
   it('every byte above 0x7F is on the allow-list', () => {
     const dir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'web', 'src', 'lib', 'rules');

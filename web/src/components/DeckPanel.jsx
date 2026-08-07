@@ -15,6 +15,7 @@ import { REPORT_ISSUES_URL } from '../lib/constants.js';
 import { COE, RULE_BY_ID } from '../lib/rules/catalog.js';
 import { refText } from '../lib/rules/docText.js';
 import { remainingCopies } from '../lib/rules/copies.js';
+import { roleFor } from '../lib/rules/roles.js';
 import { deckCardWidth } from '../lib/cardGrid.js';
 import { placePopover } from '../lib/popover.js';
 
@@ -118,10 +119,18 @@ function sumQty(map) {
 // answer to their own maxMinorItems cap (POOL-ITEMS), which this tab does
 // not display. Count only what the cap governs so the tab and the
 // POOL-CHARS validator warning never disagree on the same deck.
-function poolCharCount(pool, cardsById) {
+//
+// With a camp, "Character" means roleFor's bucket, not card.type: an agent
+// can only be sitting in this pool because that camp counts it as one
+// (zonesFor already routes it to the deck otherwise), so it must count here
+// too. Freeform has no camp to ask roleFor about, so it keeps the old
+// card.type check -- same fallback zonesFor/buildGroups use for sideId.
+function poolCharCount(pool, cardsById, sideId) {
   return Object.entries(pool || {}).reduce((sum, [id, n]) => {
     const c = cardsById.get(id);
-    return c && c.type === 'Character' ? sum + n : sum;
+    if (!c) return sum;
+    const isCharacter = sideId ? roleFor(c, sideId).bucket === 'character' : c.type === 'Character';
+    return isCharacter ? sum + n : sum;
   }, 0);
 }
 
@@ -310,11 +319,17 @@ export default function DeckPanel({
   // Same derivation and same class as DeckManager's list rows, so the badge a
   // deck wears in the list is the badge it wears open. Freeform has no side.
   const sideKey = deckbuilding && deck.ruleset ? deck.ruleset.side : 'freeform';
+  // The camp fed to zonesFor/zoneTargets/moveTargets/isDropAllowed's optional
+  // sideId -- same condition as sideKey, but undefined (not 'freeform') in
+  // freeform: those functions treat "no camp" as side-blind, which is exactly
+  // freeform's own rule (it has no camp to route an agent card away from the
+  // pool with).
+  const sideId = deckbuilding && deck.ruleset ? deck.ruleset.side : undefined;
 
   const tabCounts = {
     play: counts.byGroup.playdeck,
     location: counts.byGroup.locationdeck,
-    pool: poolCharCount(zones.pool, cardsById),
+    pool: poolCharCount(zones.pool, cardsById, sideId),
     sideboard: sumQty(zones.sideboard),
     sideboardFw: sumQty(zones.sideboardFw),
     cards: counts.total,
@@ -359,7 +374,7 @@ export default function DeckPanel({
     // entry specifically — the shared `onToggle` only knows about `quantities`.
     activeOnToggle = (id) => changeZoneQty(tab, id, -((zones[tab] || {})[id] || 0));
   }
-  const groups = tab === 'notes' ? [] : buildGroups(activeEntries, lang);
+  const groups = tab === 'notes' ? [] : buildGroups(activeEntries, lang, sideId);
 
   // Drop target is the tab itself (not an area inside the panel): zones live
   // in separate tabs, so source and destination are never visible together,
@@ -371,7 +386,7 @@ export default function DeckPanel({
     if (!payload || !payload.id) return;
     const card = cardsById.get(payload.id);
     if (!card) return;
-    if (!isDropAllowed(card, toZone)) return; // e.g. a Site dropped on Pool: ignored silently
+    if (!isDropAllowed(card, toZone, sideId)) return; // e.g. a Site dropped on Pool: ignored silently
     moveCopy(payload.id, payload.from, resolveDropTarget(toZone));
   }
 
@@ -564,7 +579,7 @@ export default function DeckPanel({
                         : { remaining: Infinity, ruleId: null }}
                       // The touch equivalent of dragging this card onto another
                       // zone tab; both routes end in the same moveCopy.
-                      moveTargets={moveTargets(card, activeZone)}
+                      moveTargets={moveTargets(card, activeZone, sideId)}
                       onMove={(toZone) => moveCopy(card.id, activeZone, toZone)}
                     />
                   ))}

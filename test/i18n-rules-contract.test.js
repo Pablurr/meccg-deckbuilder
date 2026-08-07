@@ -218,6 +218,12 @@ function buildFixture(code) {
       const hazard = firstWhere((c) => c.type === 'Hazard' && ['Hero', 'Neutral'].includes(c.alignment));
       return { ...base, side: 'wizard', quantities: { [wizardAvatar.id]: 1 }, zones: { sideboard: {}, pool: { [hazard.id]: 1 } } };
     }
+    case 'POOL-ELIGIBLE.agent': {
+      // DM-1 Anarin: a Character with attributes.agent === true. A Wizard
+      // counts an agent as a hazard (1.3.W2), so it is barred from the pool
+      // for a camp-related reason rather than a type-related one.
+      return { ...base, side: 'wizard', quantities: { [wizardAvatar.id]: 1 }, zones: { sideboard: {}, pool: { 'DM-1': 1 } } };
+    }
     case 'POOL-STAGE.points': {
       // A single 2-point Stage resource is one short of the required 3 (1.7.F1).
       const two = firstWhere((c) => c.alignment === 'Stage' && c.type === 'Resource'

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { SIDES, GENERAL } from '../web/src/lib/rules/sides.js';
 import { LENGTHS } from '../web/src/lib/rules/formats.js';
-import { localize, copiesText, poolText, playDeckText, refText, capTitle } from '../web/src/lib/rules/docText.js';
+import { localize, copiesText, poolText, sideText, playDeckText, refText, capTitle } from '../web/src/lib/rules/docText.js';
 import { RULES } from '../web/src/lib/rules/catalog.js';
 import { makeT } from '../web/src/lib/i18n.js';
 
@@ -84,8 +84,8 @@ describe('poolText', () => {
 
   it('ringwraith: only the universal character and minor-item caps (section 1 states no mind cap or race restriction for this side)', () => {
     const pool = SIDES.ringwraith.pool;
-    expect(pool.balrogMindPerCharacterLimit).toBeNull();
-    expect(pool.requireRaces).toBeNull();
+    expect(pool.balrogMindPerCharacterLimit).toBeUndefined();
+    expect(pool.requireRaces).toBeUndefined();
     const text = poolText(stubT, pool);
     expect(text).toBe(
       `docs.pool.maxCharacters::{"n":${pool.maxCharacters}} · docs.pool.maxMinorItems::{"n":${pool.maxMinorItems}}`
@@ -94,25 +94,35 @@ describe('poolText', () => {
 
   it('fallen-wizard: only the universal character and minor-item caps (section 1 states no mind cap or race restriction for this side)', () => {
     const pool = SIDES['fallen-wizard'].pool;
-    expect(pool.balrogMindPerCharacterLimit).toBeNull();
-    expect(pool.requireRaces).toBeNull();
+    expect(pool.balrogMindPerCharacterLimit).toBeUndefined();
+    expect(pool.requireRaces).toBeUndefined();
     const text = poolText(stubT, pool);
     expect(text).toBe(
       `docs.pool.maxCharacters::{"n":${pool.maxCharacters}} · docs.pool.maxMinorItems::{"n":${pool.maxMinorItems}}`
     );
   });
 
-  it('balrog: the universal caps plus the per-character mind-below-9 clause (1.3.B4) and the required-races clause', () => {
+  it('balrog: the pool text keeps only the universal caps, 1.3.B4 having moved to the camp', () => {
     const pool = SIDES.balrog.pool;
-    expect(pool.balrogMindPerCharacterLimit).toBe(9);
-    expect(pool.requireRaces).toEqual(['Orc', 'Troll']);
     const text = poolText(stubT, pool);
     expect(text).toBe(
       `docs.pool.maxCharacters::{"n":${pool.maxCharacters}} · ` +
-      `docs.pool.maxMinorItems::{"n":${pool.maxMinorItems}} · ` +
-      `docs.pool.balrogMindBelow::{"n":${pool.balrogMindPerCharacterLimit}} · ` +
-      `docs.pool.requireRaces::{"races":"${pool.requireRaces.join(', ')}"}`
+      `docs.pool.maxMinorItems::{"n":${pool.maxMinorItems}}`
     );
+  });
+
+  it('balrog: the camp text carries the 1.3.B4 race and mind clauses', () => {
+    const side = SIDES.balrog;
+    expect(side.characterRaces).toEqual(['Orc', 'Troll']);
+    expect(side.characterMindLimit).toBe(9);
+    expect(sideText(stubT, side)).toBe(
+      `docs.side.characterRaces::{"races":"${side.characterRaces.join(', ')}"} · ` +
+      `docs.side.characterMindBelow::{"n":${side.characterMindLimit}}`
+    );
+  });
+
+  it('a camp without 1.3.B4 constraints has no camp text at all', () => {
+    expect(sideText(stubT, SIDES.wizard)).toBe('');
   });
 });
 
