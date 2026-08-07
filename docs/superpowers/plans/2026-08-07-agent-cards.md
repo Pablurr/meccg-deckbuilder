@@ -711,7 +711,17 @@ Dans `web/src/lib/rules/validate.js`, boucle de la réserve :
     if (!poolEligible) {
       // 1.3.W2 / 1.3.B2 -- an agent this camp counts as a hazard is a Character
       // by type, so "type" would be a lie: it is the camp that bars it.
-      const reason = (c.attributes || {}).agent === true && roleFor(c, side).bucket === 'hazard' ? 'agent' : 'type';
+      //
+      // The `c.type === 'Character'` gate is load-bearing, not decoration.
+      // DM-28 and DM-29 are agents whose own type is Hazard, and roleFor
+      // short-circuits them to bucket 'hazard' on EVERY camp (roles.js:54 only
+      // consults side.agents.role for a Character). Without the gate they would
+      // report reason 'agent' -- telling the player their camp reclassified the
+      // card, when in truth a Hazard can never sit in the pool on any camp.
+      // That is the same lie this reason code exists to remove, pointing the
+      // other way.
+      const reason = c.type === 'Character' && (c.attributes || {}).agent === true
+        && roleFor(c, side).bucket === 'hazard' ? 'agent' : 'type';
       emit('POOL-ELIGIBLE', { id, name: name(c), reason }, `POOL-ELIGIBLE.${reason}`);
       continue;
     }
