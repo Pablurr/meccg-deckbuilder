@@ -468,6 +468,20 @@ describe('sides data', () => {
     expect(raceAllowed({ attributes: { race: 'Man' } }, 'wizard')).toBe(true);
   });
 
+  it('raceAllowed fails open when race data is absent, not just when it mismatches (1.3.B4)', () => {
+    // Every one of the 194 real Character cards carries a race today, so
+    // there is no real card to exercise this with -- the one deliberate
+    // exception to this suite's real-card convention. It stays here because
+    // the principle it guards ("data we cannot read must not silently hide a
+    // card", sides.js:172-174) is the same one the mind check right beside it
+    // already gets, and card data changes between sets.
+    expect(raceAllowed({ attributes: {} }, 'balrog')).toBe(true);
+    expect(raceAllowed({ attributes: { race: '' } }, 'balrog')).toBe(true);
+    // A present race that simply isn't Orc/Troll must still be rejected --
+    // that's the rule working, not unreadable data.
+    expect(raceAllowed({ attributes: { race: 'Man' } }, 'balrog')).toBe(false);
+  });
+
   it('SPECIFIC_TO_SIDES covers every specific value in the card data', () => {
     const seen = new Set(cards.map((c) => (c.attributes || {}).specific).filter(Boolean));
     for (const s of seen) expect(SPECIFIC_TO_SIDES[s]).toBeDefined();
@@ -740,6 +754,9 @@ describe('sides data', () => {
     // Without an exemption the race pass would hide all 32 agents from the
     // Balrog browser, while 1.3.B2 makes them hazards that camp plays.
     const agents = cards.filter((c) => c.attributes.agent === true);
+    // Stands on its own rather than relying on agentData.test.js failing
+    // first if the data ever lost every `agent` flag.
+    expect(agents.length).toBeGreaterThan(0);
     for (const c of agents) expect(isLegalForSide(c, 'balrog')).toBe(true);
   });
 

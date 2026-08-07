@@ -140,7 +140,7 @@ export default function ImportDialog({ cards, lang = 'fr', deck, setNames = NO_S
       bucket[id] = (bucket[id] || 0) + count;
     });
     return { quantities, zones };
-  }, [resolved, choice]);
+  }, [resolved, choice, effectiveSide]);
 
   // totalCopies, not a hand-listed map trio: the previous list named
   // quantities/pool/sideboard only, so a paste that resolved entirely into

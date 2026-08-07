@@ -23,6 +23,15 @@ export function zonesFor(card, sideId) {
     // zones: the starting pool holds characters, and for this camp the card is
     // not one. Side-blind callers keep the old answer, which is why sideId is
     // optional -- the same contract openBalrog/bannedIds have in sides.js.
+    //
+    // roleFor's agent branch (roles.js:51-54) computes this identical bucket
+    // for the identical rule by reading the same `side.agents.role` field
+    // independently, rather than this function calling roleFor. Deliberate,
+    // not an oversight: zonesFor runs in render loops and roleFor does
+    // considerably more work (creature weight, effective alignment, race
+    // matching) this check does not need. The two cannot disagree in value
+    // today, but nothing enforces that beyond this comment -- if the
+    // condition guarding either read ever changes, change both.
     const side = SIDES[sideId];
     if (a.agent === true && side && side.agents.role === 'hazard') {
       return { primary: 'deck', extra: ['sideboard', 'sideboardFw'] };

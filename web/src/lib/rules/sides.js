@@ -2,7 +2,7 @@
 // specificMode says how attributes.specific is read:
 //   'balrog-exempt'  -- specific:"Balrog" cards escape race/mind restrictions
 //   'avatar-match'   -- a card naming an avatar is legal only in that avatar's deck
-import { matchesRace } from './races.js';
+import { matchesRace, racesOf } from './races.js';
 
 // Side-independent limits (1.3.1, 1.3.2, 1.4).
 export const GENERAL = {
@@ -187,5 +187,12 @@ export function isLegalForSide(card, sideId, openBalrog, bannedIds) {
 export function raceAllowed(card, sideId) {
   const side = SIDES[sideId];
   if (!side || !side.characterRaces) return true;
-  return side.characterRaces.some((r) => matchesRace((card.attributes || {}).race, r));
+  const race = (card.attributes || {}).race;
+  // A race that is absent or empty restricts nothing, same principle as the
+  // mind check beside this function's caller (isLegalForSide) and the
+  // unrecognised `specific` value above it: data we cannot read must not
+  // silently hide a card. A race that IS present and simply isn't Orc/Troll
+  // still falls through to the real check below -- that's the rule working.
+  if (racesOf(race).length === 0) return true;
+  return side.characterRaces.some((r) => matchesRace(race, r));
 }
