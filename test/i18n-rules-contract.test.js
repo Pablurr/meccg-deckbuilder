@@ -130,13 +130,19 @@ function buildFixture(code) {
     }
     case 'BALROG-RACE': {
       const balrogAvatar = firstWhere((c) => c.attributes.avatar && c.alignment === 'Balrog');
+      // Excludes agents: 1.3.B2 makes an agent a hazard for the Balrog, not a
+      // "Balrog character", so BALROG-RACE must not fire for one -- the wrong
+      // fixture here would silently stop proving the code is reachable.
       const wrongRaceChar = firstWhere((c) => c.type === 'Character' && !c.attributes.avatar && c.attributes.specific !== 'Balrog'
+        && c.attributes.agent !== true
         && c.attributes.race && !String(c.attributes.race).includes('Orc') && !String(c.attributes.race).includes('Troll'));
       return { ...base, side: 'balrog', quantities: { [balrogAvatar.id]: 1, [wrongRaceChar.id]: 1 } };
     }
     case 'BALROG-MIND': {
       const balrogAvatar = firstWhere((c) => c.attributes.avatar && c.alignment === 'Balrog');
-      const bigMindChar = firstWhere((c) => c.type === 'Character' && !c.attributes.avatar && c.attributes.specific !== 'Balrog' && parseInt(c.attributes.mind, 10) >= 9);
+      // Same exclusion as BALROG-RACE just above, same reason.
+      const bigMindChar = firstWhere((c) => c.type === 'Character' && !c.attributes.avatar && c.attributes.specific !== 'Balrog'
+        && c.attributes.agent !== true && parseInt(c.attributes.mind, 10) >= 9);
       return { ...base, side: 'balrog', quantities: { [balrogAvatar.id]: 1, [bigMindChar.id]: 1 } };
     }
     case 'FACTION-RACE': {
@@ -217,6 +223,12 @@ function buildFixture(code) {
     case 'POOL-ELIGIBLE.type': {
       const hazard = firstWhere((c) => c.type === 'Hazard' && ['Hero', 'Neutral'].includes(c.alignment));
       return { ...base, side: 'wizard', quantities: { [wizardAvatar.id]: 1 }, zones: { sideboard: {}, pool: { [hazard.id]: 1 } } };
+    }
+    case 'POOL-ELIGIBLE.agent': {
+      // DM-1 Anarin: a Character with attributes.agent === true. A Wizard
+      // counts an agent as a hazard (1.3.W2), so it is barred from the pool
+      // for a camp-related reason rather than a type-related one.
+      return { ...base, side: 'wizard', quantities: { [wizardAvatar.id]: 1 }, zones: { sideboard: {}, pool: { 'DM-1': 1 } } };
     }
     case 'POOL-STAGE.points': {
       // A single 2-point Stage resource is one short of the required 3 (1.7.F1).

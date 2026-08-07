@@ -132,7 +132,11 @@ export function importDeckList(text, cards, lang = 'en') {
     if (clean.status === 'notfound') { unmatched.push(clean); continue; }
     if (clean.status === 'ambiguous') ambiguous.push(clean);
     const card = clean.matches[0];
-    const bucket = bucketFor(card, clean.target, { quantities, zones });
+    // doc.meta.side is the camp the pasted "Side:"/"Camp:" line named (null in
+    // freeform or when the paste carries none) -- the same value already fed
+    // to resolveLines above, so an agent lands in the zone this camp actually
+    // gives it instead of the side-blind default.
+    const bucket = bucketFor(card, clean.target, { quantities, zones }, doc.meta.side);
     bucket[card.id] = (bucket[card.id] || 0) + clean.qty;
   }
 

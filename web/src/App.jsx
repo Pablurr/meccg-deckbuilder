@@ -428,7 +428,7 @@ export default function App() {
           // out of deckbuilding left cards there. Offering all three here was
           // inviting a freeform deck to grow zone data no other freeform
           // surface can see or edit.
-          rows={(deck.mode === 'deckbuilding' ? zoneTargets(previewCard) : ['deck']).map((zone) => ({
+          rows={(deck.mode === 'deckbuilding' ? zoneTargets(previewCard, deck.ruleset.side) : ['deck']).map((zone) => ({
             zone,
             qty: (zone === 'deck' ? quantities : zones[zone] || {})[previewCard.id] || 0,
             room: capCtx

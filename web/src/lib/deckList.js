@@ -30,6 +30,7 @@ import { cardName } from './lang.js';
 import { deckSections } from './export/deckSections.js';
 import { TYPE_ORDER } from './constants.js';
 import { emptyZones } from './deck.js';
+import { roleFor } from './rules/roles.js';
 
 export { TYPE_ORDER } from './constants.js';
 
@@ -55,15 +56,28 @@ const META_MODE = { freeform: 'Freeform', deckbuilding: 'Deckbuilding' };
 const META_SIDE = { wizard: 'Wizard', ringwraith: 'Ringwraith', 'fallen-wizard': 'Fallen-wizard', balrog: 'Balrog' };
 const META_LENGTH = { starter: 'Starter', standard: 'Standard', long: 'Long', campaign: 'Campaign' };
 
+// roleFor's buckets, mapped onto the TYPE_ORDER keys this function has always
+// returned. 'avatar' maps to Character on purpose: there is no Avatars group
+// here (deckSections.js has one, this does not), and an avatar has always
+// shown up among the characters.
+const TYPE_BY_BUCKET = { character: 'Character', avatar: 'Character', resource: 'Resource', hazard: 'Hazard', site: 'Site', region: 'Region' };
+
 // Bucket a { card, qty } entry list by TYPE_ORDER, sorted by name within each
 // group, dropping empty groups. Shared by the deck panel's zone tabs (play,
-// pool, sideboard, location, cards) — same grouping the panel has always
-// used, factored out here alongside buildDeckListText since both group deck
-// entries by card type in the same fixed order.
-export function buildGroups(entries, lang) {
+// pool, sideboard, location, cards).
+//
+// With a camp, the grouping follows roleFor rather than card.type, so a
+// Wizard's agents are listed among the hazards they actually are (1.3.W2,
+// 1.3.B2). Without one -- freeform decks -- the old type grouping stands,
+// which is why sideId is optional.
+export function buildGroups(entries, lang, sideId) {
+  const displayType = (card) => {
+    if (!sideId) return card.type;
+    return TYPE_BY_BUCKET[roleFor(card, sideId).bucket] || card.type;
+  };
   return TYPE_ORDER.map((type) => {
     const items = entries
-      .filter((it) => it.card && it.card.type === type)
+      .filter((it) => it.card && displayType(it.card) === type)
       .sort((a, b) => cardName(a.card, lang).localeCompare(cardName(b.card, lang)));
     return { type, items };
   }).filter((g) => g.items.length > 0);

@@ -257,13 +257,14 @@ export const translations = {
     'rules.POOL-ITEMS.unique': '{name} est unique — la réserve de départ n’accepte que des objets mineurs non uniques.',
     'rules.POOL-ITEMS.hoard': '{name} est un objet de trésor — la réserve de départ n’accepte pas les objets de trésor.',
     'rules.POOL-ELIGIBLE.type': '{name} ne peut pas être dans la réserve de départ — seuls les personnages et les objets mineurs de départ y ont leur place. Déplace-la vers la pioche ou le talon.',
+    'rules.POOL-ELIGIBLE.agent': '{name} est un agent que ce camp compte comme un péril, pas comme un personnage — il n’a pas sa place dans la réserve de départ. Déplace-la vers la pioche ou le talon.',
     'rules.POOL-STAGE.points': 'La réserve contient {total} points de progression — il en faut exactement {required}.',
     'rules.POOL-STAGE.count': '{count} ressources de progression dans la réserve — {max} au maximum.',
     'rules.POOL-STAGE.nonUnique': 'La réserve doit contenir au moins {min} ressource de progression non unique.',
     // Data values interpolated into the messages above ({alignment}, {race}):
     // localized so a sentence never mixes an English data value with
     // translated prose. Values are those that actually occur (see sides.js
-    // alignments/pool.forbidRaces/requireRaces and the Character race set).
+    // alignments/characterRaces and the Character race set).
     'alignment.Hero': 'Héros',
     'alignment.Minion': 'Séide',
     'alignment.Neutral': 'Neutre',
@@ -353,6 +354,7 @@ export const translations = {
     'docs.col.copies': "Limite d'exemplaires",
     'docs.col.playDeck': 'Taille de la pioche',
     'docs.col.pool': 'Réserve de départ',
+    'docs.col.characterConstraints': 'Contraintes de personnages',
     'docs.copies.default': '{n} par carte',
     // One full phrase per (bucket, alignment) combination -- each language
     // owns its own word order rather than the code concatenating a bucket
@@ -363,8 +365,10 @@ export const translations = {
     'docs.copies.category.resource-Minion': '{n} pour les ressources Séide',
     'docs.pool.maxCharacters': '{n} personnages max',
     'docs.pool.maxMinorItems': '{n} objets mineurs max',
-    'docs.pool.balrogMindBelow': 'esprit par personnage Balrog < {n}',
-    'docs.pool.requireRaces': 'races requises : {races}',
+    // 1.3.B4 -- a whole-deck constraint, not a pool one: saying "réserve"
+    // here would be false documentation (see docs.col.pool above).
+    'docs.side.characterRaces': 'personnages non-avatars, deck entier : races autorisées {races}',
+    'docs.side.characterMindBelow': 'personnages non-avatars, deck entier : esprit < {n}',
     'docs.playDeck.resources': '{min}–{max} ressources',
     'docs.playDeck.hazards': 'autant de périls que de ressources',
     'docs.playDeck.characters': '{n} personnages non-avatar max',
@@ -653,6 +657,7 @@ export const translations = {
     'rules.POOL-ITEMS.unique': '{name} is unique — the starting pool only takes non-unique minor items.',
     'rules.POOL-ITEMS.hoard': '{name} is a hoard item — the starting pool takes no hoard items.',
     'rules.POOL-ELIGIBLE.type': '{name} cannot sit in the starting pool — only characters and starting minor items are pool-eligible. Move it to the play deck or sideboard.',
+    'rules.POOL-ELIGIBLE.agent': '{name} is an agent this side counts as a hazard, not a character — it cannot sit in the starting pool. Move it to the play deck or sideboard.',
     'rules.POOL-STAGE.points': 'The pool holds {total} stage points — exactly {required} are needed.',
     'rules.POOL-STAGE.count': '{count} stage resources in the pool — {max} at most.',
     'rules.POOL-STAGE.nonUnique': 'The pool needs at least {min} non-unique stage resource.',
@@ -743,6 +748,7 @@ export const translations = {
     'docs.col.copies': 'Copy limit',
     'docs.col.playDeck': 'Play deck size',
     'docs.col.pool': 'Starting pool',
+    'docs.col.characterConstraints': 'Character constraints',
     'docs.copies.default': '{n} per card',
     // One full phrase per (bucket, alignment) combination -- each language
     // owns its own word order rather than the code concatenating a bucket
@@ -753,8 +759,8 @@ export const translations = {
     'docs.copies.category.resource-Minion': '{n} for Minion resources',
     'docs.pool.maxCharacters': '{n} characters max',
     'docs.pool.maxMinorItems': '{n} minor items max',
-    'docs.pool.balrogMindBelow': 'Balrog mind per character < {n}',
-    'docs.pool.requireRaces': 'required races: {races}',
+    'docs.side.characterRaces': 'non-avatar characters, whole deck: allowed races {races}',
+    'docs.side.characterMindBelow': 'non-avatar characters, whole deck: mind < {n}',
     'docs.playDeck.resources': '{min}–{max} resources',
     'docs.playDeck.hazards': 'as many hazards as resources',
     'docs.playDeck.characters': '{n} non-avatar characters max',
@@ -1052,6 +1058,7 @@ export const translations = {
     'rules.POOL-ITEMS.unique': '{name} es única — la reserva inicial solo admite objetos menores no únicos.',
     'rules.POOL-ITEMS.hoard': '{name} es un objeto de tesoro — la reserva inicial no admite objetos de tesoro.',
     'rules.POOL-ELIGIBLE.type': '{name} no puede estar en la reserva inicial — solo caben personajes y objetos menores iniciales. Muévela al mazo de juego o al sideboard.',
+    'rules.POOL-ELIGIBLE.agent': '{name} es un agente que este bando cuenta como peligro, no como personaje — no puede estar en la reserva inicial. Muévela al mazo de juego o al sideboard.',
     'rules.POOL-STAGE.points': 'La reserva inicial tiene {total} puntos de puesta en escena — hacen falta exactamente {required}.',
     'rules.POOL-STAGE.count': '{count} recursos de puesta en escena en la reserva inicial — {max} como máximo.',
     'rules.POOL-STAGE.nonUnique': 'La reserva inicial necesita al menos {min} recurso de puesta en escena no único.',
@@ -1141,6 +1148,7 @@ export const translations = {
     'docs.col.copies': 'Límite de copias',
     'docs.col.playDeck': 'Tamaño del mazo de juego',
     'docs.col.pool': 'Reserva inicial',
+    'docs.col.characterConstraints': 'Restricciones de personajes',
     'docs.copies.default': '{n} por carta',
     // One full phrase per (bucket, alignment) combination -- each language
     // owns its own word order rather than the code concatenating a bucket
@@ -1151,8 +1159,8 @@ export const translations = {
     'docs.copies.category.resource-Minion': '{n} para los recursos Secuaz',
     'docs.pool.maxCharacters': '{n} personajes máx.',
     'docs.pool.maxMinorItems': '{n} objetos menores máx.',
-    'docs.pool.balrogMindBelow': 'mente por personaje Balrog < {n}',
-    'docs.pool.requireRaces': 'razas requeridas: {races}',
+    'docs.side.characterRaces': 'personajes no avatar, mazo completo: razas permitidas {races}',
+    'docs.side.characterMindBelow': 'personajes no avatar, mazo completo: mente < {n}',
     'docs.playDeck.resources': '{min}–{max} recursos',
     'docs.playDeck.hazards': 'tantos peligros como recursos',
     'docs.playDeck.characters': '{n} personajes no avatar máx.',

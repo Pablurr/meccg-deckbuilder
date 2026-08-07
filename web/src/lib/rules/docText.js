@@ -55,10 +55,20 @@ export function poolText(t, pool) {
     t('docs.pool.maxCharacters', { n: pool.maxCharacters }),
     t('docs.pool.maxMinorItems', { n: pool.maxMinorItems }),
   ];
-  if (pool.balrogMindPerCharacterLimit != null) parts.push(t('docs.pool.balrogMindBelow', { n: pool.balrogMindPerCharacterLimit }));
-  if (pool.requireRaces && pool.requireRaces.length) {
-    parts.push(t('docs.pool.requireRaces', { races: pool.requireRaces.map((r) => localize(t, 'race', r)).join(', ') }));
+  return parts.join(' · ');
+}
+
+// 1.3.B4 -- the camp-wide character constraints, as short localized fragments
+// for the same reason poolText is built that way: both fields are null for
+// three of the four camps. Kept out of poolText because they are NOT pool
+// rules -- describing them under "starting pool" is what made the rule look
+// like a pool cap in the first place.
+export function sideText(t, side) {
+  const parts = [];
+  if (side.characterRaces && side.characterRaces.length) {
+    parts.push(t('docs.side.characterRaces', { races: side.characterRaces.map((r) => localize(t, 'race', r)).join(', ') }));
   }
+  if (side.characterMindLimit != null) parts.push(t('docs.side.characterMindBelow', { n: side.characterMindLimit }));
   return parts.join(' · ');
 }
 

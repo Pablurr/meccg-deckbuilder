@@ -5,7 +5,7 @@ import { SIDES } from '../lib/rules/sides.js';
 import { LENGTHS } from '../lib/rules/formats.js';
 import { BANNED } from '../lib/rules/banned.js';
 import { REPORT_ISSUES_URL, SIDE_IDS, LENGTH_IDS } from '../lib/constants.js';
-import { localize, copiesText, poolText, playDeckText, refText } from '../lib/rules/docText.js';
+import { localize, copiesText, poolText, sideText, playDeckText, refText } from '../lib/rules/docText.js';
 import { COE } from '../lib/rules/catalog.js';
 import FeaturesDoc from './FeaturesDoc.jsx';
 
@@ -153,6 +153,7 @@ export default function RulesDoc({ deck, onToggleRule, onClose }) {
                   <th>{t('docs.col.copies')}</th>
                   <th>{t('docs.col.playDeck')}</th>
                   <th>{t('docs.col.pool')}</th>
+                  <th>{t('docs.col.characterConstraints')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -165,6 +166,11 @@ export default function RulesDoc({ deck, onToggleRule, onClose }) {
                       <td>{copiesText(t, p)}</td>
                       <td>{playDeckText(t)}</td>
                       <td>{poolText(t, p.pool)}</td>
+                      {/* 1.3.B4 is a whole-deck constraint on the camp, not a
+                          pool rule -- its own column keeps it out of the
+                          "Starting pool" column, which would misdocument its
+                          scope again. Empty for the three camps it doesn't apply to. */}
+                      <td>{sideText(t, p)}</td>
                     </tr>
                   );
                 })}
