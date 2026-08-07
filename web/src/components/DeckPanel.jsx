@@ -15,6 +15,7 @@ import { REPORT_ISSUES_URL } from '../lib/constants.js';
 import { COE, RULE_BY_ID } from '../lib/rules/catalog.js';
 import { refText } from '../lib/rules/docText.js';
 import { remainingCopies } from '../lib/rules/copies.js';
+import { roleFor } from '../lib/rules/roles.js';
 import { deckCardWidth } from '../lib/cardGrid.js';
 import { placePopover } from '../lib/popover.js';
 
@@ -118,10 +119,18 @@ function sumQty(map) {
 // answer to their own maxMinorItems cap (POOL-ITEMS), which this tab does
 // not display. Count only what the cap governs so the tab and the
 // POOL-CHARS validator warning never disagree on the same deck.
-function poolCharCount(pool, cardsById) {
+//
+// With a camp, "Character" means roleFor's bucket, not card.type: an agent
+// can only be sitting in this pool because that camp counts it as one
+// (zonesFor already routes it to the deck otherwise), so it must count here
+// too. Freeform has no camp to ask roleFor about, so it keeps the old
+// card.type check -- same fallback zonesFor/buildGroups use for sideId.
+function poolCharCount(pool, cardsById, sideId) {
   return Object.entries(pool || {}).reduce((sum, [id, n]) => {
     const c = cardsById.get(id);
-    return c && c.type === 'Character' ? sum + n : sum;
+    if (!c) return sum;
+    const isCharacter = sideId ? roleFor(c, sideId).bucket === 'character' : c.type === 'Character';
+    return isCharacter ? sum + n : sum;
   }, 0);
 }
 
@@ -308,7 +317,7 @@ export default function DeckPanel({
   const tabCounts = {
     play: counts.byGroup.playdeck,
     location: counts.byGroup.locationdeck,
-    pool: poolCharCount(zones.pool, cardsById),
+    pool: poolCharCount(zones.pool, cardsById, sideId),
     sideboard: sumQty(zones.sideboard),
     sideboardFw: sumQty(zones.sideboardFw),
     cards: counts.total,
@@ -350,7 +359,7 @@ export default function DeckPanel({
     // entry specifically — the shared `onToggle` only knows about `quantities`.
     activeOnToggle = (id) => changeZoneQty(tab, id, -((zones[tab] || {})[id] || 0));
   }
-  const groups = tab === 'notes' ? [] : buildGroups(activeEntries, lang);
+  const groups = tab === 'notes' ? [] : buildGroups(activeEntries, lang, sideId);
 
   // Drop target is the tab itself (not an area inside the panel): zones live
   // in separate tabs, so source and destination are never visible together,

@@ -366,6 +366,43 @@ describe('buildGroups', () => {
   });
 });
 
+describe('buildGroups (display role, 1.3.W2/R2/B2)', () => {
+  const anarin = () => index.get('DM-1');
+  const plainHazard = () => firstWhere((c) => c.type === 'Hazard' && c.attributes.agent !== true);
+
+  it('groups an agent under Hazard for the camps that count it as one', () => {
+    const entries = [{ card: anarin(), qty: 1 }, { card: plainHazard(), qty: 1 }];
+    for (const side of ['wizard', 'balrog']) {
+      const groups = buildGroups(entries, 'en', side);
+      expect(groups.map((g) => g.type)).toEqual(['Hazard']);
+      expect(groups[0].items).toHaveLength(2);
+    }
+  });
+
+  it('groups the same agent under Character for the camps that count it as one', () => {
+    const entries = [{ card: anarin(), qty: 1 }];
+    for (const side of ['ringwraith', 'fallen-wizard']) {
+      expect(buildGroups(entries, 'en', side).map((g) => g.type)).toEqual(['Character']);
+    }
+  });
+
+  it('omitting the side keeps the old grouping by card type', () => {
+    const entries = [{ card: anarin(), qty: 1 }];
+    expect(buildGroups(entries, 'en').map((g) => g.type)).toEqual(['Character']);
+  });
+
+  it('an avatar still groups under Character, since there is no Avatars group here', () => {
+    const avatar = firstWhere((c) => c.attributes.avatar === true && c.type === 'Character');
+    expect(buildGroups([{ card: avatar, qty: 1 }], 'en', 'wizard').map((g) => g.type)).toEqual(['Character']);
+  });
+
+  it('keeps TYPE_ORDER and drops empty groups', () => {
+    const site = firstWhere((c) => c.type === 'Site');
+    const entries = [{ card: plainHazard(), qty: 1 }, { card: site, qty: 1 }];
+    expect(buildGroups(entries, 'en', 'wizard').map((g) => g.type)).toEqual(['Hazard', 'Site']);
+  });
+});
+
 describe('sides data', () => {
   it('exposes the four sides with alignments and copy limits', () => {
     expect(Object.keys(SIDES).sort()).toEqual(['balrog', 'fallen-wizard', 'ringwraith', 'wizard']);
