@@ -7,9 +7,9 @@ const { cards, index } = parseCards(raw);
 describe('agent card data', () => {
   it('every card flagged as an agent also carries the "Agent" keyword', () => {
     const agents = cards.filter((c) => c.attributes.agent === true);
-    // 30 Character/Minion de Dark Minions + les 2 agents de type Hazard
-    // (DM-28, DM-29). Le keyword dit "c'est un agent", pas "c'est un
-    // agent-personnage", donc les deux Hazard le portent aussi.
+    // 30 Character/Minion agents from Dark Minions + 2 Hazard-type agents
+    // (DM-28, DM-29). The keyword means "this is an agent", not "this is
+    // an agent character", so both Hazards carry it too.
     expect(agents).toHaveLength(32);
     for (const c of agents) expect(c.attributes.keywords).toContain('Agent');
   });
@@ -22,8 +22,8 @@ describe('agent card data', () => {
   });
 
   it('The Balrog (BA-3) carries Spawn as a keyword, not as a subtype', () => {
-    // "Spawn" n'est pas un sous-type de carte : c'etait le seul subtype:"Spawn"
-    // du jeu, une entree parasite dans la facette Subtype du navigateur.
+    // Spawn is not a card subtype: it was the only subtype:"Spawn" in the
+    // game, a stray entry in the browser's Subtype facet.
     const balrog = index.get('BA-3');
     expect(balrog.attributes.subtype).toBeUndefined();
     expect(balrog.attributes.keywords).toContain('Spawn');
