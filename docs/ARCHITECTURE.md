@@ -8,32 +8,16 @@
 > Doc utilisateur : [`README.md`](../README.md). Ce fichier-ci décrit le *comment* et le *pourquoi*.
 
 **Dernière mise à jour : 2026-08-07** — branche `agent-card-management` (`a04e54f..HEAD`),
-tâche 4/7 : `zonesFor(card, sideId)` connaît désormais le camp (§6). Avant cette tâche, tout
-Character non-avatar recevait `primary: 'pool'`, y compris les 32 cartes `Agent` — offrant la
-réserve à un agent-péril au glisser-déposer, au menu « déplacer » et à l'import, sur les camps
-(Sorcier, Balrog) où 1.3.W2/1.3.B2 le comptent comme un péril, pas un personnage. `sideId` est
-**optionnel**, dernier paramètre, même contrat qu'`openBalrog`/`bannedIds` dans
-`isLegalForSide` : omis, la sortie est strictement celle d'avant — un test le vérifie sur tout
-le jeu de cartes. Propagé à `zoneTargets`, `moveTargets`, `isDropAllowed`
-(`dropTargets.js`) et `targetForCard`/`bucketFor` (`import/target.js`) ; câblé chez **cinq**
-appelants qui connaissent le camp — `CardBrowser.jsx` (prop `side`), `App.jsx` (aperçu carte,
-branche deckbuilding seulement, `deck.ruleset.side`), les **deux** appelants d'`import/target.js`
-(`importDeckList` via `doc.meta.side`, le camp lu dans l'en-tête collée — une façade d'API
-publique, sans appelant sous `web/src`, exercée seulement par des tests de round-trip, pas un
-chemin de production ; la prévisualisation d'`ImportDialog`, **elle réellement atteinte par
-l'UI**, via `effectiveSide`, déjà calculée pour `resolveLines`), et **`DeckPanel.jsx`**
-(glisser-déposer et menu « déplacer vers » **réels** du panneau de
-deck — un oubli de la première passe, repéré en revue : la liste des appelants du plan venait
-d'un grep sur `zonesFor`/`zoneTargets` qui ne voyait pas les deux appels qui passent par
-`dropTargets`/`moveTargets`). `DeckPanel.jsx` dérive `sideId` du même calcul que `sideKey`
-(son badge de camp) mais rend `undefined`, pas `'freeform'`, hors deckbuilding — c'est la
-valeur « pas de camp » que `zonesFor` et consorts traitent déjà comme side-blind. `validate.js`
-appelle encore `zonesFor(c)` sans camp — seul appelant restant hors périmètre, volontairement :
-prévu tâche 5.
-
-Tâche 3/7 (pour mémoire) : 1.3.B4 (personnages non-avatars Balrog : Orc ou Troll, esprit < 9)
-a déménagé de `SIDES[side].pool` vers `SIDES[side]` lui-même — clés `characterRaces`/
-`characterMindLimit` (§6, §15).
+**terminée (tâche 7/7, documentation).** Un « agent » (32 cartes, `attributes.agent ===
+true`) se comporte désormais selon le camp qui le joue — péril pour un Sorcier ou un Balrog
+(1.3.W2/1.3.B2), personnage pour un Spectre de l'Anneau ou un Sorcier déchu (1.3.R2/1.3.F4)
+— à travers légalité, zones, validation et affichage ; et 1.3.B4 (personnages non-avatars
+Balrog : Orc ou Troll, esprit < 9) est passée d'un plafond de réserve à une contrainte de
+deck entier. Détail par section : §3 (données : mot-clé `Agent`, `Spawn` quitte le subtype
+de BA-3), §6 (`isLegalForSide` gagne les passes agent et 1.3.B4 ; `zonesFor(card, sideId)`
+connaît le camp ; `POOL-ELIGIBLE.agent` et son garde de type), §10 (`buildGroups` regroupe
+par rôle quand `sideId` est connu ; pourquoi `deckSections.js` ne le fait délibérément pas).
+Historique tâche par tâche en §15.
 
 ---
 
@@ -179,6 +163,15 @@ Alignements : Hero, Minion, Neutral, Stage, Balrog, Fallen-wizard, Dual.
 
 ### Pièges de données — vérifiés, coûteux à redécouvrir
 
+- **Éditer ce fichier (à la main ou par script) doit round-tripper à l'octet près.** La
+  source est indentée à **un espace**, en fins de ligne **CRLF**, **sans newline finale**
+  (vérifié : `wc -l` compte 63 802 fins de ligne sur un fichier qui ne se termine pas par
+  une newline). Un seul réglage `json.dumps` le reproduit : `json.dumps(d, indent=1,
+  ensure_ascii=False).replace('\n', '\r\n')`, écrit avec `open(path, 'w', newline='')` —
+  sans ce dernier point, Python retraduit les `\r\n` qu'on vient d'insérer en `\r\r\n`.
+  N'importe quel autre réglage (indentation par défaut, `\n` nus, `open()` sans
+  `newline=''`) reformate silencieusement l'intégralité du fichier : un changement de deux
+  caractères devient un diff de dizaines de milliers de lignes.
 - **Deux chemins d'image, à ne pas confondre.** `relativePath` désigne une copie *locale*
   historique et est aujourd'hui **inerte** (héritage d'avant la migration CDN, §12).
   Le chemin vivant est `imageBaseUrl[lang] + image`.
@@ -203,6 +196,18 @@ Alignements : Hero, Minion, Neutral, Stage, Balrog, Fallen-wizard, Dual.
   Gandalf 7, Pallando 6, Radagast 8, Saruman 6) — contrainte plus fine que le camp.
 - **`attributes.playableAsStartingMinorItem`** identifie exactement les ressources
   éligibles à un pool de départ.
+- **Le mot-clé `"Agent"` (`attributes.keywords`, 2026-08-07) est un libellé de filtre, pas
+  un signal de règles.** Les 32 cartes `attributes.agent === true` — y compris DM-28 et
+  DM-29, dont le `type` reste `Hazard` — le portent désormais, ce qui les fait apparaître
+  sous le filtre Mots-clés sans code UI nouveau (§10 : ce filtre affiche les valeurs de
+  facette brutes, non traduites). Le moteur de règles ne lit **jamais** ce mot-clé :
+  `attributes.agent` reste l'unique source de vérité (`isLegalForSide`, `zonesFor`,
+  `roleFor`, `POOL-ELIGIBLE` — §6).
+- **`attributes.subtype: "Spawn"` a quitté BA-3 (2026-08-07)**, remplacé par le mot-clé
+  `"Spawn"` dans `attributes.keywords`. Aucun code n'en a eu besoin : `roleFor`
+  (`creatureWeight`, `roles.js`) lisait déjà les deux signaux (`a.spawn === true` ou
+  `keywords.includes('Spawn')`) pour ce même trait porté tantôt en attribut tantôt en
+  mot-clé selon la carte.
 - **Les valeurs de facettes ne sont pas traduites** : ce sont des données de jeu lues
   directement dans `cards.json`. Seul le chrome d'interface est traduit. (Voir §14 : c'est
   le dernier endroit où du vocabulaire anglais reste visible dans l'UI FR.)
@@ -685,6 +690,19 @@ carte en silence. Ordre **chargé de sens** : avatars et agents sortent avant d'
 cette passe, et les cartes Balrog-spécifiques (`SPECIFIC_TO_SIDES`) aussi — c'est ce qui
 laisse BA-5/BA-9 (Troll, esprit 9, mais `specific: "Balrog"`) visibles malgré leur esprit,
 alors que LE-20/21/22 (même profil racial, sans `specific`) sont bien masqués.
+
+**`POOL-ELIGIBLE` et son motif `agent` (`validate.js`, 2026-08-07, tâche 5/7).** Une carte
+que `zonesFor(c)` n'admet nulle part en réserve échoue `POOL-ELIGIBLE` avec un `code` en
+deux variantes, `POOL-ELIGIBLE.type` ou `POOL-ELIGIBLE.agent` (i18n fr/en/es). Le motif
+`agent` exige **trois** conditions, pas deux : `c.type === 'Character' && a.agent === true
+&& roleFor(c, side).bucket === 'hazard'`. Le garde de type est nécessaire à cause de
+DM-28/DM-29 : ces deux cartes ont `attributes.agent === true` mais leur `type` propre est
+`Hazard`, et `roleFor` (`roles.js`) ne consulte `side.agents.role` que pour un `Character` —
+sur **tout** camp, avatar ou non, leur `bucket` vaut donc déjà `'hazard'` sans qu'aucun camp
+n'ait rien reclassé. Sans le garde `c.type === 'Character'`, ces deux cartes émettraient
+`reason: 'agent'` en disant au joueur que son camp les a requalifiées, alors qu'elles n'ont
+jamais été des personnages — le message correct pour elles reste `'type'`, la même raison
+que n'importe quel Hazard ordinaire déposé en réserve.
 
 ### Ajouter une règle — ordre des opérations
 
@@ -1356,6 +1374,30 @@ avant le rendu.
 quantifient sur la même vignette 200 px (`deckThumbWidth`), donc sans conséquence visible :
 c'est le compromis assumé « la prédiction peut dériver, la mise en page jamais », pas un bug.
 
+### Regroupement par rôle dans un onglet du panneau (`buildGroups`, `lib/deckList.js`, 2026-08-07)
+
+Chaque onglet du panneau (pioche, réserve, talons) regroupe ses cartes par en-tête
+`Character / Resource / Hazard / Site / Region` via `buildGroups(entries, lang, sideId)`.
+**`sideId` est optionnel, dernier paramètre, même contrat que `zonesFor`/`isLegalForSide` :**
+omis (freeform), le regroupement reste `card.type`, comportement d'avant cette tâche. Passé
+(deckbuilding, même `sideId` que `DeckPanel` dérive déjà pour le glisser-déposer, §6), le
+regroupement suit `roleFor(card, sideId).bucket` au lieu du type imprimé — c'est ce qui liste
+les agents d'un camp Sorcier ou Balrog sous l'en-tête **Hazard** (1.3.W2/1.3.B2) plutôt que
+Character, à l'endroit même où le joueur les compte réellement comme périls. `TYPE_BY_BUCKET`
+fait le pont bucket → en-tête (`avatar` retombe sur `Character` : ce module n'a jamais eu de
+groupe « Avatars » séparé, à la différence de `deckSections.js` ci-dessous).
+
+**`deckSections.js` (§7), le second regroupeur de deck, reste délibérément sur `card.type` et
+ne doit pas être « corrigé » pour suivre `roleFor`.** Les deux modules groupent tous les deux
+un deck, mais pas pour le même lecteur : `buildGroups` sert l'écran, `deckSections` sert
+l'export texte, et ses titres de groupe (« Hazards », « Characters »…) sont relus en sens
+inverse par le parseur d'import comme **indices de type** (`import/vocabulary.js:82-84`,
+`group('Hazard')` etc. — §4). Un agent classé sous « Hazards » à l'export à cause de `roleFor`
+réimporterait avec `type: 'Hazard'` faux pour une carte dont le vrai type reste `Character` —
+la carte redeviendrait illisible pour tout code qui teste `card.type === 'Character'`,
+silencieusement, au premier aller-retour export → import. La divergence entre les deux
+modules **est** l'invariant, pas un oubli.
+
 ### Onglets de zone : pastilles élargies, survol de dépôt, zone optionnelle (`ZoneTabs.jsx`, 2026-08-03)
 
 Pastilles élargies (`4px 10px` → `8px 14px`, hauteur mini `34px`) : ce sont des cibles de
@@ -1452,7 +1494,7 @@ rafraîchissement.
 
 ## §11 — Tests
 
-`npm test` → Vitest, **36 fichiers, 676 tests**. Node pur, pas de DOM : les composants ne
+`npm test` → Vitest, **36 fichiers, 687 tests**. Node pur, pas de DOM : les composants ne
 sont pas montés, ce sont les **modules purs** qui sont testés.
 
 C'est ce qui dicte la façon d'aborder un travail d'interface ici : **on extrait la décision
@@ -1473,6 +1515,11 @@ Fichiers notables :
 - `parseCards.test.js` — aplatissement, facettes, et **le contrat des noms de sets** :
   chaque set offert par la facette porte un nom dans les trois langues. Sans lui, un set
   ajouté sans nom s'afficherait en code nu, dans toutes les langues, sans rien casser.
+- `agentData.test.js` (2026-08-07) — épingle sur `cards.json` lui-même : exactement 32
+  cartes `attributes.agent === true` portent `"Agent"` dans `attributes.keywords`, DM-28/
+  DM-29 compris, et BA-3 ne porte plus `attributes.subtype: "Spawn"`. Un test de données,
+  pas de code — il casse si quelqu'un retouche `cards.json` sans repasser par le round-trip
+  du §3.
 - `importDeck.test.js`, `deckList.test.js`, `deckSections.test.js` — le cycle
   export texte → import. `importLine.test.js`, `importVocabulary.test.js`,
   `importDocument.test.js`, `importResolve.test.js`, `importDeckSetCode.test.js`,
@@ -1726,3 +1773,5 @@ transformation*, donc lis le compte de **fichiers**, pas seulement celui des tes
 | 2026-08-07 | `zonesFor` connaît le camp, branche `agent-card-management`, tâche 4/7. §6 : `zonesFor(card, sideId)` — pour un `Character` non-avatar, `a.agent === true && SIDES[sideId].agents.role === 'hazard'` renvoie désormais les zones d'un Hazard (`deck` + les deux talons) au lieu du `primary: 'pool'` par défaut : sans ce changement, les 32 cartes `Agent` offraient la réserve au glisser-déposer, au menu « déplacer » et à l'import sur les camps (Sorcier, Balrog) qui les comptent comme périls (1.3.W2/1.3.B2) — la réserve d'un camp Spectre/Sorcier-déchu, où l'agent reste un personnage (1.3.R2/1.3.F4), n'est pas touchée. `sideId` optionnel, dernier paramètre, même contrat qu'`openBalrog`/`bannedIds` (`isLegalForSide`) : omis, ou inconnu (`SIDES[sideId]` `undefined`), la sortie est celle d'avant cette tâche — un test le vérifie sur tout le jeu de cartes, un autre sur un id inventé. Propagé à `zoneTargets`/`moveTargets` (même fichier) et à `isDropAllowed` (`dropTargets.js`) et `targetForCard`/`bucketFor` (`import/target.js`, §4). `zones.js` importe `SIDES` de `sides.js` — pas de cycle, `sides.js` ne dépend que de `races.js`. **Quatre appelants câblés,** chacun avec le camp qu'il connaît déjà : `CardBrowser.jsx` (nouvelle prop `side` sur `ZoneCtrls`, déjà reçue par le composant parent) ; `App.jsx` (aperçu carte, `deck.ruleset.side`, branche deckbuilding seulement — une carte fixe le mode, `normalizeDeck` garantit `ruleset.side` dès que `deck.mode === 'deckbuilding'`) ; et **les deux appelants** d'`import/target.js` — `importDeckList` (`doc.meta.side`, le camp lu dans l'en-tête « Side: »/« Camp: » du texte collé, déjà utilisé par `resolveLines` juste au-dessus ; une façade d'API publique, sans appelant sous `web/src`, exercée par des tests de round-trip, pas un chemin de production) et la prévisualisation d'`ImportDialog` (**elle réellement atteinte par l'UI**, via `effectiveSide`, déjà calculée pour `resolveLines`/`isLegalForSide` — `null` en freeform, où il n'y a pas de camp pour reclasser l'agent). **Hors périmètre, vérifié par la grep du plan (`zonesFor|zoneTargets|moveTargets|isDropAllowed` sur `web/src`) :** `DeckPanel.jsx` (glisser-déposer et menu « déplacer vers » **réels** du panneau de deck, lignes `isDropAllowed(card, toZone)`/`moveTargets(card, activeZone)`) et `validate.js` (`zonesFor(c)`, tâche 5 à venir) appellent encore ces fonctions sans camp ; le contrat optionnel les laisse corrects mais ne leur fait pas encore refuser la réserve à un agent-péril — seuls `CardBrowser`, l'aperçu carte et les deux chemins d'import bénéficient de la correction pour l'instant. §11 : `test/rules.test.js` gagne six tests dans `describe('zonesFor')` et un dans `describe('zoneTargets / moveTargets')` (drag-and-drop) — 36 fichiers, 669 tests, 0 échec. |
 | 2026-08-07 | Correctif immédiat sur la tâche 4/7 (`agent-card-management`), repéré en revue avant la fin de la tâche : `DeckPanel.jsx` — le glisser-déposer et le menu « déplacer vers » **réels** du panneau de deck — appelait encore `isDropAllowed(card, toZone)`/`moveTargets(card, activeZone)` sans camp, laissant le correctif de la tâche sans effet visible sur les deux surfaces que le bug décrivait explicitement. Cause : la liste d'appelants du plan venait d'un grep sur `zonesFor`/`zoneTargets`, qui ne voit pas les deux appels qui ne nomment que `isDropAllowed`/`moveTargets` (importés de `dropTargets.js`/`zones.js`, pas les fonctions grepées elles-mêmes) — un angle mort du grep, pas de l'implémentation. §6 : nouvelle constante locale `sideId` dans `DeckPanel.jsx`, dérivée par la même condition que `sideKey` (le badge de camp affiché) mais rendant `undefined` plutôt que la chaîne d'affichage `'freeform'` hors deckbuilding — c'est la valeur que `zonesFor`/`isDropAllowed`/`moveTargets` traitent déjà comme « pas de camp », donc un deck freeform n'est pas affecté. §11 : cinq tests ajoutés dans un nouveau `describe('DeckPanel: drag-and-drop and "move to" pass the camp')` : deux lisent le source de `DeckPanel.jsx` et vérifient littéralement que les deux appels portent `sideId` (ce composant n'est pas monté en test — §11 — donc c'est la seule façon de pincer l'oubli lui-même, pas seulement le comportement des fonctions pures qu'il appelle, qui restait correct avant comme après puisqu'elles étaient déjà testées ailleurs) ; les trois autres pincent le comportement attendu — camp Sorcier : pool refusée au dépôt et absente du menu « déplacer » ; camp Spectre : les deux fonctionnent encore ; freeform (`sideId` `undefined`) : inchangé. Vérifié en RED avant correctif : les deux tests de source échouaient contre le fichier commité par la première passe de la tâche 4 (`86fb86f`), les trois tests de comportement passaient déjà (ils n'exercent pas `DeckPanel.jsx`) — signature exacte d'un oubli de câblage plutôt que d'une fonction pure fautive. `validate.js` revérifié : toujours `zonesFor(c)` sans camp, toujours volontaire (tâche 5), non touché. §11 : 36 fichiers, 674 tests, 0 échec. |
 | 2026-08-07 | Deuxième tour de revue sur la tâche 4/7, deux trouvailles Important. **§11 : le chemin d'import n'avait aucune garde de régression** — `importDeck.js`/`ImportDialog.jsx` étaient corrects (l'argument `sideId` atteint bien la 4ᵉ place de `bucketFor`) mais rien ne l'affirmait, exactement le mode d'échec déjà livré une fois sur `DeckPanel.jsx`. Trois tests ajoutés dans `test/importDeck.test.js` (`describe('agent camp routing via importDeckList (task 4 regression)')`), fonction pure, pas de DOM : un texte collé « Side: Wizard » classant un agent sous « ## Pool » atterrit dans `quantities`, pas `zones.pool` (1.3.W2) ; « Side: Ringwraith » garde le même agent dans la réserve (1.3.R2) ; sans ligne « Side: » (freeform), inchangé. Vérifié en RED : en retirant temporairement `doc.meta.side` de l'appel à `bucketFor` (`importDeck.js:139`), seul le cas Sorcier échoue (`{}` reçu au lieu de `{ 'AS-99': 1 }`) — les deux autres passent déjà, side-blind par construction, preuve que le nouveau test cible bien l'argument et rien d'autre. La prévisualisation d'`ImportDialog` n'a pas d'équivalent testable : `bucketFor` y est appelé dans un `useMemo` interne à un composant React, et ce dépôt ne monte aucun composant en test (§11, pas de jsdom) — non forcé, consigné comme tel plutôt que contourné. **§11 : trois des cinq tests `DeckPanel` du tour précédent ne pouvaient jamais échouer** — les cas Sorcier/Spectre répétaient mot pour mot une assertion déjà faite dans `describe('zoneTargets / moveTargets')`, et les trois pinçaient `isDropAllowed`/`moveTargets` directement sans jamais lire `DeckPanel.jsx`, donc restaient vrais que le câblage soit présent ou non (confirmé par la RED du tour précédent : les trois passaient déjà contre le fichier fautif). Le cas freeform, seul apport réel, est déplacé dans `describe('zoneTargets / moveTargets')` ; les deux Sorcier/Spectre sont retirés (redondants, pas remplacés). Le bloc `describe('DeckPanel: …')` ne garde que ce qu'il peut vraiment faire échouer : les deux pinces de source, assouplies (`isDropAllowed\([^)]*,\s*sideId\s*\)` plutôt que le texte littéral `card, toZone` — un reformatage Prettier ne doit pas casser un test qui ne protège rien sur cet axe), plus une troisième pince nouvelle sur la ligne de dérivation elle-même (`const sideId = deckbuilding && deck.ruleset ? deck.ruleset.side : undefined;`) : sans elle, une régression du type `const sideId = sideKey;` (mauvaise valeur en freeform, mais toujours nommée `sideId`) passait les deux pinces existantes sans être détectée. **Terminologie corrigée (§4, §6, en-tête) :** `importDeckList` était qualifiée d'« appelant réel » d'`import/target.js` à trois endroits — c'est une façade d'API publique sans appelant sous `web/src`, exercée seulement par `test/deckSections.test.js`/`test/importDeck.test.js`, pas un chemin que l'UI atteint ; câbler son camp restait juste, le mot « réel » était faux. La prévisualisation d'`ImportDialog`, elle, l'est réellement — désormais dit explicitement aux trois endroits. §11 : 36 fichiers, 676 tests, 0 échec (+3 `importDeck.test.js`, net −2 `rules.test.js` : −2 doublons, +1 cas freeform déplacé, +1 nouvelle pince de dérivation). |
+| 2026-08-07 | Quatre tâches de code sans étape documentation propre (tâches 1/7, 2/7, 5/7, 6/7 de `agent-card-management`), consignées ensemble par la tâche 7/7 faute de ligne existante. **§3 (tâche 1/7, données, `9dbdbfd`) :** les 32 cartes `attributes.agent === true` (DM-28/DM-29 compris, `type: 'Hazard'`) portent désormais `"Agent"` dans `attributes.keywords` — visible sous le filtre Mots-clés existant sans code UI nouveau (ce filtre affiche les valeurs de facette brutes, §10). `BA-3` perd `attributes.subtype: "Spawn"` (le seul de tout le jeu) au profit du mot-clé `"Spawn"`, déjà lu en alternative par `creatureWeight` (`roles.js`). Piège d'édition consigné en §3 : indentation 1 espace / CRLF / pas de newline finale, un seul réglage `json.dumps` round-trippe le fichier à l'octet près. `test/agentData.test.js` (4 tests) épingle les deux invariants sur les données elles-mêmes. **§6 (tâche 2/7, légalité, `fe08286`, déjà narrée en partie par la tâche 3 pour situer sa propre passe) :** `isLegalForSide` gagne la passe agent — `a.agent === true && side.agents.role === 'hazard'` renvoie `true` avant la passe d'alignement, placée après `specific` et avant 1.3.B4 ; c'est cet ordre qui garde les agents (Homme/Elfe pour la plupart) visibles dans un navigateur Balrog malgré 1.3.B4. **§6 (tâche 5/7, validation, `83875aa`/`0aa364d`) :** `POOL-ELIGIBLE.agent` (i18n fr/en/es) — motif à trois conditions, `c.type === 'Character' && a.agent === true && roleFor(c, side).bucket === 'hazard'`, le garde de type distinguant un agent que le camp a reclassé des deux agents Hazard-type (DM-28/DM-29) qui n'ont jamais été des personnages et qui, sans ce garde, auraient affiché `reason: 'agent'` à tort. **§10 (tâche 6/7, affichage, `2aed2b3`) :** `buildGroups(entries, lang, sideId)` — regroupe par `roleFor(card, sideId).bucket` plutôt que `card.type` quand `sideId` est connu, listant les agents d'un camp Sorcier/Balrog sous l'en-tête Hazard dans le panneau de deck ; `deckSections.js` (§7) reste volontairement sur `card.type`, ses titres de groupe étant relus comme indices de type par le parseur d'import (`import/vocabulary.js:82-84`) — les faire diverger casserait le round-trip export → import. §11 : 36 fichiers, 687 tests, 0 échec. |
+| 2026-08-07 | Tâche 7/7 (documentation), fin de branche `agent-card-management`. En-tête de ce document réécrit pour résumer la branche entière plutôt que la seule tâche 4 ; §3/§6/§10 complétés des quatre tâches ci-dessus ; §11 : `test/agentData.test.js` ajouté à la liste des fichiers notables. `CLAUDE.md` : compte de tests corrigé, « 35 fichiers, 637 tests » (périmé depuis la tâche « qol-minor-features » du 2026-08-04) → 36 fichiers, 687 tests. `README.md` relu contre les quatre changements visibles listés par le plan (agents dans le navigateur d'un Sorcier, réserve refusée aux agents Sorcier/Balrog, personnages masqués par 1.3.B4 chez un Balrog, filtre Mots-clés `Agent`) : **aucune modification** — les trois premiers sont déjà couverts par la phrase générique existante sur le filtre de légalité (« masque les cartes non éligibles au camp choisi »), qui ne nomme aucune règle en particulier et reste donc vraie sans changement ; le quatrième découle du filtre Mots-clés déjà documenté, dont le README ne détaille déjà aucune valeur de facette individuelle. Aucune dette nouvelle. |
