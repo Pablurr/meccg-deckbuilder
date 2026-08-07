@@ -233,6 +233,45 @@ describe('parseDeckListDocument / importDeckList (reachable path — legacy comp
   });
 });
 
+// Task 4 (agent-card-management) regression: importDeckList's bucketFor call
+// gained a fourth argument, the camp read from the paste's own "Side:" line,
+// so an agent card routes to the zone THAT camp actually gives it instead of
+// the side-blind default. A call site that compiles fine and silently keeps
+// the old side-blind behaviour is exactly the failure mode that already
+// shipped once in this task (DeckPanel.jsx's two call sites, caught in
+// review) -- this pins the import path against the same regression.
+describe('agent camp routing via importDeckList (task 4 regression)', () => {
+  // Hand-built, like every other fixture in this file: this suite tests text
+  // parsing, not rules, and 'type'/'attributes.agent' are the only fields
+  // zonesFor's agent branch reads.
+  const agent = { id: 'AS-99', name: { en: 'Test Agent', fr: 'Agent test' }, type: 'Character', attributes: { agent: true } };
+  const withAgent = [...cards, agent];
+
+  it('a Wizard-side paste that files an agent under "## Pool" still lands it in the main deck (1.3.W2)', () => {
+    const { quantities, zones } = importDeckList(
+      ['## Metadata', '- Side: Wizard', '## Pool', '1x Test Agent'].join('\n'),
+      withAgent,
+    );
+    expect(quantities).toEqual({ 'AS-99': 1 });
+    expect(zones.pool).toEqual({});
+  });
+
+  it('a Ringwraith-side paste keeps the same agent in the pool (1.3.R2)', () => {
+    const { quantities, zones } = importDeckList(
+      ['## Metadata', '- Side: Ringwraith', '## Pool', '1x Test Agent'].join('\n'),
+      withAgent,
+    );
+    expect(zones.pool).toEqual({ 'AS-99': 1 });
+    expect(quantities).toEqual({});
+  });
+
+  it('a paste with no "Side:" line (freeform) is unchanged: the agent stays wherever it was filed', () => {
+    const { quantities, zones } = importDeckList(['## Pool', '1x Test Agent'].join('\n'), withAgent);
+    expect(zones.pool).toEqual({ 'AS-99': 1 });
+    expect(quantities).toEqual({});
+  });
+});
+
 // Final review, C1-C4: the export half of the Fallen-wizard sideboard worked
 // (## Sideboard vs FW was written correctly), but the import half crashed --
 // bucketFor(card, 'sideboardFw', { quantities, zones }) returned
