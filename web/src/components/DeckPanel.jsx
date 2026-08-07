@@ -125,6 +125,18 @@ function poolCharCount(pool, cardsById) {
   }, 0);
 }
 
+// Starting minor items and stage events also live in the pool but answer to
+// their own maxMinorItems cap (POOL-ITEMS), not the character cap above --
+// same reasoning as poolCharCount, just the complement. Shown as a "(+n)"
+// suffix on the pool pill rather than folded into count/cap, because they
+// are not part of the budget that cap governs.
+export function poolExtraCount(pool, cardsById) {
+  return Object.entries(pool || {}).reduce((sum, [id, n]) => {
+    const c = cardsById.get(id);
+    return c && c.type !== 'Character' ? sum + n : sum;
+  }, 0);
+}
+
 export default function DeckPanel({
   cardsById,
   quantities,
@@ -308,6 +320,9 @@ export default function DeckPanel({
     cards: counts.total,
     notes: null, // the Notes tab carries no count
   };
+  // Only the pool pill carries a "(+n)" suffix -- undefined everywhere else
+  // renders no suffix at all (see ZoneTabs).
+  const tabExtras = { pool: poolExtraCount(zones.pool, cardsById) };
   // 1.6.1's ten are granted flat, so unlike sideboardMax this cap does not
   // depend on the ruleset -- it is the same number in freeform, where the tab
   // only appears at all because the zone is non-empty.
@@ -417,6 +432,7 @@ export default function DeckPanel({
           labels={tabLabels}
           counts={tabCounts}
           caps={tabCaps}
+          extras={tabExtras}
           optional={OPTIONAL_TABS}
           titles={tabTitles}
         />

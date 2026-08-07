@@ -35,13 +35,14 @@ export function tabPresentation({ count, cap, optional }) {
   };
 }
 
-export default function ZoneTabs({ tabs, active, onSelect, onDrop, labels, counts, caps, optional, titles }) {
+export default function ZoneTabs({ tabs, active, onSelect, onDrop, labels, counts, caps, extras, optional, titles }) {
   const [dragOver, setDragOver] = useState(null);
   return (
     <div className="ztabs">
       {tabs.map((id) => {
         const cap = caps[id];
         const count = counts[id];
+        const extra = extras && extras[id];
         const { inviting, over, showCount } = tabPresentation({ count, cap, optional: optional && optional.has(id) });
         return (
           <button
@@ -71,7 +72,7 @@ export default function ZoneTabs({ tabs, active, onSelect, onDrop, labels, count
             // visible pill, which shows no count either while the zone is
             // still just an invitation.
             aria-label={titles && titles[id]
-              ? `${labels[id]}${showCount ? ` ${cap != null ? `${count} / ${cap}` : count}` : ''} — ${titles[id]}`
+              ? `${labels[id]}${showCount ? ` ${cap != null ? `${count} / ${cap}` : count}${extra ? ` (+${extra})` : ''}` : ''} — ${titles[id]}`
               : undefined}
             onClick={() => onSelect(id)}
             onDragOver={(e) => e.preventDefault()}
@@ -81,7 +82,10 @@ export default function ZoneTabs({ tabs, active, onSelect, onDrop, labels, count
           >
             {inviting ? `+ ${labels[id]}` : labels[id]}
             {showCount && (
-              <span className="cnt">{cap != null ? `${count} / ${cap}` : count}</span>
+              <span className="cnt">
+                {cap != null ? `${count} / ${cap}` : count}
+                {extra ? ` (+${extra})` : ''}
+              </span>
             )}
           </button>
         );

@@ -62,6 +62,11 @@ body {
 }
 /* Proxy toggle, language picker and ? sit at the far right of the top row. */
 .filterbar-top .proxy-toggle { margin-left: auto; margin-right: 10px; flex: 0 0 auto; }
+/* Transparent on desktop: a pure grouping node so search-group (its only
+   child there -- filters-toggle is mobile-only) sizes exactly as if it were
+   still a direct child of .filterbar-top. Becomes a real flex line on mobile
+   (see media query) so search-group and filters-toggle can share one row. */
+.search-row { display: contents; }
 /* The two search boxes share one line and shrink together. */
 .search-group {
   display: flex;
@@ -830,6 +835,9 @@ body {
   width: min(560px, 92vw);
   max-height: 86vh;
   overflow: auto;
+  /* No transform/filter/will-change/contain/perspective here: any of those makes
+     this a containing block for position:fixed, which would reparent
+     CardSelectionDialog's own .modal-backdrop into this box instead of the viewport. */
 }
 .modal h2 { margin-top: 0; }
 .modal .row { display: flex; gap: 8px; align-items: center; margin: 10px 0; }
@@ -1010,12 +1018,16 @@ code {
 }
 /* The cap reason is on-screen text rather than the title= tooltip it used to
    be: a tooltip is unreachable by touch, and the disabled + button it explains
-   cannot take focus either, so a blocked + had no way to say why. */
+   cannot take focus either, so a blocked + had no way to say why.
+   A direct child of the bar (not of a zone row) since it is now printed once
+   per distinct reason for the whole card, so it carries .card-modal-zone's
+   width rule itself to stay aligned with the rows it explains. */
 .card-modal-zone-reason {
+  width: 100%;
+  max-width: 420px;
   font-size: 12px;
   line-height: 1.35;
   color: var(--muted);
-  padding-top: 3px;
 }
 
 /* ---- Deck panel as full-screen bottom sheet (mobile) ---- */
@@ -1053,16 +1065,35 @@ code {
   /* Filter bar: the two search boxes stay on one line (shrunk); brand smaller. */
   .filterbar { padding: 8px 10px; }
   .brand-logo { height: 26px; }
-  .filters-toggle { align-self: flex-start; }
-  /* Three rows, not four. Left to wrap on its own the top row broke into
-     logo / searches / proxy+languages+?, and with the Filtres button below it
-     that put four rows of chrome above the grid. The search pair takes a full
-     row of its own so the other four items share the first: measured at 375px
-     they need 293px of the 355 available, so nothing has to shrink.
-     `order` moves the searches visually below controls that follow them in the
-     DOM; the DOM order is kept as-is because reaching the search box early is
-     the better keyboard path, and desktop still wants it beside the logo. */
-  .search-group { flex: 1 0 100%; order: 1; }
+  /* Three rows, not four/five. Left to wrap on its own the top row broke into
+     logo / searches / proxy+languages+? / Filtres, one row of chrome too many
+     above the grid. `.search-row` (see the base rule, `display: contents` on
+     desktop) becomes a real flex line here, forced onto its own row exactly
+     as `search-group` alone used to be (`flex: 1 0 100%; order: 1`) -- so the
+     other five items share the first row. `order` moves it visually below
+     controls that follow it in the DOM; the DOM order is kept as-is because
+     reaching the search box early is the better keyboard path, and desktop
+     still wants it beside the logo. Giving THIS wrapper the forced-wrap
+     basis, rather than `search-group` itself, is what lets `filters-toggle`
+     share the row: the flex-wrap algorithm assigns items to lines using
+     their hypothetical (pre-grow) size, so a child forced to 100% is placed
+     alone on its line before flex-grow/shrink ever run -- no later sizing
+     can pull a sibling onto that same line once that has happened. Nesting
+     search-group and filters-toggle as this wrapper's own flex children
+     sidesteps the trap entirely: they only ever negotiate width with each
+     other, inside a line whose existence is already decided. */
+  .search-row { display: flex; flex: 1 0 100%; order: 1; gap: 4px; min-width: 0; }
+  .search-row .search-group { flex: 1 1 auto; min-width: 0; }
+  .search-row .filters-toggle { flex: 0 0 auto; }
+  /* Logo row: five items (logo, Proxy, langue, ?, 💡) have to hold one line
+     on their own now that the search boxes wrap away. Tightened the three
+     joints that actually cost width -- the gap between every item, the Proxy
+     chip's own horizontal padding, and its desktop-only right margin (there
+     to separate it from the search boxes on the SAME row, which no longer
+     happens here since those wrapped to their own row above). */
+  .filterbar-top { gap: 4px; }
+  .brand-logo { margin-right: 2px; }
+  .filterbar-top .proxy-toggle { margin-left: 0; margin-right: 0; padding-left: 6px; padding-right: 6px; }
   /* Chrome buttons -- the filter row, the drawer, modal actions -- are sized
      to 36px rather than the 44px Apple/WCAG-AAA target. They are wide,
      text-labelled, low-frequency controls, and on a phone the header and
@@ -1162,28 +1193,37 @@ code {
      the card modal owns that editing now, so the rules that used to enlarge
      them are gone rather than left behind matching nothing. */
 
-  /* The only touch route to moving a copy between zones -- the card is not
-     draggable on mobile -- so it gets a full 44px target even though it costs
-     a visible corner of the thumbnail. */
-  /* Sized against the CARD, not the viewport: the panel's own width drives
-     these tiles' size via the shared .grid rule, independently of screen
-     width, so a flat 44px here collided with the qty stack at the card's
-     smallest size -- measured at the 60px floor, the button
-     spanned x 18-62 across a stack at x 44-66, making a tap there ambiguous.
-     Stacking them vertically does not rescue it either: the stack is 54px
-     tall and the card only 84px at that size.
-     So the touch size applies only once the card can hold it beside the stack
-     (44 + ~22 + margins), and below that the compact button stays. A target
-     smaller than the guideline is a compromise; two overlapping targets are a
-     defect. */
-  @container (min-width: 80px) {
-    .deck-mini-move-btn { width: 44px; height: 44px; font-size: 20px; border-radius: 8px; }
-  }
-  /* Destination buttons fill the tile, so they can afford the full height;
-     the overlay scrolls if a three-zone card is shown at a small zoom. */
-  .deck-mini-move .btn { min-height: 44px; font-size: 15px; }
+  /* No mobile sizing for .deck-mini-move-btn / .deck-mini-move: the ⇄ trigger
+     and its destination overlay are desktop-only (see MiniCard.jsx), because
+     tapping the thumbnail opens CardPreviewModal, which reaches the same
+     zones with 44px targets instead of buttons crushed into a ~105px tile.
+     The rules that used to grow both to a touch size lived here and were
+     deleted with it -- they had needed a @container query to keep the 44px
+     button from overlapping the qty stack on the narrowest cards, a
+     collision the modal simply does not have. */
   /* Zone rows in the card modal: keep the name from crowding the 44px
      buttons on a narrow phone. */
   .card-modal-zone-name { font-size: 14px; }
   .card-modal-zone-row { gap: 10px; }
+  /* Shrink the whole zone-selector stack on phones so the bar cedes height
+     back to the card image above it -- the image is the reason this modal
+     exists, and a tall stack of 44px rows for a three-zone card (Character)
+     can eat a third of the screen. 38px still clears the touch-target floor;
+     going smaller than that would put the +/- taps at risk. */
+  .card-modal-bar { gap: 4px; padding: 8px 12px; }
+  .qty-btn.big { width: 38px; height: 38px; font-size: 22px; }
+  .card-modal-count { font-size: 16px; min-width: 22px; }
+  .card-modal-zone-reason { font-size: 11px; padding-top: 1px; }
 }
+
+.modal-wide { max-width: 1100px; width: 92vw; }
+.select-grid { max-height: 60vh; overflow-y: auto; margin: 8px 0; }
+.select-section { margin-bottom: 10px; }
+.select-head { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-weight: 600; }
+.select-head.sub { padding-left: 18px; font-weight: 500; opacity: 0.9; }
+.select-chevron { background: none; border: 0; cursor: pointer; color: inherit; padding: 0 2px; }
+.select-cards { display: flex; flex-wrap: wrap; gap: 10px; padding: 4px 0 8px 36px; }
+.select-card { width: 90px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.select-card img { width: 90px; border-radius: 3px; }
+.select-card-name { font-size: 11px; text-align: center; line-height: 1.2; }
+.select-boxes { display: flex; gap: 3px; flex-wrap: wrap; justify-content: center; }

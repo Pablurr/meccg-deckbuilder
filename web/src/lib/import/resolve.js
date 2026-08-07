@@ -162,11 +162,20 @@ function isMarked(line, { cardsById, setNames }) {
   return line.candidates[0].hints.some((h) => classifyHint(h, { cardsById, setNames }).kind !== 'unknown');
 }
 
+// A line made ENTIRELY of decoration characters ("----", "####", "===",
+// "***") is a forum/markdown divider, not a remark -- it carries no
+// information a player would want back in their notes. isMarked would call
+// it unmarked (no digit, no qty>1, no hint), so without this it would join
+// `prose` and silently fill the notes with separator noise on every import
+// of a list copied from a forum post.
+const DECORATION_ONLY = /^[#\-=*_~.]+$/;
+
 export function resolveLines(lines, ctx) {
   const resolved = [];
   const prose = [];
   for (const line of lines) {
     const r = resolveOne(line, ctx);
+    if (r.status === 'notfound' && DECORATION_ONLY.test(line.raw)) continue;
     if (r.status === 'notfound' && !isMarked(line, ctx)) prose.push(line.raw);
     else resolved.push(r);
   }
