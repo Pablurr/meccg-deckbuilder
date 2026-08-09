@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { cardName, cardImageSrc, cardImageEn } from '../lib/lang.js';
 import ProxyStamp from './ProxyStamp.jsx';
 import { useT } from '../i18n.jsx';
 import { capTitle } from '../lib/rules/docText.js';
 import { ZONE_LABEL_KEY } from '../lib/rules/zones.js';
+import { swipeDirection } from '../lib/cardNav.js';
 
 // Full-screen card preview for touch (desktop uses the hover CardPreview).
 // The image is constrained to fit ENTIRELY within the viewport (see styles):
@@ -44,16 +45,39 @@ export function capNotices(rows) {
   return [...byReason].map(([reason, zones]) => ({ reason, zones }));
 }
 
-export default function CardPreviewModal({ card, lang, rows = [], onChangeZoneQty, onClose, proxyMode, setNames }) {
+export default function CardPreviewModal({ card, lang, rows = [], onChangeZoneQty, onClose, onNav, proxyMode, setNames }) {
   const t = useT();
+  const touchStart = useRef(null);
   if (!card) return null;
   const name = cardName(card, lang);
+
+  function handleTouchStart(e) {
+    const touch = e.touches[0];
+    touchStart.current = { x: touch.clientX, y: touch.clientY };
+  }
+
+  // Reads the recorded start point rather than accumulating deltas across
+  // touchmove: a single start/end comparison is enough for a swipe gesture
+  // and skips a stream of intermediate state updates on every frame.
+  function handleTouchEnd(e) {
+    const start = touchStart.current;
+    touchStart.current = null;
+    if (!start || !onNav) return;
+    const touch = e.changedTouches[0];
+    const dir = swipeDirection(touch.clientX - start.x, touch.clientY - start.y);
+    if (dir) onNav(dir);
+  }
+
   return (
     // Clicking anywhere (the card image or the letterbox around it) closes the
     // modal; only the quantity bar swallows the click so ＋/− don't dismiss it.
     <div className="card-modal-backdrop" onClick={onClose}>
       <div className="card-modal">
-        <div className="card-modal-imgwrap">
+        <div
+          className="card-modal-imgwrap"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
           <div className="proxy-wrap">
             <img
               src={cardImageSrc(card, lang)}
