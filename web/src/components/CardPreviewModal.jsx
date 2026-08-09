@@ -53,6 +53,7 @@ export default function CardPreviewModal({ card, lang, rows = [], onChangeZoneQt
 
   function handleTouchStart(e) {
     const touch = e.touches[0];
+    if (!touch) return;
     touchStart.current = { x: touch.clientX, y: touch.clientY };
   }
 
@@ -68,6 +69,14 @@ export default function CardPreviewModal({ card, lang, rows = [], onChangeZoneQt
     if (dir) onNav(dir);
   }
 
+  // The OS can interrupt a touch mid-gesture (incoming call, notification
+  // pull-down, scroll takeover) without ever firing touchend. Without this,
+  // touchStart.current would stay stale until some later, unrelated touchend
+  // paired it with a mismatched end point and misfired onNav.
+  function handleTouchCancel() {
+    touchStart.current = null;
+  }
+
   return (
     // Clicking anywhere (the card image or the letterbox around it) closes the
     // modal; only the quantity bar swallows the click so ＋/− don't dismiss it.
@@ -77,6 +86,7 @@ export default function CardPreviewModal({ card, lang, rows = [], onChangeZoneQt
           className="card-modal-imgwrap"
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchCancel}
         >
           <div className="proxy-wrap">
             <img
