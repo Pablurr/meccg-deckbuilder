@@ -123,7 +123,9 @@ même fenêtre plein écran, avec un `−`/`+` par zone où cette carte a le dro
 qu'on ajoute, retire et déplace un exemplaire (déplacer = `−1` dans une zone, `+1` dans
 l'autre) ; les zones ne sont proposées qu'en mode **Construction de deck**, l'Impression libre
 n'en ayant pas. Quand un `+` est bloqué, la raison est écrite sous les compteurs, une seule
-fois même si elle vaut pour plusieurs zones.
+fois même si elle vaut pour plusieurs zones. Un swipe gauche/droite sur l'image passe à la
+carte suivante ou précédente, dans la liste où la fenêtre a été ouverte (la grille filtrée du
+navigateur, ou la zone active du panneau de deck).
 
 Dans le
 navigateur de cartes, chaque carte affiche un compteur par zone ; en mode Construction de

@@ -7,9 +7,16 @@
 > Public : LLM. Style : dense, factuel, pas de prose d'introduction.
 > Doc utilisateur : [`README.md`](../README.md). Ce fichier-ci décrit le *comment* et le *pourquoi*.
 
-**Dernière mise à jour : 2026-08-07** — branche `agent-card-management` (`a04e54f..HEAD`),
-**terminée (tâche 7/7, documentation).** Un « agent » (32 cartes, `attributes.agent ===
-true`) se comporte désormais selon le camp qui le joue — péril pour un Sorcier ou un Balrog
+**Dernière mise à jour : 2026-08-09** — navigation par swipe (gauche/droite) dans
+`CardPreviewModal` sur mobile, pour passer à la carte suivante/précédente sans fermer la
+modale. Logique dans [`web/src/lib/cardNav.js`](../web/src/lib/cardNav.js) (`navigateList`,
+`swipeDirection`, pures et testées sans DOM) ; liste de navigation figée à l'ouverture,
+capturée depuis la grille filtrée du sélecteur ou la zone active du panneau de deck. Détail
+en §10, sous-section « Navigation par swipe dans `CardPreviewModal` ». Historique en §15.
+
+Précédent : branche `agent-card-management` (2026-08-07, `a04e54f..HEAD`), **terminée
+(tâche 7/7, documentation).** Un « agent » (32 cartes, `attributes.agent === true`) se
+comporte désormais selon le camp qui le joue — péril pour un Sorcier ou un Balrog
 (1.3.W2/1.3.B2), personnage pour un Spectre de l'Anneau ou un Sorcier déchu (1.3.R2/1.3.F4)
 — à travers légalité, zones, validation et affichage ; et 1.3.B4 (personnages non-avatars
 Balrog : Orc ou Troll, esprit < 9) est passée d'un plafond de réserve à une contrainte de
@@ -17,9 +24,8 @@ deck entier. Détail par section : §3 (données : mot-clé `Agent`, `Spawn` qui
 de BA-3), §6 (`isLegalForSide` gagne les passes agent et 1.3.B4 ; `zonesFor(card, sideId)`
 connaît le camp ; `POOL-ELIGIBLE.agent` et son garde de type), §10 (`buildGroups` regroupe
 par rôle quand `sideId` est connu ; pourquoi `deckSections.js` ne le fait délibérément pas).
-Historique tâche par tâche en §15.
 
-Précédent : lot confort import / panneau / mobile (2026-08-05) — sept améliorations de confort sur l'import, le panneau
+Encore avant : lot confort import / panneau / mobile (2026-08-05) — sept améliorations de confort sur l'import, le panneau
 de deck et le mobile. **Dernier lot (§10) :** en mobile, `CardPreviewModal` devient la route
 unique vers les zones — le bouton `⇄` de la vignette de deck est supprimé (il offrait les mêmes
 destinations dans un calque écrasé sur une vignette de ~105 px), et les avertissements de
@@ -1453,6 +1459,42 @@ Fonction pure exportée et testée (`test/cardPreviewModal.test.js`), même idio
 > seulement en *Construction de deck*. Retirer `⇄` en mobile a d'ailleurs supprimé
 > l'incohérence inverse, où ce bouton offrait pool/talon **même en freeform**.
 
+### Navigation par swipe dans `CardPreviewModal` (2026-08-09)
+
+**Un geste tactile gauche/droite sur l'image fait passer à la carte suivante/précédente**,
+dans la liste où la modale a été ouverte : la grille filtrée du sélecteur (`CardBrowser`,
+`shown` — le même tableau capé/filtré déjà affiché à l'écran) ou les cartes de la zone/onglet
+actif du panneau de deck mobile (`DeckPanel`, `groups` aplati). Toute la logique de
+navigation vit dans deux fonctions pures et testées sans DOM (même idiome que `capNotices` :
+ce dépôt ne monte jamais de composant en test, §11) — [`web/src/lib/cardNav.js`](../web/src/lib/cardNav.js) :
+
+- `navigateList(list, currentCard, delta)` — retrouve `currentCard` par `.id` dans `list` et
+  renvoie l'élément à `index + delta`, ou `null` hors bornes. **Pas de bouclage** : dépasser
+  la première ou la dernière carte est un no-op, la modale reste sur la carte courante.
+- `swipeDirection(dx, dy)` — décide si un geste tactile compte comme un swipe horizontal :
+  `SWIPE_THRESHOLD_PX = 50` de déplacement horizontal minimum, `SWIPE_VERTICAL_TOLERANCE_PX = 30`
+  de dérive verticale maximum tolérée (au-delà, le geste est traité comme un scroll accidentel,
+  pas une navigation).
+
+**La liste de navigation est figée à l'ouverture de la modale**, portée par un état
+`previewList` dans `App` à côté de `previewCard` (peuplé par un handler `openPreview(card,
+list)` que `CardBrowser` et `DeckPanel` appellent avec leur propre liste). Elle ne réagit
+**pas** aux filtres ou au deck qui changeraient pendant que la modale reste ouverte — un cas
+rare, et recalculer en direct aurait ajouté une réactivité que rien ne demande.
+
+**Les gestionnaires tactiles vivent uniquement sur `.card-modal-imgwrap`** (l'image), jamais
+sur le fond (`.card-modal-backdrop`, qui doit continuer à fermer la modale au tap) ni sur la
+barre de contrôle (`.card-modal-bar`, qui doit continuer à n'écouter que ses propres boutons).
+`onTouchCancel` réinitialise le point de départ du geste au même titre que `onTouchEnd` — un
+geste interrompu par le système (appel entrant, notification) ne doit pas laisser un point de
+départ périmé pour un `touchend` sans rapport.
+
+**Dans le panneau de deck, les titres de groupe (par type de carte) sont transparents à la
+navigation** : `DeckPanel` construit `navList` en aplatissant `groups` (`groups.flatMap(g =>
+g.items.map(it => it.card))`), donc le swipe traverse la frontière entre deux groupes sans
+s'arrêter — les titres n'étant pas des entrées de la liste, il n'y a rien à ignorer
+explicitement.
+
 ### Contrôles de zone sur une tuile (`ZoneRow`, desktop)
 
 **Une ligne horizontale par zone — `LABEL − n +`, ~22 px.** C'était une pile verticale
@@ -2004,3 +2046,4 @@ transformation*, donc lis le compte de **fichiers**, pas seulement celui des tes
 | 2026-08-07 | Revue finale de branche `agent-card-management` (quatre trouvailles : deux Important, deux Minor), toutes corrigées en un tour. **§6 : `raceAllowed` (`sides.js`) contredisait son propre commentaire** — la passe esprit honore « une donnée illisible ne restreint rien » via `Number.isFinite(mind)`, mais la passe race appelait `matchesRace(undefined, r)` sur une race absente, et `racesOf(undefined).some()` vaut `false` : la carte était masquée sans explication, à l'opposé du principe promis juste au-dessus. Vérifié contre les données avant correction : les 194 cartes `Character` portent toutes une race, donc **latent, aucune carte affectée aujourd'hui** — corrigé quand même, le principe devant tenir avant que la donnée ne change. `raceAllowed` renvoie désormais `true` quand `racesOf(race).length === 0` ; une race présente mais simplement hors liste reste rejetée. Test ajouté sur une carte synthétique (seule exception de la suite à la convention carte réelle, faute de cas réel — commenté comme tel pour ne pas être « corrigé » en carte réelle par erreur) ; vu échouer avant le correctif (`expected false to be true`). **§6 : `zonesFor` (branche agent) et `roleFor` (branche agent, `roles.js`) calculent le même seau pour la même règle 1.3.W2/1.3.B2 en relisant indépendamment `side.agents.role`** — rien ne garde les deux conditions synchronisées au-delà de la coïncidence actuelle. Pas de fusion (`zonesFor` tourne en boucle de rendu, `roleFor` fait plus de travail) : commentaire croisé ajouté dans `zones.js`, même registre que celui déjà présent dans `validate.js` pour son propre exemplaire du motif (`POOL-ELIGIBLE`, plus haut en §6). **§11 : le test « agents escape 1.3.B4 »** (`test/rules.test.js`) filtrait `cards` sur `attributes.agent === true` sans jamais vérifier que le tableau n'est pas vide — passerait à vide si la donnée perdait ce mot-clé, en s'appuyant implicitement sur `agentData.test.js` pour échouer en premier. Assertion `agents.length > 0` ajoutée. **`ImportDialog.jsx` : le `useMemo` d'`importable`** listait `[resolved, choice]` sans `effectiveSide`, alors que le callback le lit — correct aujourd'hui seulement par transitivité (`resolved` en dépend déjà), fragile à un futur découplage des deux mémos. `effectiveSide` ajouté au tableau de dépendances. §11 : `npm test` — 36 fichiers, 688 tests (+1, le test `raceAllowed`), 0 échec. |
 | 2026-08-07 | Fusion de `agent-card-management` dans `dev`. La branche était partie de `main` (`a04e54f`), que `dev` dépassait déjà de neuf commits, donc la fusion n'était pas triviale : cinq conflits dans ce document, tous de cohabitation et non de contradiction. **En-tête** — le bloc du 2026-08-05 (lot confort import / panneau / mobile) est rétrogradé en « Précédent », celui du 2026-08-07 prend sa place. **§4** — le paragraphe « Ligne de pure décoration » (venu de `dev`) et la réécriture de la puce `target.js` (venue de la branche) sont deux contenus différents sur des lignes voisines : les deux conservés. **§15** — les sept lignes du 2026-08-05 et les huit du 2026-08-07 conservées, dans l'ordre chronologique. **§2 et §11** — les deux comptes de tests en conflit (37/678 côté `dev`, 36/687 côté branche) ne valaient ni l'un ni l'autre après fusion : mesurés sur le résultat fusionné, **38 fichiers, 722 tests, 0 échec**. Les comptes cités dans les lignes de ce journal ne sont **pas** touchés — ils consignent le compte de leur époque, et un `replace_all` les avait déjà écrasés une fois (voir la ligne du 2026-08-05 sur l'ergonomie tactile des zones). |
 | 2026-08-07 | Correctif signalé par le propriétaire après la fusion précédente : `ALIGN-LEGAL` (Sorcier) et `BALROG-RACE`/`BALROG-MIND` (Balrog) se déclenchaient encore sur un agent que son camp compte comme péril. **Deux bugs distincts, pas un seul.** `ALIGN-LEGAL` ignorait totalement la dérogation agent qu'`isLegalForSide` possède déjà (§6) — le navigateur montrait Anarin légale en deck Sorcier, le validateur la contredisait dès son ajout à la pioche. `BALROG-RACE`/`BALROG-MIND` gataient sur `c.type === 'Character'` (le type brut) au lieu du rôle joué pour ce camp. **La consigne « seulement si le rôle est CHARACTER » ne s'appliquait PAS telle quelle aux deux :** `rules.ALIGN-LEGAL.doc` dit explicitement « chaque carte non-avatar » — un contrôle universel, pas un contrôle de personnage (vérifié : AS-44, Ressource Héros, a le bucket `'resource'`) — donc gater `ALIGN-LEGAL` sur `roleFor(...).bucket === 'character'` aurait silencieusement désactivé le contrôle d'alignement pour toutes les ressources et périls ordinaires. Correctif agent-spécifique pour `ALIGN-LEGAL` (`a.agent === true && profile.agents.role === 'hazard'`, même condition qu'`isLegalForSide`) ; correctif basé sur le rôle pour `BALROG-RACE`/`BALROG-MIND`, dont la doc parle explicitement de « personnages Balrog ». **Régression trouvée en cours de route :** les fixtures `BALROG-MIND` existantes (`test/rules.test.js` et `test/i18n-rules-contract.test.js`) sélectionnaient leur carte via `firstWhere` sans exclure les agents et tombaient sur DM-14 (mind 9) — corrigées, ainsi que le fixture `BALROG-RACE` voisin par cohérence (même piège latent, pas encore déclenché). Vérifié dans le navigateur réel sur les deux camps. Fusionné dans `dev` sans conflit cette fois (merge ordinaire, pas un fast-forward : `dev` portait déjà le merge précédent). §2/§11 : **38 fichiers, 727 tests, 0 échec**. |
+| 2026-08-09 | Navigation par swipe dans `CardPreviewModal` (mobile), demandée par le propriétaire, exécutée en Subagent-Driven Development sur `dev` (quatre tâches de code + une de vérification/doc, `465e66e..HEAD`). §10, nouvelle sous-section « Navigation par swipe dans `CardPreviewModal` » : un geste gauche/droite sur l'image passe à la carte suivante/précédente, dans la liste où la modale a été ouverte (grille filtrée du sélecteur ou zone/onglet actif du panneau de deck mobile) ; logique portée par deux fonctions pures et testées sans DOM, [`web/src/lib/cardNav.js`](../web/src/lib/cardNav.js) (`navigateList`, `swipeDirection`) — même idiome que `capNotices`, ce dépôt ne montant jamais de composant en test. Pas de bouclage en bout de liste (no-op). Liste figée à l'ouverture (état `previewList` dans `App`, à côté de `previewCard`), ne réagit pas à un changement de filtre/deck pendant que la modale reste ouverte. Gestionnaires tactiles posés uniquement sur `.card-modal-imgwrap`, jamais sur le fond ni la barre de contrôle ; `onTouchCancel` réinitialise le point de départ du geste au même titre que `onTouchEnd`, ajouté en cours de revue de tâche (un geste interrompu par le système — appel entrant, notification — laissait sinon un point de départ périmé pour un `touchend` sans rapport). Dans le panneau de deck, les titres de groupe (par type de carte) sont transparents à la navigation : `navList` aplatit `groups` avant de le passer à la modale. Vérifié dans le navigateur réel (événements tactiles simulés, viewport mobile 375×812) : swipe gauche → carte suivante, swipe droite → précédente, no-op en bout de liste (modale reste ouverte sur la même carte), boutons de la barre de contrôle sans effet sur la navigation ni la fermeture, tap sur le fond ferme toujours la modale. §11 : `test/cardNav.test.js` (11 tests) — 39 fichiers, 738 tests, 0 échec. Spec : `docs/superpowers/specs/2026-08-09-mobile-swipe-navigation-design.md`. |
