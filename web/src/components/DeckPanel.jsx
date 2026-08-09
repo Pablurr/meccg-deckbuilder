@@ -375,6 +375,10 @@ export default function DeckPanel({
     activeOnToggle = (id) => changeZoneQty(tab, id, -((zones[tab] || {})[id] || 0));
   }
   const groups = tab === 'notes' ? [] : buildGroups(activeEntries, lang, sideId);
+  // Flattened in display order (group by group, card by card within each) so
+  // swipe in the mobile preview walks the same sequence the grid shows --
+  // group headings are not list entries, so they're transparently skipped.
+  const navList = groups.flatMap((g) => g.items.map((it) => it.card));
 
   // Drop target is the tab itself (not an area inside the panel): zones live
   // in separate tabs, so source and destination are never visible together,
@@ -570,7 +574,7 @@ export default function DeckPanel({
                       trackPointer={trackPointer}
                       hidePreview={hidePreview}
                       isMobile={isMobile}
-                      onPreview={onPreview}
+                      onPreview={(c) => onPreview(c, navList)}
                       proxyMode={proxyMode}
                       setNames={setNames}
                       zone={activeZone}

@@ -197,7 +197,7 @@ export default function CardBrowser({ cards, filters, quantities, lang, onChange
                 src={cardThumbSrc(c, lang)}
                 alt={name}
                 loading="lazy"
-                onClick={() => (isMobile ? onPreview(c) : onToggle(c.id))}
+                onClick={() => (isMobile ? onPreview(c, shown) : onToggle(c.id))}
                 onMouseEnter={(e) => trackPointer(e, c)}
                 onMouseMove={(e) => trackPointer(e, c)}
                 onMouseLeave={hidePreview}
