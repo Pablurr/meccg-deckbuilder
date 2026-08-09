@@ -48,6 +48,12 @@ export function capNotices(rows) {
 export default function CardPreviewModal({ card, lang, rows = [], onChangeZoneQty, onClose, onNav, proxyMode, setNames }) {
   const t = useT();
   const touchStart = useRef(null);
+  // A real touchend synthesizes a compatibility click on the same target
+  // afterwards; without swallowing it, a swipe's trailing click bubbles to
+  // the backdrop's onClose and the gesture that navigates also closes the
+  // modal. Set only when onNav actually fired, so a plain tap (no swipe)
+  // still bubbles through and closes the modal as before.
+  const swiped = useRef(false);
   if (!card) return null;
   const name = cardName(card, lang);
 
@@ -66,7 +72,10 @@ export default function CardPreviewModal({ card, lang, rows = [], onChangeZoneQt
     if (!start || !onNav) return;
     const touch = e.changedTouches[0];
     const dir = swipeDirection(touch.clientX - start.x, touch.clientY - start.y);
-    if (dir) onNav(dir);
+    if (dir) {
+      swiped.current = true;
+      onNav(dir);
+    }
   }
 
   // The OS can interrupt a touch mid-gesture (incoming call, notification
@@ -75,6 +84,17 @@ export default function CardPreviewModal({ card, lang, rows = [], onChangeZoneQt
   // paired it with a mismatched end point and misfired onNav.
   function handleTouchCancel() {
     touchStart.current = null;
+  }
+
+  // Consumes the compatibility click a real touchscreen fires right after
+  // touchend, on whatever element was under the finger (usually the image).
+  // stopPropagation keeps it from reaching the backdrop's onClose; a plain
+  // tap leaves swiped.current false and falls through to close as usual.
+  function handleImgwrapClick(e) {
+    if (swiped.current) {
+      swiped.current = false;
+      e.stopPropagation();
+    }
   }
 
   return (
@@ -87,6 +107,7 @@ export default function CardPreviewModal({ card, lang, rows = [], onChangeZoneQt
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
           onTouchCancel={handleTouchCancel}
+          onClick={handleImgwrapClick}
         >
           <div className="proxy-wrap">
             <img
