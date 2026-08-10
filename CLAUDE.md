@@ -49,7 +49,7 @@ SPA **100 % statique** (Vite + React 18, JSX, pas de TypeScript) pour construire
 
 ```bash
 npm run dev     # Vite HMR → http://localhost:5173
-npm test        # Vitest — 39 fichiers, 738 tests
+npm test        # Vitest — 39 fichiers, 747 tests
 npm run build   # → web/dist
 ```
 

@@ -46,9 +46,11 @@ npx wrangler pages deploy web/dist
 
 ## Utilisation
 
-1. **Filtrer / rechercher** : barre du haut (Set, Type, Alignement, Rareté, Race, Sous-type,
-   Compétences, Mots-clés, Unique + recherche par nom en/fr). La **recherche ignore les
-   accents** (« burat » trouve « Bûrat »).
+1. **Filtrer / rechercher** : barre du haut (Set, Alignement, Type, Sous-type, Mots-clés, Race,
+   Compétences, Artiste, Rareté, Unique + recherche par nom en/fr). La **recherche ignore les
+   accents** (« burat » trouve « Bûrat »). Un bouton **Trier par**, à gauche des filtres, choisit
+   le critère de tri de la grille (1er critère + 2e optionnel, parmi les mêmes clés que les
+   filtres, plus Nom) ; « Set » par défaut, remis à ce défaut à chaque rechargement de la page.
 2. **Sélectionner (quantités)** : **1er clic** sur l'image = ajoute la carte, **2e clic** =
    la retire. Les boutons **− / +** en bas de la carte ajustent la quantité, et le tiroir du
    bas affiche les compteurs live. **Les limites de copies dépendent du mode du deck** (voir
