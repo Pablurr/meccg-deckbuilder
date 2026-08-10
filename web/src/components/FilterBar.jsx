@@ -114,8 +114,7 @@ export default function FilterBar({ facets, setNames = {}, filters, onChange, la
   const anyActive =
     (filters.search && filters.search.length) ||
     (filters.cardText && filters.cardText.length) ||
-    filters.unique ||
-    ['sets', 'types', 'alignments', 'rarities', 'artists', 'races', 'subtypes', 'skills', 'keywords']
+    ['sets', 'types', 'alignments', 'rarities', 'artists', 'races', 'subtypes', 'skills', 'keywords', 'unique']
       .some((k) => (filters[k] || []).length);
 
   // How a facet's raw data value is turned into what the menu shows. Two
@@ -127,6 +126,7 @@ export default function FilterBar({ facets, setNames = {}, filters, onChange, la
   // artist names and is the existing behaviour for the rest.
   const optionLabel = (key) => {
     if (key === 'sets') return (v) => setLabel(setNames, v, lang);
+    if (key === 'unique') return (v) => (v === 'true' ? t('filter.uniqueYes') : t('filter.uniqueNo'));
     if (FACET_PREFIX[key]) return (v) => localize(t, FACET_PREFIX[key], v);
     return undefined;
   };
@@ -225,9 +225,16 @@ export default function FilterBar({ facets, setNames = {}, filters, onChange, la
         {facet('skills', t('filter.skills'))}
         {facet('artists', t('filter.artist'))}
         {facet('rarities', t('filter.rarity'))}
-        <button className={`chip-toggle ${filters.unique ? 'on' : ''}`} onClick={() => set('unique', !filters.unique)}>
-          {t('filter.unique')}
-        </button>
+        <FacetDropdown
+          label={t('filter.unique')}
+          options={['true', 'false']}
+          selected={filters.unique}
+          onChange={(v) => set('unique', v)}
+          open={openKey === 'unique'}
+          onToggle={() => setOpenKey((k) => (k === 'unique' ? null : 'unique'))}
+          optionLabel={optionLabel('unique')}
+          order={['true', 'false']}
+        />
         {anyActive ? (
           <button className="linkbtn" onClick={() => onChange({})}>{t('filter.reset')}</button>
         ) : null}

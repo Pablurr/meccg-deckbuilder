@@ -34,7 +34,7 @@ export function filterCards(cards, filters = {}) {
       const kw = a.keywords || [];
       if (!filters.keywords.some((k) => kw.includes(k))) return false;
     }
-    if (filters.unique === true && a.unique !== true) return false;
+    if (has(filters.unique) && !filters.unique.includes(String(a.unique === true))) return false;
     if (q) {
       const names = normalizeText([c.name?.en, c.name?.fr, c.name?.es].filter(Boolean).join(' '));
       if (!names.includes(q)) return false;

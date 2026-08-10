@@ -17,8 +17,14 @@ describe('filterCards', () => {
     expect(filterCards(cards, { types: ['Site'] }).map((c) => c.id)).toEqual(['BA-1']);
   });
 
-  it('filters by unique flag', () => {
-    expect(filterCards(cards, { unique: true }).map((c) => c.id)).toEqual(['AS-1']);
+  it('filters by unique as an array facet', () => {
+    // AS-1 is unique: true; AS-44 and BA-1 have no `unique` attribute (falsy).
+    expect(filterCards(cards, { unique: ['true'] }).map((c) => c.id)).toEqual(['AS-1']);
+    expect(filterCards(cards, { unique: ['false'] }).map((c) => c.id)).toEqual(['AS-44', 'BA-1']);
+    // Both values selected excludes nothing, like any other multi-select facet.
+    expect(filterCards(cards, { unique: ['true', 'false'] }).map((c) => c.id)).toEqual(['AS-1', 'AS-44', 'BA-1']);
+    // No selection excludes nothing.
+    expect(filterCards(cards, { unique: [] })).toHaveLength(3);
   });
 
   it('filters by keyword membership', () => {

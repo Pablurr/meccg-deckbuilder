@@ -54,6 +54,8 @@ export const translations = {
     'filter.skills': 'Compétences',
     'filter.keywords': 'Mots-clés',
     'filter.unique': 'Unique',
+    'filter.uniqueYes': 'Unique',
+    'filter.uniqueNo': 'Non-unique',
     'filter.reset': 'réinitialiser',
     'filter.filters': 'Filtres',
 
@@ -463,6 +465,8 @@ export const translations = {
     'filter.skills': 'Skills',
     'filter.keywords': 'Keywords',
     'filter.unique': 'Unique',
+    'filter.uniqueYes': 'Unique',
+    'filter.uniqueNo': 'Non-unique',
     'filter.reset': 'reset',
     'filter.filters': 'Filters',
 
@@ -859,6 +863,8 @@ export const translations = {
     'filter.skills': 'Habilidades',
     'filter.keywords': 'Palabras clave',
     'filter.unique': 'Única',
+    'filter.uniqueYes': 'Única',
+    'filter.uniqueNo': 'No única',
     'filter.reset': 'reiniciar',
     'filter.filters': 'Filtros',
 
