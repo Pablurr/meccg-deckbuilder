@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { cardName, cardImageSrc, cardImageEn } from '../lib/lang.js';
 import ProxyStamp from './ProxyStamp.jsx';
 import { useT } from '../i18n.jsx';
 import { capTitle } from '../lib/rules/docText.js';
 import { ZONE_LABEL_KEY } from '../lib/rules/zones.js';
+import { swipeDirection } from '../lib/cardNav.js';
 
 // Full-screen card preview for touch (desktop uses the hover CardPreview).
 // The image is constrained to fit ENTIRELY within the viewport (see styles):
@@ -44,16 +45,70 @@ export function capNotices(rows) {
   return [...byReason].map(([reason, zones]) => ({ reason, zones }));
 }
 
-export default function CardPreviewModal({ card, lang, rows = [], onChangeZoneQty, onClose, proxyMode, setNames }) {
+export default function CardPreviewModal({ card, lang, rows = [], onChangeZoneQty, onClose, onNav, proxyMode, setNames }) {
   const t = useT();
+  const touchStart = useRef(null);
+  // A real touchend synthesizes a compatibility click on the same target
+  // afterwards; without swallowing it, a swipe's trailing click bubbles to
+  // the backdrop's onClose and the gesture that navigates also closes the
+  // modal. Set only when onNav actually fired, so a plain tap (no swipe)
+  // still bubbles through and closes the modal as before.
+  const swiped = useRef(false);
   if (!card) return null;
   const name = cardName(card, lang);
+
+  function handleTouchStart(e) {
+    const touch = e.touches[0];
+    if (!touch) return;
+    touchStart.current = { x: touch.clientX, y: touch.clientY };
+  }
+
+  // Reads the recorded start point rather than accumulating deltas across
+  // touchmove: a single start/end comparison is enough for a swipe gesture
+  // and skips a stream of intermediate state updates on every frame.
+  function handleTouchEnd(e) {
+    const start = touchStart.current;
+    touchStart.current = null;
+    if (!start || !onNav) return;
+    const touch = e.changedTouches[0];
+    const dir = swipeDirection(touch.clientX - start.x, touch.clientY - start.y);
+    if (dir) {
+      swiped.current = true;
+      onNav(dir);
+    }
+  }
+
+  // The OS can interrupt a touch mid-gesture (incoming call, notification
+  // pull-down, scroll takeover) without ever firing touchend. Without this,
+  // touchStart.current would stay stale until some later, unrelated touchend
+  // paired it with a mismatched end point and misfired onNav.
+  function handleTouchCancel() {
+    touchStart.current = null;
+  }
+
+  // Consumes the compatibility click a real touchscreen fires right after
+  // touchend, on whatever element was under the finger (usually the image).
+  // stopPropagation keeps it from reaching the backdrop's onClose; a plain
+  // tap leaves swiped.current false and falls through to close as usual.
+  function handleImgwrapClick(e) {
+    if (swiped.current) {
+      swiped.current = false;
+      e.stopPropagation();
+    }
+  }
+
   return (
     // Clicking anywhere (the card image or the letterbox around it) closes the
     // modal; only the quantity bar swallows the click so ＋/− don't dismiss it.
     <div className="card-modal-backdrop" onClick={onClose}>
       <div className="card-modal">
-        <div className="card-modal-imgwrap">
+        <div
+          className="card-modal-imgwrap"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchCancel}
+          onClick={handleImgwrapClick}
+        >
           <div className="proxy-wrap">
             <img
               src={cardImageSrc(card, lang)}

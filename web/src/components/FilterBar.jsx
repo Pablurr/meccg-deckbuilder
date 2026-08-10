@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { UI_LANGUAGES, setLabel } from '../lib/lang.js';
 import { useT } from '../i18n.jsx';
 import { localize } from '../lib/rules/docText.js';
-import { sortFacetOptions } from '../lib/filter.js';
+import { sortFacetOptions, SORT_KEYS } from '../lib/filter.js';
 import { TYPE_ORDER, REPORT_ISSUES_URL } from '../lib/constants.js';
 
 // Facet values come straight from cards.json, so they are English data --
@@ -42,6 +42,70 @@ function FacetDropdown({ label, options, selected = [], onChange, open, onToggle
               {show(opt)}
             </label>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// The 9 keys the sort picker offers, and the i18n key each one's label
+// lives under. Reuses the same keys as filter.* labels (filter.set,
+// filter.type, ...) except filter.name, which has no facet counterpart.
+const SORT_KEY_LABEL = {
+  sets: 'filter.set',
+  types: 'filter.type',
+  subtypes: 'filter.subtype',
+  alignments: 'filter.alignment',
+  races: 'filter.race',
+  skills: 'filter.skills',
+  rarities: 'filter.rarity',
+  artists: 'filter.artist',
+  name: 'filter.name',
+};
+
+// Sort control: two stacked <select>s (primary, secondary) rather than
+// side-by-side, so it stays narrow enough for a 320px mobile screen. Reuses
+// the facet dropdown's open/close mechanism (single `openKey` in the parent)
+// so it participates in the same outside-click/Escape handling as every
+// other facet menu, instead of needing its own.
+function SortPicker({ sortBy, onChange, open, onToggle, keys, labelFor, t }) {
+  const active = Boolean(sortBy.secondary);
+  const secondaryOptions = keys.filter((k) => k !== sortBy.primary);
+  return (
+    <div className="facet">
+      <button className={active ? 'active' : ''} onClick={onToggle}>
+        {t('filter.sortBy')} ▾
+      </button>
+      {open && (
+        <div className="facet-menu sort-menu">
+          <label>
+            {t('filter.sortPrimary')}
+            <select
+              value={sortBy.primary}
+              onChange={(e) => {
+                const primary = e.target.value;
+                // Dropping the secondary if it now collides with the new primary.
+                const secondary = sortBy.secondary === primary ? null : sortBy.secondary;
+                onChange({ primary, secondary });
+              }}
+            >
+              {keys.map((k) => (
+                <option key={k} value={k}>{labelFor(k)}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            {t('filter.sortSecondary')}
+            <select
+              value={sortBy.secondary || ''}
+              onChange={(e) => onChange({ ...sortBy, secondary: e.target.value || null })}
+            >
+              <option value="">{t('filter.sortNone')}</option>
+              {secondaryOptions.map((k) => (
+                <option key={k} value={k}>{labelFor(k)}</option>
+              ))}
+            </select>
+          </label>
         </div>
       )}
     </div>
@@ -94,7 +158,7 @@ function ProxyToggle({ on, onChange }) {
   );
 }
 
-export default function FilterBar({ facets, setNames = {}, filters, onChange, lang, onLangChange, isMobile, proxyMode, onProxyChange, onOpenDocs }) {
+export default function FilterBar({ facets, setNames = {}, filters, onChange, lang, onLangChange, isMobile, proxyMode, onProxyChange, onOpenDocs, sortBy, onSortChange }) {
   const t = useT();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [openKey, setOpenKey] = useState(null); // which facet menu is open (only one)
@@ -114,8 +178,7 @@ export default function FilterBar({ facets, setNames = {}, filters, onChange, la
   const anyActive =
     (filters.search && filters.search.length) ||
     (filters.cardText && filters.cardText.length) ||
-    filters.unique ||
-    ['sets', 'types', 'alignments', 'rarities', 'artists', 'races', 'subtypes', 'skills', 'keywords']
+    ['sets', 'types', 'alignments', 'rarities', 'artists', 'races', 'subtypes', 'skills', 'keywords', 'unique']
       .some((k) => (filters[k] || []).length);
 
   // How a facet's raw data value is turned into what the menu shows. Two
@@ -127,9 +190,12 @@ export default function FilterBar({ facets, setNames = {}, filters, onChange, la
   // artist names and is the existing behaviour for the rest.
   const optionLabel = (key) => {
     if (key === 'sets') return (v) => setLabel(setNames, v, lang);
+    if (key === 'unique') return (v) => (v === 'true' ? t('filter.uniqueYes') : t('filter.uniqueNo'));
     if (FACET_PREFIX[key]) return (v) => localize(t, FACET_PREFIX[key], v);
     return undefined;
   };
+
+  const sortKeyLabel = (key) => t(SORT_KEY_LABEL[key]);
 
   // Render a facet dropdown wired to the single-open state.
   const facet = (key, label, order) => (
@@ -216,18 +282,34 @@ export default function FilterBar({ facets, setNames = {}, filters, onChange, la
         >💡</a>
       </div>
       <div className="filterbar-bottom" style={isMobile && !filtersOpen ? { display: 'none' } : undefined}>
+        <SortPicker
+          sortBy={sortBy}
+          onChange={onSortChange}
+          open={openKey === 'sort'}
+          onToggle={() => setOpenKey((k) => (k === 'sort' ? null : 'sort'))}
+          keys={SORT_KEYS}
+          labelFor={sortKeyLabel}
+          t={t}
+        />
         {facet('sets', t('filter.set'))}
-        {facet('types', t('filter.type'), TYPE_ORDER)}
         {facet('alignments', t('filter.alignment'))}
-        {facet('rarities', t('filter.rarity'))}
-        {facet('artists', t('filter.artist'))}
-        {facet('races', t('filter.race'))}
+        {facet('types', t('filter.type'), TYPE_ORDER)}
         {facet('subtypes', t('filter.subtype'))}
-        {facet('skills', t('filter.skills'))}
         {facet('keywords', t('filter.keywords'))}
-        <button className={`chip-toggle ${filters.unique ? 'on' : ''}`} onClick={() => set('unique', !filters.unique)}>
-          {t('filter.unique')}
-        </button>
+        {facet('races', t('filter.race'))}
+        {facet('skills', t('filter.skills'))}
+        {facet('artists', t('filter.artist'))}
+        {facet('rarities', t('filter.rarity'))}
+        <FacetDropdown
+          label={t('filter.unique')}
+          options={['true', 'false']}
+          selected={filters.unique}
+          onChange={(v) => set('unique', v)}
+          open={openKey === 'unique'}
+          onToggle={() => setOpenKey((k) => (k === 'unique' ? null : 'unique'))}
+          optionLabel={optionLabel('unique')}
+          order={['true', 'false']}
+        />
         {anyActive ? (
           <button className="linkbtn" onClick={() => onChange({})}>{t('filter.reset')}</button>
         ) : null}

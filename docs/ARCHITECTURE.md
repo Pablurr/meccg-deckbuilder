@@ -7,9 +7,28 @@
 > Public : LLM. Style : dense, factuel, pas de prose d'introduction.
 > Doc utilisateur : [`README.md`](../README.md). Ce fichier-ci décrit le *comment* et le *pourquoi*.
 
-**Dernière mise à jour : 2026-08-07** — branche `agent-card-management` (`a04e54f..HEAD`),
-**terminée (tâche 7/7, documentation).** Un « agent » (32 cartes, `attributes.agent ===
-true`) se comporte désormais selon le camp qui le joue — péril pour un Sorcier ou un Balrog
+**Dernière mise à jour : 2026-08-10** — correctifs de revue finale sur la branche
+`filterbar-redesign` : le tri « Set » suit désormais `SET_ORDER` (ordre de sortie des
+extensions MECCG), pas le libellé localisé — décision explicite du propriétaire, même
+logique que `types`/`TYPE_ORDER`. Voir §15 pour le détail.
+
+Précédent : refonte de `FilterBar` : `Ally` retiré du menu
+Compétences (reste dans les données), facets réordonnées, `unique` devient une facet à deux
+valeurs plutôt qu'un toggle, et nouveau `SortPicker` (tri configurable sur deux critères,
+`sortBy` séparé de `filters`, non persisté). Détail en §5 (`sortBy`) et §10, sous-section
+« `FilterBar` : nettoyage skills, réordre, `unique` en facet, tri ». Spec :
+`docs/superpowers/specs/2026-08-09-filterbar-redesign-design.md`. Historique en §15.
+
+Précédent : navigation par swipe (gauche/droite) dans `CardPreviewModal` sur mobile, pour
+passer à la carte suivante/précédente sans fermer la modale. Logique dans
+[`web/src/lib/cardNav.js`](../web/src/lib/cardNav.js) (`navigateList`, `swipeDirection`, pures
+et testées sans DOM) ; liste de navigation figée à l'ouverture, capturée depuis la grille
+filtrée du sélecteur ou la zone active du panneau de deck. Détail en §10, sous-section
+« Navigation par swipe dans `CardPreviewModal` ».
+
+Précédent : branche `agent-card-management` (2026-08-07, `a04e54f..HEAD`), **terminée
+(tâche 7/7, documentation).** Un « agent » (32 cartes, `attributes.agent === true`) se
+comporte désormais selon le camp qui le joue — péril pour un Sorcier ou un Balrog
 (1.3.W2/1.3.B2), personnage pour un Spectre de l'Anneau ou un Sorcier déchu (1.3.R2/1.3.F4)
 — à travers légalité, zones, validation et affichage ; et 1.3.B4 (personnages non-avatars
 Balrog : Orc ou Troll, esprit < 9) est passée d'un plafond de réserve à une contrainte de
@@ -17,9 +36,8 @@ deck entier. Détail par section : §3 (données : mot-clé `Agent`, `Spawn` qui
 de BA-3), §6 (`isLegalForSide` gagne les passes agent et 1.3.B4 ; `zonesFor(card, sideId)`
 connaît le camp ; `POOL-ELIGIBLE.agent` et son garde de type), §10 (`buildGroups` regroupe
 par rôle quand `sideId` est connu ; pourquoi `deckSections.js` ne le fait délibérément pas).
-Historique tâche par tâche en §15.
 
-Précédent : lot confort import / panneau / mobile (2026-08-05) — sept améliorations de confort sur l'import, le panneau
+Encore avant : lot confort import / panneau / mobile (2026-08-05) — sept améliorations de confort sur l'import, le panneau
 de deck et le mobile. **Dernier lot (§10) :** en mobile, `CardPreviewModal` devient la route
 unique vers les zones — le bouton `⇄` de la vignette de deck est supprimé (il offrait les mêmes
 destinations dans un calque écrasé sur une vignette de ~105 px), et les avertissements de
@@ -143,7 +161,7 @@ web/src/            toute l'application
     export/         pipeline d'export pur (10 modules, aucun import React)
     *.js            deck, deckStore, filter, importDeck, lang, proxy, tags, zoom…
 web/public/         servi tel quel : cards.json, card-backs/, proxy-patches/, _redirects
-test/               38 fichiers Vitest, 727 tests
+test/               39 fichiers Vitest, 747 tests
 docs/superpowers/   specs et plans d'implémentation, datés (historique des intentions)
 scripts/            make_proxy_patches.py (génération des patchs proxy, hors build)
 ```
@@ -470,7 +488,7 @@ Pas de Redux, pas de Zustand, pas de `useReducer` global : **`App.jsx` détient 
 descend en props**. Le seul contexte React est `I18nContext`.
 
 **États principaux de `App.jsx` :** `cards`, `facets`, `defaultBacks`, `deck`, `quantities`,
-`zones`, `filters`, `uiLang`, `proxyMode`, `panelCollapsed`, `panelWidth`,
+`zones`, `filters`, `sortBy`, `uiLang`, `proxyMode`, `panelCollapsed`, `panelWidth`,
 `previewCard`, `deckSheetOpen`, `savedSignature`, `saveState`, les booléens de modales
 (`showManager`, `showSetup`, `showExport`, `showImport`, `showDocs`) et `error`. (`cardZoom` a
 disparu avec le curseur de zoom, §10/§12 ; la clé `localStorage` correspondante reste
@@ -541,6 +559,16 @@ met à jour le nom *et* refait la ligne de base.
   contient-il des cartes ? » doit utiliser `totalCopies`** — un deck rempli uniquement via
   le pool était autrement déclaré vide, ce qui désactivait le bouton « voir le deck »,
   seul accès à ces zones sur mobile.
+
+### `sortBy` (2026-08-09)
+
+`{ primary: 'sets', secondary: null }` — le critère de tri de la grille `CardBrowser`, choisi
+par le nouveau `SortPicker` de `FilterBar`. **Délibérément un état séparé de `filters`, pas
+une clé dedans** : le bouton « Réinitialiser les filtres » (`onChange({})`) ne doit pas aussi
+changer l'ordre d'affichage — trier et filtrer sont deux axes indépendants pour l'utilisateur.
+**Non persisté en `localStorage`**, contrairement à `proxyMode` (§4) : repart à
+`{ primary: 'sets', secondary: null }` à chaque rechargement, choix YAGNI du spec
+(`docs/superpowers/specs/2026-08-09-filterbar-redesign-design.md`), pas un oubli.
 
 ---
 
@@ -1445,6 +1473,51 @@ chaque entrée n'est préfixée de ses zones que lorsqu'il y en a plus d'une à 
 Fonction pure exportée et testée (`test/cardPreviewModal.test.js`), même idiome que
 `tabPresentation` — ce dépôt ne monte jamais un composant dans un test (§11).
 
+### `FilterBar` : nettoyage skills, réordre, `unique` en facet, tri (2026-08-09)
+
+Spec : `docs/superpowers/specs/2026-08-09-filterbar-redesign-design.md`.
+
+- **`Ally` disparaît du menu Compétences, pas des données.** `Ally` est une vraie valeur du
+  champ `skills` (les cartes Allié la portent comme "compétence"), donc elle doit rester dans
+  `cardTags`/`filterCards` pour que le matching continue de fonctionner ailleurs. Seul le menu
+  déroulant la cache : `excludeSkill(skills, value)` (`lib/parseCards.js`) filtre
+  `derivedFacets.skills` dans `App.jsx`, en aval de `baseOptions`.
+- **Ordre des facets** (`filterbar-bottom`) : `sets, alignments, types, subtypes, keywords,
+  races, skills, artists, rarities`, puis `unique`, puis le bouton reset — remplace l'ancien
+  `sets, types, alignments, rarities, artists, races, subtypes, skills, keywords`. Choix du
+  propriétaire, pas de logique dérivable du code au-delà de l'ordre littéral des appels
+  `facet(...)`.
+- **`unique` devient une `FacetDropdown` à deux valeurs (`'true'`/`'false'`), plus un bouton
+  `chip-toggle`.** Cohérent avec le reste de la barre (comparaison `includes` sur un tableau)
+  au lieu d'un booléen isolé. `filterCards` (`lib/filter.js`) : `filters.unique` est un tableau,
+  testé via `!filters.unique.includes(String(a.unique === true))` — vide ou les deux valeurs
+  cochées n'excluent rien, comme n'importe quel autre facet multi-choix. Libellés portés par
+  `optionLabel('unique')` dans `FilterBar.jsx` (`filter.uniqueYes`/`filter.uniqueNo`), ordre
+  fixe `['true', 'false']` via `sortFacetOptions`.
+- **`SortPicker`** (`FilterBar.jsx`) : deux `<select>` natifs empilés (1er critère, 2e critère
+  optionnel) plutôt que côte à côte — reste utilisable à 320px de large. Partage le mécanisme
+  `openKey`/`onToggle` des `FacetDropdown` (un seul menu ouvert à la fois, même fermeture au
+  clic extérieur/Échap), sous la clé `'sort'`. Le 2e select exclut la clé déjà choisie en 1er
+  (pas de `primary === secondary`) et retombe sur `null` si elle y était sélectionnée au moment
+  où le 1er change. `SORT_KEYS` (`lib/filter.js`) fixe les 9 clés offertes et leur ordre de
+  menu : `sets, types, subtypes, alignments, races, skills, rarities, artists, name`.
+  `sortCards(cards, { primary, secondary }, { lang, labelFor })` (`lib/filter.js`) trie une
+  copie du tableau ; `primary` falsy renvoie `cards` tel quel (référence inchangée, pour que
+  `CardBrowser` puisse mémoïser dessus). Comparaison : `type` suit `TYPE_ORDER` (ordre de jeu,
+  pas alpha, même logique que `sortFacetOptions`) ; `sets` suit de la même façon `SET_ORDER`
+  (ordre de sortie des extensions MECCG — TW, TD, DM, LE, AS, WH, BA — décision explicite du
+  propriétaire : l'ordre par défaut de la grille ne doit pas dépendre de la langue d'affichage,
+  donc pas de passage par `setLabel`) ; `name` compare `card.name[lang]` directement
+  (pas de dictionnaire) ; toutes les autres clés comparent le **libellé affiché**, pas la
+  valeur anglaise brute — `CardBrowser.jsx` fournit `labelFor` en miroir exact de
+  `optionLabel` côté `FilterBar` (sets → `setLabel`, mais inutilisé par `sortCards` puisque
+  `sets` a sa propre branche avant l'appel à `labelFor`, comme `types` ; alignments/races →
+  `localize`, le reste → valeur brute, faute d'entrée de dictionnaire). `card.id` (déjà
+  `set-numéro`, ex. `AS-44`)
+  sert de tiebreak final systématique, avec `localeCompare(..., { numeric: true })` pour que
+  `AS-2` précède `AS-10`. Pas de direction de tri (toujours ascendant), pas de 3e critère, pas
+  de persistance `localStorage` — voir `sortBy` en §5 pour pourquoi.
+
 > **Le verrou `deck.mode === 'deckbuilding'` sur les `rows` est délibéré et conservé.** En
 > *Impression libre*, la modale n'offre que la pioche : ce mode n'a pas de zones (il imprime,
 > il ne construit pas), et lui en proposer inviterait un deck freeform à faire grossir des
@@ -1452,6 +1525,42 @@ Fonction pure exportée et testée (`test/cardPreviewModal.test.js`), même idio
 > « la modale ne propose que la pioche » : elle propose bien toutes les zones légales, mais
 > seulement en *Construction de deck*. Retirer `⇄` en mobile a d'ailleurs supprimé
 > l'incohérence inverse, où ce bouton offrait pool/talon **même en freeform**.
+
+### Navigation par swipe dans `CardPreviewModal` (2026-08-09)
+
+**Un geste tactile gauche/droite sur l'image fait passer à la carte suivante/précédente**,
+dans la liste où la modale a été ouverte : la grille filtrée du sélecteur (`CardBrowser`,
+`shown` — le même tableau capé/filtré déjà affiché à l'écran) ou les cartes de la zone/onglet
+actif du panneau de deck mobile (`DeckPanel`, `groups` aplati). Toute la logique de
+navigation vit dans deux fonctions pures et testées sans DOM (même idiome que `capNotices` :
+ce dépôt ne monte jamais de composant en test, §11) — [`web/src/lib/cardNav.js`](../web/src/lib/cardNav.js) :
+
+- `navigateList(list, currentCard, delta)` — retrouve `currentCard` par `.id` dans `list` et
+  renvoie l'élément à `index + delta`, ou `null` hors bornes. **Pas de bouclage** : dépasser
+  la première ou la dernière carte est un no-op, la modale reste sur la carte courante.
+- `swipeDirection(dx, dy)` — décide si un geste tactile compte comme un swipe horizontal :
+  `SWIPE_THRESHOLD_PX = 50` de déplacement horizontal minimum, `SWIPE_VERTICAL_TOLERANCE_PX = 30`
+  de dérive verticale maximum tolérée (au-delà, le geste est traité comme un scroll accidentel,
+  pas une navigation).
+
+**La liste de navigation est figée à l'ouverture de la modale**, portée par un état
+`previewList` dans `App` à côté de `previewCard` (peuplé par un handler `openPreview(card,
+list)` que `CardBrowser` et `DeckPanel` appellent avec leur propre liste). Elle ne réagit
+**pas** aux filtres ou au deck qui changeraient pendant que la modale reste ouverte — un cas
+rare, et recalculer en direct aurait ajouté une réactivité que rien ne demande.
+
+**Les gestionnaires tactiles vivent uniquement sur `.card-modal-imgwrap`** (l'image), jamais
+sur le fond (`.card-modal-backdrop`, qui doit continuer à fermer la modale au tap) ni sur la
+barre de contrôle (`.card-modal-bar`, qui doit continuer à n'écouter que ses propres boutons).
+`onTouchCancel` réinitialise le point de départ du geste au même titre que `onTouchEnd` — un
+geste interrompu par le système (appel entrant, notification) ne doit pas laisser un point de
+départ périmé pour un `touchend` sans rapport.
+
+**Dans le panneau de deck, les titres de groupe (par type de carte) sont transparents à la
+navigation** : `DeckPanel` construit `navList` en aplatissant `groups` (`groups.flatMap(g =>
+g.items.map(it => it.card))`), donc le swipe traverse la frontière entre deux groupes sans
+s'arrêter — les titres n'étant pas des entrées de la liste, il n'y a rien à ignorer
+explicitement.
 
 ### Contrôles de zone sur une tuile (`ZoneRow`, desktop)
 
@@ -1708,7 +1817,7 @@ rafraîchissement.
 
 ## §11 — Tests
 
-`npm test` → Vitest, **38 fichiers, 727 tests**. Node pur, pas de DOM : les composants ne
+`npm test` → Vitest, **39 fichiers, 747 tests**. Node pur, pas de DOM : les composants ne
 sont pas montés, ce sont les **modules purs** qui sont testés.
 
 C'est ce qui dicte la façon d'aborder un travail d'interface ici : **on extrait la décision
@@ -1734,6 +1843,10 @@ Fichiers notables :
   DM-29 compris, et BA-3 ne porte plus `attributes.subtype: "Spawn"`. Un test de données,
   pas de code — il casse si quelqu'un retouche `cards.json` sans repasser par le round-trip
   du §3.
+- `cardNav.test.js` (2026-08-09) — les deux fonctions pures derrière le swipe dans
+  `CardPreviewModal` : `navigateList` (pas de bouclage en bout de liste, no-op) et
+  `swipeDirection` (seuil horizontal, tolérance verticale). Même idiome qu'`agentData.test.js` :
+  modules purs, pas de composant monté.
 - `importDeck.test.js`, `deckList.test.js`, `deckSections.test.js` — le cycle
   export texte → import. `importLine.test.js`, `importVocabulary.test.js`,
   `importDocument.test.js`, `importResolve.test.js`, `importDeckSetCode.test.js`,
@@ -2000,7 +2113,11 @@ transformation*, donc lis le compte de **fichiers**, pas seulement celui des tes
 | 2026-08-07 | Deuxième tour de revue sur la tâche 4/7, deux trouvailles Important. **§11 : le chemin d'import n'avait aucune garde de régression** — `importDeck.js`/`ImportDialog.jsx` étaient corrects (l'argument `sideId` atteint bien la 4ᵉ place de `bucketFor`) mais rien ne l'affirmait, exactement le mode d'échec déjà livré une fois sur `DeckPanel.jsx`. Trois tests ajoutés dans `test/importDeck.test.js` (`describe('agent camp routing via importDeckList (task 4 regression)')`), fonction pure, pas de DOM : un texte collé « Side: Wizard » classant un agent sous « ## Pool » atterrit dans `quantities`, pas `zones.pool` (1.3.W2) ; « Side: Ringwraith » garde le même agent dans la réserve (1.3.R2) ; sans ligne « Side: » (freeform), inchangé. Vérifié en RED : en retirant temporairement `doc.meta.side` de l'appel à `bucketFor` (`importDeck.js:139`), seul le cas Sorcier échoue (`{}` reçu au lieu de `{ 'AS-99': 1 }`) — les deux autres passent déjà, side-blind par construction, preuve que le nouveau test cible bien l'argument et rien d'autre. La prévisualisation d'`ImportDialog` n'a pas d'équivalent testable : `bucketFor` y est appelé dans un `useMemo` interne à un composant React, et ce dépôt ne monte aucun composant en test (§11, pas de jsdom) — non forcé, consigné comme tel plutôt que contourné. **§11 : trois des cinq tests `DeckPanel` du tour précédent ne pouvaient jamais échouer** — les cas Sorcier/Spectre répétaient mot pour mot une assertion déjà faite dans `describe('zoneTargets / moveTargets')`, et les trois pinçaient `isDropAllowed`/`moveTargets` directement sans jamais lire `DeckPanel.jsx`, donc restaient vrais que le câblage soit présent ou non (confirmé par la RED du tour précédent : les trois passaient déjà contre le fichier fautif). Le cas freeform, seul apport réel, est déplacé dans `describe('zoneTargets / moveTargets')` ; les deux Sorcier/Spectre sont retirés (redondants, pas remplacés). Le bloc `describe('DeckPanel: …')` ne garde que ce qu'il peut vraiment faire échouer : les deux pinces de source, assouplies (`isDropAllowed\([^)]*,\s*sideId\s*\)` plutôt que le texte littéral `card, toZone` — un reformatage Prettier ne doit pas casser un test qui ne protège rien sur cet axe), plus une troisième pince nouvelle sur la ligne de dérivation elle-même (`const sideId = deckbuilding && deck.ruleset ? deck.ruleset.side : undefined;`) : sans elle, une régression du type `const sideId = sideKey;` (mauvaise valeur en freeform, mais toujours nommée `sideId`) passait les deux pinces existantes sans être détectée. **Terminologie corrigée (§4, §6, en-tête) :** `importDeckList` était qualifiée d'« appelant réel » d'`import/target.js` à trois endroits — c'est une façade d'API publique sans appelant sous `web/src`, exercée seulement par `test/deckSections.test.js`/`test/importDeck.test.js`, pas un chemin que l'UI atteint ; câbler son camp restait juste, le mot « réel » était faux. La prévisualisation d'`ImportDialog`, elle, l'est réellement — désormais dit explicitement aux trois endroits. §11 : 36 fichiers, 676 tests, 0 échec (+3 `importDeck.test.js`, net −2 `rules.test.js` : −2 doublons, +1 cas freeform déplacé, +1 nouvelle pince de dérivation). |
 | 2026-08-07 | Quatre tâches de code sans étape documentation propre (tâches 1/7, 2/7, 5/7, 6/7 de `agent-card-management`), consignées ensemble par la tâche 7/7 faute de ligne existante. **§3 (tâche 1/7, données, `9dbdbfd`) :** les 32 cartes `attributes.agent === true` (DM-28/DM-29 compris, `type: 'Hazard'`) portent désormais `"Agent"` dans `attributes.keywords` — visible sous le filtre Mots-clés existant sans code UI nouveau (ce filtre affiche les valeurs de facette brutes, §10). `BA-3` perd `attributes.subtype: "Spawn"` (le seul de tout le jeu) au profit du mot-clé `"Spawn"`, déjà lu en alternative par `creatureWeight` (`roles.js`). Piège d'édition consigné en §3 : indentation 1 espace / CRLF / pas de newline finale, un seul réglage `json.dumps` round-trippe le fichier à l'octet près. `test/agentData.test.js` (4 tests) épingle les deux invariants sur les données elles-mêmes. **§6 (tâche 2/7, légalité, `fe08286`, déjà narrée en partie par la tâche 3 pour situer sa propre passe) :** `isLegalForSide` gagne la passe agent — `a.agent === true && side.agents.role === 'hazard'` renvoie `true` avant la passe d'alignement, placée après `specific` et avant 1.3.B4 ; c'est cet ordre qui garde les agents (29 des 30 de type `Character` ne sont ni Orc ni Troll) visibles dans un navigateur Balrog malgré 1.3.B4. **§6 (tâche 5/7, validation, `83875aa`/`0aa364d`) :** `POOL-ELIGIBLE.agent` (i18n fr/en/es) — motif à trois conditions, `c.type === 'Character' && a.agent === true && roleFor(c, side).bucket === 'hazard'`, le garde de type distinguant un agent que le camp a reclassé des deux agents Hazard-type (DM-28/DM-29) qui n'ont jamais été des personnages et qui, sans ce garde, auraient affiché `reason: 'agent'` à tort. **§10 (tâche 6/7, affichage, `2aed2b3`) :** `buildGroups(entries, lang, sideId)` — regroupe par `roleFor(card, sideId).bucket` plutôt que `card.type` quand `sideId` est connu, listant les agents d'un camp Sorcier/Balrog sous l'en-tête Hazard dans le panneau de deck ; `deckSections.js` (§7) reste volontairement sur `card.type`, ses titres de groupe étant relus comme indices de type par le parseur d'import (`import/vocabulary.js:82-84`) — les faire diverger casserait le round-trip export → import. §11 : 36 fichiers, 687 tests, 0 échec. |
 | 2026-08-07 | Tâche 7/7 (documentation), fin de branche `agent-card-management`. En-tête de ce document réécrit pour résumer la branche entière plutôt que la seule tâche 4 ; §3/§6/§10 complétés des quatre tâches ci-dessus ; §11 : `test/agentData.test.js` ajouté à la liste des fichiers notables. `CLAUDE.md` : compte de tests corrigé, « 35 fichiers, 637 tests » (périmé depuis la tâche « qol-minor-features » du 2026-08-04) → 36 fichiers, 687 tests. `README.md` relu contre les quatre changements visibles listés par le plan (agents dans le navigateur d'un Sorcier, réserve refusée aux agents Sorcier/Balrog, personnages masqués par 1.3.B4 chez un Balrog, filtre Mots-clés `Agent`) : **aucune modification** — les trois premiers sont déjà couverts par la phrase générique existante sur le filtre de légalité (« masque les cartes non éligibles au camp choisi »), qui ne nomme aucune règle en particulier et reste donc vraie sans changement ; le quatrième découle du filtre Mots-clés déjà documenté, dont le README ne détaille déjà aucune valeur de facette individuelle. Aucune dette nouvelle. |
+| 2026-08-10 | Deux correctifs de revue finale, branche `filterbar-redesign`. §10 : le tri « Set » utilisait `setLabel` (libellé localisé) via `sortLabelFor`, donc l'ordre par défaut de la grille (`sets` est la clé de tri primaire par défaut) changeait avec la langue d'affichage — décision explicite du propriétaire : il doit suivre un ordre fixe, l'ordre de sortie réel des extensions MECCG. Nouvelle constante `SET_ORDER = ['TW', 'TD', 'DM', 'LE', 'AS', 'WH', 'BA']` dans `constants.js`, miroir de `TYPE_ORDER` ; `compareSortKey` (`lib/filter.js`) gagne une branche `key === 'sets'` (nouveau `setRank`, même sémantique « absent de l'ordre va en dernier ») qui court-circuite l'appel à `labelFor`, exactement comme `types` le fait déjà — `sortLabelFor` (`CardBrowser.jsx`) garde sa branche `sets` telle quelle (inoffensive, potentiellement utile ailleurs), simplement plus jamais consultée par `sortCards` pour cette clé. `filterCards`'s docblock corrigé en passant : `unique(bool)` → `unique[]` (le filtre `unique` est un tableau depuis la tâche 2 de `filterbar-redesign`, le commentaire ne l'avait jamais suivi). §11 : `test/filter.test.js` gagne un test `sets sorts by SET_ORDER`, miroir direct du test `types sorts by TYPE_ORDER` existant — 39 fichiers, 748 tests, 0 échec. |
 | 2026-08-07 | Revue de la tâche 7/7, une trouvaille Important. §2 : l'arbre de structure du dépôt citait encore `test/  36 fichiers Vitest, 676 tests` — une troisième occurrence du compte de tests, distincte des deux (`CLAUDE.md`, §11) déjà corrigées par la tâche elle-même et repérée seulement par un grep en revue, pas par la relecture initiale. Corrigée à 687. Balayage du dépôt entier (grep, pas lecture) pour d'autres occurrences périmées : aucune — les seuls autres résultats sont des lignes §15 datées (correctes en tant qu'état figé à leur date) ou des plans figés sous `docs/superpowers/plans/` (hors table de routage de `CLAUDE.md`, donc hors du périmètre de mise à jour). §6 : la justification de l'ordre agent/1.3.B4 affirmait que « la plupart » des agents sont Homme ou Elfe — repéré comme la même classe d'erreur qu'un cas signalé par le propriétaire ailleurs (une race citée de mémoire plutôt que lue dans les données) ; vérifié contre `cards.json` : sur les 30 agents de type `Character` (les 2 de type `Hazard`, DM-28/DM-29, échappent à 1.3.B4 par construction), un seul est Orc, aucun Troll — la formulation corrigée dit désormais « 29 des 30 » et s'appuie sur le test réel de 1.3.B4 (« ni Orc ni Troll ») plutôt que de nommer des races, corrigée aussi dans la ligne §15 de la tâche elle-même. §11 : `npm test` — 36 fichiers, 687 tests, 0 échec. |
 | 2026-08-07 | Revue finale de branche `agent-card-management` (quatre trouvailles : deux Important, deux Minor), toutes corrigées en un tour. **§6 : `raceAllowed` (`sides.js`) contredisait son propre commentaire** — la passe esprit honore « une donnée illisible ne restreint rien » via `Number.isFinite(mind)`, mais la passe race appelait `matchesRace(undefined, r)` sur une race absente, et `racesOf(undefined).some()` vaut `false` : la carte était masquée sans explication, à l'opposé du principe promis juste au-dessus. Vérifié contre les données avant correction : les 194 cartes `Character` portent toutes une race, donc **latent, aucune carte affectée aujourd'hui** — corrigé quand même, le principe devant tenir avant que la donnée ne change. `raceAllowed` renvoie désormais `true` quand `racesOf(race).length === 0` ; une race présente mais simplement hors liste reste rejetée. Test ajouté sur une carte synthétique (seule exception de la suite à la convention carte réelle, faute de cas réel — commenté comme tel pour ne pas être « corrigé » en carte réelle par erreur) ; vu échouer avant le correctif (`expected false to be true`). **§6 : `zonesFor` (branche agent) et `roleFor` (branche agent, `roles.js`) calculent le même seau pour la même règle 1.3.W2/1.3.B2 en relisant indépendamment `side.agents.role`** — rien ne garde les deux conditions synchronisées au-delà de la coïncidence actuelle. Pas de fusion (`zonesFor` tourne en boucle de rendu, `roleFor` fait plus de travail) : commentaire croisé ajouté dans `zones.js`, même registre que celui déjà présent dans `validate.js` pour son propre exemplaire du motif (`POOL-ELIGIBLE`, plus haut en §6). **§11 : le test « agents escape 1.3.B4 »** (`test/rules.test.js`) filtrait `cards` sur `attributes.agent === true` sans jamais vérifier que le tableau n'est pas vide — passerait à vide si la donnée perdait ce mot-clé, en s'appuyant implicitement sur `agentData.test.js` pour échouer en premier. Assertion `agents.length > 0` ajoutée. **`ImportDialog.jsx` : le `useMemo` d'`importable`** listait `[resolved, choice]` sans `effectiveSide`, alors que le callback le lit — correct aujourd'hui seulement par transitivité (`resolved` en dépend déjà), fragile à un futur découplage des deux mémos. `effectiveSide` ajouté au tableau de dépendances. §11 : `npm test` — 36 fichiers, 688 tests (+1, le test `raceAllowed`), 0 échec. |
 | 2026-08-07 | Fusion de `agent-card-management` dans `dev`. La branche était partie de `main` (`a04e54f`), que `dev` dépassait déjà de neuf commits, donc la fusion n'était pas triviale : cinq conflits dans ce document, tous de cohabitation et non de contradiction. **En-tête** — le bloc du 2026-08-05 (lot confort import / panneau / mobile) est rétrogradé en « Précédent », celui du 2026-08-07 prend sa place. **§4** — le paragraphe « Ligne de pure décoration » (venu de `dev`) et la réécriture de la puce `target.js` (venue de la branche) sont deux contenus différents sur des lignes voisines : les deux conservés. **§15** — les sept lignes du 2026-08-05 et les huit du 2026-08-07 conservées, dans l'ordre chronologique. **§2 et §11** — les deux comptes de tests en conflit (37/678 côté `dev`, 36/687 côté branche) ne valaient ni l'un ni l'autre après fusion : mesurés sur le résultat fusionné, **38 fichiers, 722 tests, 0 échec**. Les comptes cités dans les lignes de ce journal ne sont **pas** touchés — ils consignent le compte de leur époque, et un `replace_all` les avait déjà écrasés une fois (voir la ligne du 2026-08-05 sur l'ergonomie tactile des zones). |
 | 2026-08-07 | Correctif signalé par le propriétaire après la fusion précédente : `ALIGN-LEGAL` (Sorcier) et `BALROG-RACE`/`BALROG-MIND` (Balrog) se déclenchaient encore sur un agent que son camp compte comme péril. **Deux bugs distincts, pas un seul.** `ALIGN-LEGAL` ignorait totalement la dérogation agent qu'`isLegalForSide` possède déjà (§6) — le navigateur montrait Anarin légale en deck Sorcier, le validateur la contredisait dès son ajout à la pioche. `BALROG-RACE`/`BALROG-MIND` gataient sur `c.type === 'Character'` (le type brut) au lieu du rôle joué pour ce camp. **La consigne « seulement si le rôle est CHARACTER » ne s'appliquait PAS telle quelle aux deux :** `rules.ALIGN-LEGAL.doc` dit explicitement « chaque carte non-avatar » — un contrôle universel, pas un contrôle de personnage (vérifié : AS-44, Ressource Héros, a le bucket `'resource'`) — donc gater `ALIGN-LEGAL` sur `roleFor(...).bucket === 'character'` aurait silencieusement désactivé le contrôle d'alignement pour toutes les ressources et périls ordinaires. Correctif agent-spécifique pour `ALIGN-LEGAL` (`a.agent === true && profile.agents.role === 'hazard'`, même condition qu'`isLegalForSide`) ; correctif basé sur le rôle pour `BALROG-RACE`/`BALROG-MIND`, dont la doc parle explicitement de « personnages Balrog ». **Régression trouvée en cours de route :** les fixtures `BALROG-MIND` existantes (`test/rules.test.js` et `test/i18n-rules-contract.test.js`) sélectionnaient leur carte via `firstWhere` sans exclure les agents et tombaient sur DM-14 (mind 9) — corrigées, ainsi que le fixture `BALROG-RACE` voisin par cohérence (même piège latent, pas encore déclenché). Vérifié dans le navigateur réel sur les deux camps. Fusionné dans `dev` sans conflit cette fois (merge ordinaire, pas un fast-forward : `dev` portait déjà le merge précédent). §2/§11 : **38 fichiers, 727 tests, 0 échec**. |
+| 2026-08-09 | Navigation par swipe dans `CardPreviewModal` (mobile), demandée par le propriétaire, exécutée en Subagent-Driven Development sur `dev` (quatre tâches de code + une de vérification/doc, `465e66e..HEAD`). §10, nouvelle sous-section « Navigation par swipe dans `CardPreviewModal` » : un geste gauche/droite sur l'image passe à la carte suivante/précédente, dans la liste où la modale a été ouverte (grille filtrée du sélecteur ou zone/onglet actif du panneau de deck mobile) ; logique portée par deux fonctions pures et testées sans DOM, [`web/src/lib/cardNav.js`](../web/src/lib/cardNav.js) (`navigateList`, `swipeDirection`) — même idiome que `capNotices`, ce dépôt ne montant jamais de composant en test. Pas de bouclage en bout de liste (no-op). Liste figée à l'ouverture (état `previewList` dans `App`, à côté de `previewCard`), ne réagit pas à un changement de filtre/deck pendant que la modale reste ouverte. Gestionnaires tactiles posés uniquement sur `.card-modal-imgwrap`, jamais sur le fond ni la barre de contrôle ; `onTouchCancel` réinitialise le point de départ du geste au même titre que `onTouchEnd`, ajouté en cours de revue de tâche (un geste interrompu par le système — appel entrant, notification — laissait sinon un point de départ périmé pour un `touchend` sans rapport). Dans le panneau de deck, les titres de groupe (par type de carte) sont transparents à la navigation : `navList` aplatit `groups` avant de le passer à la modale. Vérifié dans le navigateur réel (événements tactiles simulés, viewport mobile 375×812) : swipe gauche → carte suivante, swipe droite → précédente, no-op en bout de liste (modale reste ouverte sur la même carte), boutons de la barre de contrôle sans effet sur la navigation ni la fermeture, tap sur le fond ferme toujours la modale. §11 : `test/cardNav.test.js` (11 tests) — 39 fichiers, 738 tests, 0 échec. Spec : `docs/superpowers/specs/2026-08-09-mobile-swipe-navigation-design.md`. |
+| 2026-08-09 | Revue finale de branche sur la navigation par swipe, un correctif Critique. **`CardPreviewModal.jsx` : un swipe déclenchait aussi la fermeture de la modale.** Sur un écran tactile réel, `touchend` est suivi d'un clic de compatibilité synthétisé sur l'élément sous le doigt (l'image), qui remonte jusqu'au fond (`.card-modal-backdrop`, `onClick={onClose}`) — invisible aux événements tactiles simulés utilisés lors de la vérification de la tâche précédente, qui ne génèrent pas ce clic de compatibilité. Corrigé par un flag `swiped` (ref) : `handleTouchEnd` le passe à `true` uniquement quand `onNav` a réellement été appelé ; un nouveau `handleImgwrapClick` sur `.card-modal-imgwrap` consomme ce clic (`stopPropagation`) et remet le flag à `false` — un tap simple (sans swipe) laisse `swiped.current` à `false` et continue de fermer la modale comme avant. §11 : `cardNav.test.js` ajouté à la liste des fichiers notables (idiome partagé avec `agentData.test.js`). Comptes de tests corrigés à trois endroits qui citaient encore l'ancien total (`727` au lieu de `738`) : §2, §11 de ce document, et `CLAUDE.md`. §11 : `npm test` — 39 fichiers, 738 tests, 0 échec (aucun test ajouté par ce correctif, comportement déjà couvert par la vérification manuelle en navigateur). |
+| 2026-08-09 | Refonte de `FilterBar`, quatre tâches de code + une de documentation (`2df6628..e4fbf04`). Spec : `docs/superpowers/specs/2026-08-09-filterbar-redesign-design.md`. **§10 :** `Ally` retiré du menu Compétences via `excludeSkill()` (`lib/parseCards.js`), appliqué à `derivedFacets.skills` dans `App.jsx` — les données (`cardTags`) le gardent, seul le menu le cache. Facets réordonnées : `sets, alignments, types, subtypes, keywords, races, skills, artists, rarities`. `unique` passe d'un bouton `chip-toggle` à une `FacetDropdown` à deux valeurs (`'true'`/`'false'`, libellés `filter.uniqueYes`/`filter.uniqueNo`) — `filters.unique` est désormais un tableau, `filterCards` compare via `includes` comme les autres facets. Nouveau `SortPicker` : deux `<select>` empilés (1er/2e critère, 9 clés dans `SORT_KEYS`), partage le mécanisme `openKey` des facets. **§5 :** nouvel état `sortBy` (`{ primary, secondary }`) dans `App.jsx`, délibérément séparé de `filters` (le reset ne le touche pas), non persisté en `localStorage`, remis à `{ primary: 'sets', secondary: null }` au rechargement. **`sortCards`** (`lib/filter.js`) : tri pur sur libellé affiché (miroir de `optionLabel`/`sortFacetOptions`), `types` sur `TYPE_ORDER`, `name` sur la chaîne déjà dans la langue d'affichage, tiebreak final systématique sur `card.id` (`localeCompare` numérique). `README.md` : liste des facets et mention du bouton Trier par mises à jour (§1, « Utilisation »). §11 : 39 fichiers, 747 tests, 0 échec (+9 : `sortCards`/`filterCards` sur `unique` en tableau). |

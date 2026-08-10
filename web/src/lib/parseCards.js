@@ -76,6 +76,13 @@ export function collectSetNames(raw) {
   return out;
 }
 
+// "Ally" is a real value in the skills data field (Ally-type cards carry it
+// as their "skill"), so it must stay in cardTags/filterCards for matching --
+// but it is not a real MECCG skill, so the skills FILTER MENU hides it.
+export function excludeSkill(skills, value) {
+  return skills.filter((s) => s !== value);
+}
+
 // One-stop parse: cards + facets + id index + set names.
 export function parseCards(raw) {
   const cards = flattenCards(raw);

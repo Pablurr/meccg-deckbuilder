@@ -2,12 +2,14 @@ import React, { useEffect, useMemo, useState } from 'react';
 import * as api from './api.js';
 import { expandQuantities, countOccurrences, deckCounts, deckWarnings, normalizeDeck, totalCopies, emptyZones, EMPTY_NOTES, deckSignature, deckPayload } from './lib/deck.js';
 import { baseOptions } from './lib/tags.js';
+import { excludeSkill } from './lib/parseCards.js';
 import { I18nProvider } from './i18n.jsx';
 import { makeT } from './lib/i18n.js';
 import { validateDeck } from './lib/rules/validate.js';
 import { remainingCopies } from './lib/rules/copies.js';
 import { zoneTargets } from './lib/rules/zones.js';
 import { bumpCount, applyDelta, applyToggle, applySelectAll } from './lib/deckMutations.js';
+import { navigateList } from './lib/cardNav.js';
 import FilterBar from './components/FilterBar.jsx';
 import CardBrowser from './components/CardBrowser.jsx';
 import DeckDrawer from './components/DeckDrawer.jsx';
@@ -26,6 +28,9 @@ export default function App() {
   const [setNames, setSetNames] = useState({}); // set code -> { en, es, fr }
   const [defaultBacks, setDefaultBacks] = useState({});
   const [filters, setFilters] = useState({});
+  // Independent from `filters` on purpose: "Reset filters" must not also
+  // reset how the grid is sorted -- see design spec 2026-08-09.
+  const [sortBy, setSortBy] = useState({ primary: 'sets', secondary: null });
   const [uiLang, setUiLang] = useState('fr'); // display language for card names
   const [quantities, setQuantities] = useState({}); // id -> copy count
   const [deck, setDeck] = useState(() => normalizeDeck({ id: null, name: 'Nouveau deck', backAssignments: {} }));
@@ -52,6 +57,11 @@ export default function App() {
   const [error, setError] = useState(null);
   const [deckSheetOpen, setDeckSheetOpen] = useState(false);
   const [previewCard, setPreviewCard] = useState(null);
+  // Captured once, when the modal opens, from whichever list it was opened
+  // from (the filtered selector grid, or the active deck zone) -- swipe
+  // navigates this frozen snapshot, so it does not need to react to filter
+  // or deck changes made while the modal is open (see design spec).
+  const [previewList, setPreviewList] = useState([]);
   // Proxy mode: cover the copyright/set-name with a "Proxy" stamp everywhere
   // (screen + exports). ON by default; persisted so the choice sticks.
   const [proxyMode, setProxyMode] = useState(() => {
@@ -90,7 +100,7 @@ export default function App() {
       ...facets,
       races: baseOptions(cards, 'races'),
       subtypes: baseOptions(cards, 'subtypes'),
-      skills: baseOptions(cards, 'skills'),
+      skills: excludeSkill(baseOptions(cards, 'skills'), 'Ally'),
     };
   }, [facets, cards]);
 
@@ -263,6 +273,11 @@ export default function App() {
     setDeck((prev) => ({ ...prev, notes: { ...prev.notes, [field]: value } }));
   }
 
+  function openPreview(card, list) {
+    setPreviewCard(card);
+    setPreviewList(list);
+  }
+
   if (error) return <div style={{ padding: 24 }}>{t('app.loadError', { error })}</div>;
   if (!facets) return <div style={{ padding: 24 }}>{t('app.loading')}</div>;
 
@@ -275,9 +290,9 @@ export default function App() {
   return (
     <I18nProvider lang={textLang}>
     <div className="app">
-      <FilterBar facets={derivedFacets} setNames={setNames} filters={filters} onChange={setFilters} lang={uiLang} onLangChange={setUiLang} isMobile={isMobile} proxyMode={proxyMode} onProxyChange={setProxyMode} onOpenDocs={() => setShowDocs(true)} />
+      <FilterBar facets={derivedFacets} setNames={setNames} filters={filters} onChange={setFilters} lang={uiLang} onLangChange={setUiLang} isMobile={isMobile} proxyMode={proxyMode} onProxyChange={setProxyMode} onOpenDocs={() => setShowDocs(true)} sortBy={sortBy} onSortChange={setSortBy} />
       <div className="main-row">
-        <CardBrowser cards={cards} filters={filters} quantities={quantities} lang={uiLang} onChangeQty={changeQty} onToggle={toggleCard} onSelectAll={selectAll} isMobile={isMobile} onPreview={setPreviewCard} proxyMode={proxyMode} setNames={setNames} deckMode={deck.mode} side={deck.mode === 'deckbuilding' ? deck.ruleset?.side ?? null : null} zones={zones} changeZoneQty={changeZoneQty} capCtx={capCtx} />
+        <CardBrowser cards={cards} filters={filters} sortBy={sortBy} quantities={quantities} lang={uiLang} onChangeQty={changeQty} onToggle={toggleCard} onSelectAll={selectAll} isMobile={isMobile} onPreview={openPreview} proxyMode={proxyMode} setNames={setNames} deckMode={deck.mode} side={deck.mode === 'deckbuilding' ? deck.ruleset?.side ?? null : null} zones={zones} changeZoneQty={changeZoneQty} capCtx={capCtx} />
         {hasSelection && !isMobile && (
           <DeckPanel
             cardsById={cardsById}
@@ -326,7 +341,7 @@ export default function App() {
           onChangeQty={changeQty}
           onToggle={toggleCard}
           onChangeNote={changeNote}
-          onPreview={setPreviewCard}
+          onPreview={openPreview}
           onClose={() => setDeckSheetOpen(false)}
           proxyMode={proxyMode}
           setNames={setNames}
@@ -436,7 +451,11 @@ export default function App() {
               : { remaining: Infinity, ruleId: null },
           }))}
           onChangeZoneQty={changeZoneQty}
-          onClose={() => setPreviewCard(null)}
+          onNav={(delta) => {
+            const next = navigateList(previewList, previewCard, delta);
+            if (next) setPreviewCard(next);
+          }}
+          onClose={() => { setPreviewCard(null); setPreviewList([]); }}
           proxyMode={proxyMode}
           setNames={setNames}
         />

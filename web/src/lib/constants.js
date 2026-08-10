@@ -21,5 +21,9 @@ export const LENGTH_IDS = ['starter', 'standard', 'long', 'campaign'];
 // export-layer module for a constant that belongs to neither.
 export const TYPE_ORDER = ['Character', 'Resource', 'Hazard', 'Site', 'Region'];
 
+// MECCG expansion release order, not alphabetical or localized-label order.
+// Used by the "Set" sort key (mirrors TYPE_ORDER's role for the Type facet/sort).
+export const SET_ORDER = ['TW', 'TD', 'DM', 'LE', 'AS', 'WH', 'BA'];
+
 // Target for the "Report this rule" link in rule-warning rows (DeckPanel).
 export const REPORT_ISSUES_URL = 'https://github.com/Pablurr/meccg-deckbuilder/issues/new';

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { flattenCards, computeFacets, parseCards, collectSetNames } from '../web/src/lib/parseCards.js';
+import { flattenCards, computeFacets, parseCards, collectSetNames, excludeSkill } from '../web/src/lib/parseCards.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CARDS_JSON = path.join(__dirname, '..', 'web', 'public', 'cards.json');
@@ -64,6 +64,16 @@ describe('collectSetNames', () => {
     // still shows something addressable — but only if the key is truly absent.
     expect(collectSetNames(fixture)).toEqual({});
     expect(collectSetNames(null)).toEqual({});
+  });
+});
+
+describe('excludeSkill', () => {
+  it('drops the given value and keeps the rest', () => {
+    expect(excludeSkill(['Ally', 'Warrior', 'Sage'], 'Ally')).toEqual(['Warrior', 'Sage']);
+  });
+
+  it('is a no-op when the value is absent', () => {
+    expect(excludeSkill(['Warrior', 'Sage'], 'Ally')).toEqual(['Warrior', 'Sage']);
   });
 });
 

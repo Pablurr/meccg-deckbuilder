@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { filterCards, sortFacetOptions } from '../web/src/lib/filter.js';
+import { filterCards, sortFacetOptions, sortCards } from '../web/src/lib/filter.js';
 
 const cards = [
   { id: 'AS-1', setCode: 'AS', type: 'Character', alignment: 'Minion', rarity: 'U2', artist: 'Omar Rayyan', name: { en: 'Bûrat', fr: 'Bûrat' }, text: 'Manifestation of Bert. +1 prowess against Dwarves.', attributes: { race: 'Troll', skills: 'Warrior/Ranger', unique: true, keywords: ['Maia'] } },
@@ -17,8 +17,14 @@ describe('filterCards', () => {
     expect(filterCards(cards, { types: ['Site'] }).map((c) => c.id)).toEqual(['BA-1']);
   });
 
-  it('filters by unique flag', () => {
-    expect(filterCards(cards, { unique: true }).map((c) => c.id)).toEqual(['AS-1']);
+  it('filters by unique as an array facet', () => {
+    // AS-1 is unique: true; AS-44 and BA-1 have no `unique` attribute (falsy).
+    expect(filterCards(cards, { unique: ['true'] }).map((c) => c.id)).toEqual(['AS-1']);
+    expect(filterCards(cards, { unique: ['false'] }).map((c) => c.id)).toEqual(['AS-44', 'BA-1']);
+    // Both values selected excludes nothing, like any other multi-select facet.
+    expect(filterCards(cards, { unique: ['true', 'false'] }).map((c) => c.id)).toEqual(['AS-1', 'AS-44', 'BA-1']);
+    // No selection excludes nothing.
+    expect(filterCards(cards, { unique: [] })).toHaveLength(3);
   });
 
   it('filters by keyword membership', () => {
@@ -94,5 +100,83 @@ describe('sortFacetOptions', () => {
     // treats "é" as "e", so "Périls" sorts before "Personnages" — which is
     // exactly why the Type facet needed an explicit order instead.
     expect(sortFacetOptions(['Hazard', 'Character'], { label })).toEqual(['Hazard', 'Character']);
+  });
+});
+
+describe('sortCards', () => {
+  const sortCardsFixture = [
+    { id: 'AS-10', setCode: 'AS', type: 'Hazard', name: { en: 'Zed' } },
+    { id: 'AS-2', setCode: 'AS', type: 'Character', name: { en: 'Alpha' } },
+    { id: 'BA-1', setCode: 'BA', type: 'Character', name: { en: 'Mid' } },
+  ];
+
+  it('returns the same array reference when no primary key is given', () => {
+    expect(sortCards(sortCardsFixture, {})).toBe(sortCardsFixture);
+  });
+
+  it('sorts by a single primary key', () => {
+    const result = sortCards(sortCardsFixture, { primary: 'sets' });
+    expect(result.map((c) => c.id)).toEqual(['AS-2', 'AS-10', 'BA-1']);
+  });
+
+  it('breaks ties on card_id with numeric comparison (AS-2 before AS-10)', () => {
+    const result = sortCards(sortCardsFixture, { primary: 'sets' });
+    // Both AS-10 and AS-2 share setCode "AS" -- numeric id comparison must
+    // place AS-2 first, not "AS-10" < "AS-2" as a plain string compare would.
+    expect(result.map((c) => c.id).slice(0, 2)).toEqual(['AS-2', 'AS-10']);
+  });
+
+  it('types sorts by TYPE_ORDER (play order), not alphabetically', () => {
+    const cards = [
+      { id: 'X-1', type: 'Hazard' },
+      { id: 'X-2', type: 'Character' },
+      { id: 'X-3', type: 'Resource' },
+    ];
+    // TYPE_ORDER = ['Character', 'Resource', 'Hazard', 'Site', 'Region']
+    expect(sortCards(cards, { primary: 'types' }).map((c) => c.id)).toEqual(['X-2', 'X-3', 'X-1']);
+  });
+
+  it('sets sorts by SET_ORDER (MECCG release order), not by label or alphabetically', () => {
+    const cards = [
+      { id: 'X-1', setCode: 'BA' },
+      { id: 'X-2', setCode: 'TW' },
+    ];
+    // SET_ORDER = ['TW', 'TD', 'DM', 'LE', 'AS', 'WH', 'BA'] -- TW is released
+    // before BA even though a labelFor that returned localized set names
+    // (or plain alphabetical order) would put BA first.
+    expect(
+      sortCards(cards, { primary: 'sets' }, { labelFor: () => 'Zzz-would-sort-last' }).map((c) => c.id)
+    ).toEqual(['X-2', 'X-1']);
+  });
+
+  it('applies primary then secondary then the id tiebreak', () => {
+    const cards = [
+      { id: 'A-2', setCode: 'TW', alignment: 'Minion' },
+      { id: 'A-1', setCode: 'TW', alignment: 'Hero' },
+      { id: 'A-3', setCode: 'AS', alignment: 'Hero' },
+    ];
+    // TW comes before AS in SET_ORDER; within TW, Hero sorts before Minion.
+    const result = sortCards(cards, { primary: 'sets', secondary: 'alignments' });
+    expect(result.map((c) => c.id)).toEqual(['A-1', 'A-2', 'A-3']);
+  });
+
+  it('uses labelFor to localize the comparison for non-type/name keys', () => {
+    const cards = [
+      { id: 'A-1', alignment: 'Minion' },
+      { id: 'A-2', alignment: 'Hero' },
+    ];
+    // Without labelFor, "Hero" < "Minion" alphabetically. With a labelFor that
+    // reverses the display order, the sort must follow the label, not the raw value.
+    const labelFor = (key, v) => (key === 'alignments' ? { Hero: 'Z', Minion: 'A' }[v] : v);
+    expect(sortCards(cards, { primary: 'alignments' }, { labelFor }).map((c) => c.id)).toEqual(['A-1', 'A-2']);
+  });
+
+  it('sorts name by the given display language, falling back to en', () => {
+    const cards = [
+      { id: 'A-1', name: { en: 'Zeta', fr: 'Alpha' } },
+      { id: 'A-2', name: { en: 'Alpha', fr: 'Zeta' } },
+    ];
+    expect(sortCards(cards, { primary: 'name' }, { lang: 'fr' }).map((c) => c.id)).toEqual(['A-1', 'A-2']);
+    expect(sortCards(cards, { primary: 'name' }, { lang: 'en' }).map((c) => c.id)).toEqual(['A-2', 'A-1']);
   });
 });
