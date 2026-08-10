@@ -51,11 +51,15 @@ tableaux de valeurs comparées par `includes`).
 - `filters.unique` devient un tableau (`[]`, `['true']`, `['false']`, ou
   `['true', 'false']` si les deux sont cochées — dans ce cas le filtre
   n'exclut rien, comme n'importe quel autre facet à choix multiple).
-- Labels du menu : `t('filter.uniqueYes')` / `t('filter.uniqueNo')`
-  (nouvelles clés i18n dans les trois langues), pas de tri alphabétique
-  spécial nécessaire (l'ordre `['true', 'false']` est fixe via le
-  paramètre `order` de `sortFacetOptions`, déjà supporté par
-  `FacetDropdown`).
+- Les valeurs internes restent les chaînes `'true'`/`'false'` (comparées
+  par `includes`), mais le menu doit afficher "Unique" / "Non-unique",
+  jamais les chaînes brutes. `FilterBar.jsx` a déjà ce mécanisme pour
+  `sets` et pour `types`/`alignments`/`races` (fonction `optionLabel`,
+  ligne ~128) : on y ajoute une entrée pour `'unique'` qui mappe
+  `'true' → t('filter.uniqueYes')` et `'false' → t('filter.uniqueNo')`
+  (nouvelles clés i18n dans les trois langues). L'ordre `['true', 'false']`
+  reste fixe via le paramètre `order` de `sortFacetOptions`, déjà
+  supporté par `FacetDropdown`.
 - `filterCards` (`lib/filter.js`) : remplacer
   `if (filters.unique === true && a.unique !== true) return false;`
   par un `tagMatch`-style check :
