@@ -7,11 +7,11 @@ export function normalizeText(s) {
 }
 
 import { cardTags } from './tags.js';
-import { TYPE_ORDER } from './constants.js';
+import { TYPE_ORDER, SET_ORDER } from './constants.js';
 
 // Pure, in-memory filtering of the card list.
 // filters: { search, cardText, sets[], types[], alignments[], rarities[],
-//            artists[], races[], subtypes[], skills[], keywords[], unique(bool) }
+//            artists[], races[], subtypes[], skills[], keywords[], unique[] }
 export function filterCards(cards, filters = {}) {
   const q = normalizeText((filters.search || '').trim());
   const qText = normalizeText((filters.cardText || '').trim());
@@ -78,14 +78,18 @@ const SORT_FIELD = {
 export const SORT_KEYS = ['sets', 'types', 'subtypes', 'alignments', 'races', 'skills', 'rarities', 'artists', 'name'];
 
 const typeRank = (v) => { const i = TYPE_ORDER.indexOf(v); return i === -1 ? Infinity : i; };
+const setRank = (v) => { const i = SET_ORDER.indexOf(v); return i === -1 ? Infinity : i; };
 
 // -1/0/1 comparison of two cards on one sort key. `labelFor` mirrors
 // sortFacetOptions' principle -- menus (and now sort) order on what the
 // player reads, not the raw English data value -- except `types`, which
-// follows game play order (TYPE_ORDER), and `name`, which has no dictionary
-// entry and reads straight off the card in the current display language.
+// follows game play order (TYPE_ORDER), `sets`, which follows MECCG release
+// order (SET_ORDER) so the default grid order doesn't depend on display
+// language, and `name`, which has no dictionary entry and reads straight off
+// the card in the current display language.
 function compareSortKey(key, a, b, { lang, labelFor }) {
   if (key === 'types') return typeRank(a.type) - typeRank(b.type);
+  if (key === 'sets') return setRank(a.setCode) - setRank(b.setCode);
   if (key === 'name') {
     const na = (a.name && (a.name[lang] || a.name.en)) || '';
     const nb = (b.name && (b.name[lang] || b.name.en)) || '';

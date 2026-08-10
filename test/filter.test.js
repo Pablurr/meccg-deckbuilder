@@ -136,12 +136,26 @@ describe('sortCards', () => {
     expect(sortCards(cards, { primary: 'types' }).map((c) => c.id)).toEqual(['X-2', 'X-3', 'X-1']);
   });
 
+  it('sets sorts by SET_ORDER (MECCG release order), not by label or alphabetically', () => {
+    const cards = [
+      { id: 'X-1', setCode: 'BA' },
+      { id: 'X-2', setCode: 'TW' },
+    ];
+    // SET_ORDER = ['TW', 'TD', 'DM', 'LE', 'AS', 'WH', 'BA'] -- TW is released
+    // before BA even though a labelFor that returned localized set names
+    // (or plain alphabetical order) would put BA first.
+    expect(
+      sortCards(cards, { primary: 'sets' }, { labelFor: () => 'Zzz-would-sort-last' }).map((c) => c.id)
+    ).toEqual(['X-2', 'X-1']);
+  });
+
   it('applies primary then secondary then the id tiebreak', () => {
     const cards = [
-      { id: 'A-2', setCode: 'X', alignment: 'Minion' },
-      { id: 'A-1', setCode: 'X', alignment: 'Hero' },
-      { id: 'A-3', setCode: 'Y', alignment: 'Hero' },
+      { id: 'A-2', setCode: 'TW', alignment: 'Minion' },
+      { id: 'A-1', setCode: 'TW', alignment: 'Hero' },
+      { id: 'A-3', setCode: 'AS', alignment: 'Hero' },
     ];
+    // TW comes before AS in SET_ORDER; within TW, Hero sorts before Minion.
     const result = sortCards(cards, { primary: 'sets', secondary: 'alignments' });
     expect(result.map((c) => c.id)).toEqual(['A-1', 'A-2', 'A-3']);
   });
