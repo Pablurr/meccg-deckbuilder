@@ -217,14 +217,14 @@ export default function FilterBar({ facets, setNames = {}, filters, onChange, la
       </div>
       <div className="filterbar-bottom" style={isMobile && !filtersOpen ? { display: 'none' } : undefined}>
         {facet('sets', t('filter.set'))}
-        {facet('types', t('filter.type'), TYPE_ORDER)}
         {facet('alignments', t('filter.alignment'))}
-        {facet('rarities', t('filter.rarity'))}
-        {facet('artists', t('filter.artist'))}
-        {facet('races', t('filter.race'))}
+        {facet('types', t('filter.type'), TYPE_ORDER)}
         {facet('subtypes', t('filter.subtype'))}
-        {facet('skills', t('filter.skills'))}
         {facet('keywords', t('filter.keywords'))}
+        {facet('races', t('filter.race'))}
+        {facet('skills', t('filter.skills'))}
+        {facet('artists', t('filter.artist'))}
+        {facet('rarities', t('filter.rarity'))}
         <button className={`chip-toggle ${filters.unique ? 'on' : ''}`} onClick={() => set('unique', !filters.unique)}>
           {t('filter.unique')}
         </button>

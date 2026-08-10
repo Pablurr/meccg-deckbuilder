@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import * as api from './api.js';
 import { expandQuantities, countOccurrences, deckCounts, deckWarnings, normalizeDeck, totalCopies, emptyZones, EMPTY_NOTES, deckSignature, deckPayload } from './lib/deck.js';
 import { baseOptions } from './lib/tags.js';
+import { excludeSkill } from './lib/parseCards.js';
 import { I18nProvider } from './i18n.jsx';
 import { makeT } from './lib/i18n.js';
 import { validateDeck } from './lib/rules/validate.js';
@@ -96,7 +97,7 @@ export default function App() {
       ...facets,
       races: baseOptions(cards, 'races'),
       subtypes: baseOptions(cards, 'subtypes'),
-      skills: baseOptions(cards, 'skills'),
+      skills: excludeSkill(baseOptions(cards, 'skills'), 'Ally'),
     };
   }, [facets, cards]);
 
