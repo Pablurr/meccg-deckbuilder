@@ -123,6 +123,13 @@ body {
   cursor: pointer;
 }
 .facet-menu label:hover { background: var(--panel); }
+/* Sort picker: two stacked selects rather than the checkbox-list layout the
+   other facet menus use -- a sort has exactly one active choice per slot,
+   so a <select> is the right control, and stacking (not side-by-side) is
+   what keeps the menu inside a 320px viewport. */
+.sort-menu { display: flex; flex-direction: column; gap: 8px; min-width: 200px; }
+.sort-menu label { display: flex; flex-direction: column; gap: 4px; align-items: stretch; cursor: default; }
+.sort-menu select { padding: 6px; border-radius: 4px; border: 1px solid var(--line); background: var(--panel); color: var(--text); }
 .chip-toggle {
   background: var(--panel-2);
   border: 1px solid var(--line);

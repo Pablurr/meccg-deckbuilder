@@ -28,6 +28,9 @@ export default function App() {
   const [setNames, setSetNames] = useState({}); // set code -> { en, es, fr }
   const [defaultBacks, setDefaultBacks] = useState({});
   const [filters, setFilters] = useState({});
+  // Independent from `filters` on purpose: "Reset filters" must not also
+  // reset how the grid is sorted -- see design spec 2026-08-09.
+  const [sortBy, setSortBy] = useState({ primary: 'sets', secondary: null });
   const [uiLang, setUiLang] = useState('fr'); // display language for card names
   const [quantities, setQuantities] = useState({}); // id -> copy count
   const [deck, setDeck] = useState(() => normalizeDeck({ id: null, name: 'Nouveau deck', backAssignments: {} }));
@@ -287,9 +290,9 @@ export default function App() {
   return (
     <I18nProvider lang={textLang}>
     <div className="app">
-      <FilterBar facets={derivedFacets} setNames={setNames} filters={filters} onChange={setFilters} lang={uiLang} onLangChange={setUiLang} isMobile={isMobile} proxyMode={proxyMode} onProxyChange={setProxyMode} onOpenDocs={() => setShowDocs(true)} />
+      <FilterBar facets={derivedFacets} setNames={setNames} filters={filters} onChange={setFilters} lang={uiLang} onLangChange={setUiLang} isMobile={isMobile} proxyMode={proxyMode} onProxyChange={setProxyMode} onOpenDocs={() => setShowDocs(true)} sortBy={sortBy} onSortChange={setSortBy} />
       <div className="main-row">
-        <CardBrowser cards={cards} filters={filters} quantities={quantities} lang={uiLang} onChangeQty={changeQty} onToggle={toggleCard} onSelectAll={selectAll} isMobile={isMobile} onPreview={openPreview} proxyMode={proxyMode} setNames={setNames} deckMode={deck.mode} side={deck.mode === 'deckbuilding' ? deck.ruleset?.side ?? null : null} zones={zones} changeZoneQty={changeZoneQty} capCtx={capCtx} />
+        <CardBrowser cards={cards} filters={filters} sortBy={sortBy} quantities={quantities} lang={uiLang} onChangeQty={changeQty} onToggle={toggleCard} onSelectAll={selectAll} isMobile={isMobile} onPreview={openPreview} proxyMode={proxyMode} setNames={setNames} deckMode={deck.mode} side={deck.mode === 'deckbuilding' ? deck.ruleset?.side ?? null : null} zones={zones} changeZoneQty={changeZoneQty} capCtx={capCtx} />
         {hasSelection && !isMobile && (
           <DeckPanel
             cardsById={cardsById}

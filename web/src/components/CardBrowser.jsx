@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { filterCards } from '../lib/filter.js';
-import { cardName, cardImageSrc, cardThumbSrc } from '../lib/lang.js';
+import { filterCards, sortCards } from '../lib/filter.js';
+import { cardName, cardImageSrc, cardThumbSrc, setLabel } from '../lib/lang.js';
 import { useCardPreview, CardPreview } from './CardPreview.jsx';
 import ProxyStamp from './ProxyStamp.jsx';
 import { useT } from '../i18n.jsx';
@@ -10,7 +10,7 @@ import { siteIndex } from '../lib/rules/sites.js';
 import { resolveBanned } from '../lib/rules/banned.js';
 import { isRuleEnabled } from '../lib/rules/catalog.js';
 import { remainingCopies } from '../lib/rules/copies.js';
-import { capTitle } from '../lib/rules/docText.js';
+import { capTitle, localize } from '../lib/rules/docText.js';
 
 const CAP = 600; // safety cap on rendered cells
 
@@ -116,10 +116,25 @@ function ZoneCtrls({ card, zones, quantities, changeZoneQty, t, capCtx, isMobile
   );
 }
 
-export default function CardBrowser({ cards, filters, quantities, lang, onChangeQty, onToggle, onSelectAll, isMobile, onPreview, proxyMode, setNames, deckMode, side, zones, changeZoneQty, capCtx }) {
+export default function CardBrowser({ cards, filters, sortBy, quantities, lang, onChangeQty, onToggle, onSelectAll, isMobile, onPreview, proxyMode, setNames, deckMode, side, zones, changeZoneQty, capCtx }) {
   const t = useT();
   const [showAll, setShowAll] = useState(false);
   const filtered = useMemo(() => filterCards(cards, filters), [cards, filters]);
+  // Mirrors FilterBar's own optionLabel: sort on what the facet menu would
+  // display for that value, not the raw English data -- consistent with
+  // sortFacetOptions. sets/alignments/races have dictionary entries;
+  // everything else (subtypes/skills/rarities/artists) has none and shows
+  // its raw value, same as those facet menus do today.
+  const sortLabelFor = useMemo(() => (key, v) => {
+    if (key === 'sets') return setLabel(setNames, v, lang);
+    if (key === 'alignments') return localize(t, 'alignment', v);
+    if (key === 'races') return localize(t, 'race', v);
+    return v;
+  }, [setNames, lang, t]);
+  const sorted = useMemo(
+    () => sortCards(filtered, sortBy, { lang, labelFor: sortLabelFor }),
+    [filtered, sortBy, lang, sortLabelFor]
+  );
   // 1.4.1 opens five Balrog sites (no hero or minion counterpart) to every
   // side. isLegalForSide doesn't know about it on its own, so derive the set
   // from siteIndex -- the single source of truth the validator also reads --
@@ -145,7 +160,7 @@ export default function CardBrowser({ cards, filters, quantities, lang, onChange
   // (never disabled by this filter). Copy caps are the only thing that
   // actually blocks an add, via remainingCopies/ZoneCtrls below.
   const legal = (c) => isLegalForSide(c, side, openBalrog, bannedIds);
-  const visible = side && !showAll ? filtered.filter(legal) : filtered;
+  const visible = side && !showAll ? sorted.filter(legal) : sorted;
   const shown = visible.slice(0, CAP);
   const { previewRef, previewImgRef, stampRef, trackPointer, hidePreview } = useCardPreview(lang, proxyMode, setNames);
 
