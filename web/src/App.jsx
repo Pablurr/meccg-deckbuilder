@@ -31,7 +31,11 @@ export default function App() {
   // Independent from `filters` on purpose: "Reset filters" must not also
   // reset how the grid is sorted -- see design spec 2026-08-09.
   const [sortBy, setSortBy] = useState({ primary: 'sets', secondary: null });
-  const [uiLang, setUiLang] = useState('fr'); // display language for card names
+  // display language for card names; defaults to English for first-time
+  // visitors, persisted below so a switch to another language sticks.
+  const [uiLang, setUiLang] = useState(() => {
+    try { return localStorage.getItem('meccg.uiLang') || 'en'; } catch { return 'en'; }
+  });
   const [quantities, setQuantities] = useState({}); // id -> copy count
   const [deck, setDeck] = useState(() => normalizeDeck({ id: null, name: 'Nouveau deck', backAssignments: {} }));
   const [zones, setZones] = useState(() => emptyZones()); // id -> copy count, per zone
@@ -70,6 +74,9 @@ export default function App() {
   useEffect(() => {
     try { localStorage.setItem('meccg.proxyMode', proxyMode ? '1' : '0'); } catch { /* storage unavailable */ }
   }, [proxyMode]);
+  useEffect(() => {
+    try { localStorage.setItem('meccg.uiLang', uiLang); } catch { /* storage unavailable */ }
+  }, [uiLang]);
 
   // When the deck empties the mobile sheet unmounts; reset its flag so re-adding
   // a card doesn't pop the sheet back open unprompted.
